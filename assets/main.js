@@ -11,3 +11,12 @@ document.addEventListener('DOMContentLoaded', () => {
 	netteForms.initOnLoad();
 	naja.initialize();
 });
+
+// Potvrzení nevratných akcí: <button data-confirm="Opravdu smazat?">
+document.addEventListener('click', (event) => {
+	const target = event.target instanceof Element ? event.target.closest('[data-confirm]') : null;
+	if (target && !window.confirm(target.getAttribute('data-confirm') ?? 'Opravdu?')) {
+		event.preventDefault();
+		event.stopImmediatePropagation();
+	}
+}, true);

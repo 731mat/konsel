@@ -7,8 +7,11 @@ namespace App\Presentation\Accessory;
 use App\Application\Municipality\MunicipalityFacade;
 use App\Application\Shared\Storage\FileStorage;
 use App\Core\Security\Allowed;
+use App\Core\Security\Privilege;
+use App\Core\Security\Resource;
 use App\Core\Tenancy\CurrentMunicipality;
 use App\Domain\Municipality\Municipality;
+use App\Domain\Shared\TenantOwned;
 use App\Domain\Shared\ValueObject\StoredFile;
 use App\Presentation\Accessory\Menu\AdminMenu;
 use App\Presentation\Accessory\Menu\AdminMenuFactory;
@@ -74,6 +77,21 @@ abstract class SecuredPresenter extends BasePresenter
 	}
 
 	/**
+	 * Kontrola oprávnění tam, kde nestačí #[Allowed] (např. formulář na stránce jen pro čtení).
+	 */
+	protected function requirePermission(Resource $resource, Privilege $privilege): void
+	{
+		if (!$this->getUser()->isAllowed($resource->value, $privilege->value)) {
+			$this->error('K této operaci nemáte oprávnění.', 403);
+		}
+	}
+
+	protected function isAllowed(Resource $resource, Privilege $privilege = Privilege::View): bool
+	{
+		return $this->getUser()->isAllowed($resource->value, $privilege->value);
+	}
+
+	/**
 	 * Obec aktuálního uživatele. Superadmin bez zvolené obce dostane 404.
 	 */
 	protected function requireMunicipality(): Municipality
@@ -83,6 +101,23 @@ abstract class SecuredPresenter extends BasePresenter
 		}
 
 		return $this->currentMunicipality->get();
+	}
+
+	/**
+	 * Druhá vrstva izolace obcí vedle TenantFilteru (ten se neuplatní na entity už načtené
+	 * v identity mapě). Volat na každou entitu načtenou podle ID z URL.
+	 *
+	 * @template T of TenantOwned
+	 * @param T $entity
+	 * @return T
+	 */
+	protected function assertOwned(TenantOwned $entity): TenantOwned
+	{
+		if ($entity->getMunicipality()->getId() !== $this->requireMunicipality()->getId()) {
+			$this->error('Záznam neexistuje.');
+		}
+
+		return $entity;
 	}
 
 	/**

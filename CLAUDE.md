@@ -34,7 +34,7 @@ make db-reset             # smazat DB → migrace → demo data
 - Jedna metoda fasády = jedna transakce přes `TransactionManager::run()` (flush + commit). Nepoužívej `EntityManager::wrapInTransaction()` – při doménové chybě zavře EntityManager. Vstupy jsou readonly Command DTO, nahrané soubory jako `UploadedFile` (ne Nette FileUpload).
 - Validuj před změnou stavu: doménové metody vyhodí výjimku dřív, než změní pole.
 - Čas jen přes `Psr\Clock\ClockInterface`, vždy `DateTimeImmutable`. Nikdy `new DateTime()` ani `time()` v doméně.
-- Entity patřící obci implementují `TenantOwned`. Izolaci hlídá `TenantFilter`, nespoléhej na ruční `WHERE`.
+- Entity patřící obci implementují `TenantOwned` (asociace `municipality`). Izolaci hlídá `TenantFilter` a navíc v presenterech `assertOwned($entita)` u každé entity načtené podle ID z URL (filtr se neuplatní na entity už načtené v identity mapě).
 - Migrace dědí z `SchemaMigration` a používají `createTable('x', fn (TableBuilder $t) => …)` / `alterTable()` / `dropTable()`. Žádné raw SQL ani deprekované `$schema->createTable()`. `make console ARGS="migrations:diff"` slouží jen jako předloha. Test `DatabaseSchemaTest` ověří, že migrace = mapping.
 - Nové služby se registrují samy podle konvence (`search:` v config/services.neon): `*Facade` v Application, `*Repository` v Infrastructure/Persistence/Repository, `*Command` v Console.
 - Soubory se ukládají jen přes `FileStorage` a servírují přes presenter s kontrolou ACL. Nic uživatelského ve `www/`.

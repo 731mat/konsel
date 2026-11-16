@@ -1,0 +1,40 @@
+{block title}Osoby{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href="Member:">Osoby a orgány</a></li>
+	<li class="breadcrumb-item active" aria-current="page">Osoby</li>
+{/block}
+
+{block content}
+{varType App\Domain\People\Person[] $persons}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+	<h1 class="h3 mb-0 me-auto">Osoby</h1>
+	<a n:if="$canEdit" n:href="add" class="btn btn-primary"><i class="bi bi-person-plus" aria-hidden="true"></i> Přidat osobu</a>
+</div>
+
+<div class="card">
+	{if $persons}
+	<div class="table-responsive">
+		<table class="table table-hover align-middle mb-0">
+			<thead>
+				<tr><th>Jméno</th><th>E-mail</th><th>Telefon</th><th n:if="$canEdit" class="text-end">Akce</th></tr>
+			</thead>
+			<tbody>
+				<tr n:foreach="$persons as $person">
+					<td>{$person->getFullName()}</td>
+					<td>{$person->getEmail()?->value}</td>
+					<td>{$person->getPhone()}</td>
+					<td n:if="$canEdit" class="text-end text-nowrap">
+						<a n:href="edit, id: $person->getId()" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil" aria-hidden="true"></i> Upravit</a>
+						<form method="post" action="{link delete!, id: $person->getId()}" class="d-inline">
+							<button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Opravdu smazat osobu {$person->getFullName()}?"><i class="bi bi-trash" aria-hidden="true"></i></button>
+						</form>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+	{else}
+	<div class="card-body text-body-secondary">Zatím nejsou zadané žádné osoby.</div>
+	{/if}
+</div>

@@ -1,0 +1,14 @@
+{block title}Ukončit členství{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href="default">Osoby a orgány</a></li>
+	<li class="breadcrumb-item"><a n:href="body, id: $body->getId()">{$body->getName()}</a></li>
+	<li class="breadcrumb-item active" aria-current="page">Ukončit členství</li>
+{/block}
+
+{block content}
+{varType App\Domain\People\Body $body}
+{varType App\Domain\People\Membership $membership}
+<h1 class="h3 mb-1">Ukončit členství</h1>
+<p class="text-body-secondary mb-4">{$membership->getPerson()->getFullName()} · {$membership->getFunction()->label()} · od {$membership->getValidFrom()|czDate}</p>
+<div class="card" style="max-width: 30rem"><div class="card-body">{control endMembershipForm}</div></div>

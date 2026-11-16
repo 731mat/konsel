@@ -1,0 +1,12 @@
+{block title}Upravit orgán{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href="default">Osoby a orgány</a></li>
+	<li class="breadcrumb-item"><a n:href="body, id: $body->getId()">{$body->getName()}</a></li>
+	<li class="breadcrumb-item active" aria-current="page">Upravit</li>
+{/block}
+
+{block content}
+{varType App\Domain\People\Body $body}
+<h1 class="h3 mb-4">Upravit orgán</h1>
+<div class="card" style="max-width: 40rem"><div class="card-body">{control bodyForm}</div></div>
