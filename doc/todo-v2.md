@@ -27,7 +27,7 @@
 
 | # | Rozhodnutí | Proč |
 |---|---|---|
-| A1 | **PHP 8.4, Nette 3.2, Latte 3**, `declare(strict_types=1)` všude | Aktuální stabilní stack. |
+| A1 | **PHP 8.4, Nette 3.3 (application), Latte 3.1**, `declare(strict_types=1)` všude | Aktuální stabilní stack. |
 | A2 | **Doctrine ORM 3** přes `nettrine/*` (ne Nette Database Explorer) | Opravdové entity s chováním, abstrakce DB platformy (SQLite → MySQL = změna konfigurace), migrace, optimistic locking. |
 | A3 | **SQLite** (WAL, `foreign_keys=ON`, `busy_timeout`) pro vývoj i první provoz, později **MySQL/MariaDB** (T41) | Nulová instalace teď, jasná cesta dál. |
 | A4 | Migrace se píšou přes **Doctrine Schema API** (`$schema->createTable()`), ne raw SQL. Výjimka: FTS indexy (T31), větvené podle platformy. | Stejné migrace poběží na SQLite i MySQL. |
@@ -118,7 +118,7 @@ konsel/
 - `git init`, .gitignore (`temp/*`, `log/*`, `var/*`, `vendor/`, `node_modules/`, `config/local.neon`, `www/assets/`), .editorconfig, .dockerignore
 **Hotovo když:** `make up` nastartuje kontejner, `make sh` → `php -v` ≥ 8.4, `php -m` obsahuje uvedená rozšíření, `composer -V` funguje a repo má první commit.
 
-### [ ] T01 – Kostra Nette aplikace
+### [x] T01 – Kostra Nette aplikace
 **Cíl:** Běžící prázdná aplikace se strukturou podle plánu.
 - composer.json ručně (ne create-project): `nette/application`, `nette/bootstrap`, `nette/di`, `nette/forms`, `nette/http`, `nette/security`, `nette/utils`, `nette/mail`, `latte/latte`, `tracy/tracy`. PSR-4 `App\\` → `app/`.
 - `App\Bootstrap`, www/index.php, `RouterFactory`, `Presentation/Home` s `@layout.latte` a stránkou „Konšel“
@@ -497,3 +497,4 @@ Vše od T32 je rozšíření, pořadí se dá upravit podle potřeby.
 > Formát: `YYYY-MM-DD T## – co se odchýlilo / rozhodlo / zůstalo jako dluh`
 
 - 2026-11-16 T00 – Místo lokální instalace je vše v Dockeru (A16): php:8.4-apache, www-data přemapovaný na UID/GID hostitele, wrapper Makefile. PDF → Gotenberg, mail → Mailpit (upraveno v T27/T20).
+- 2026-11-16 T01 – Composer vybral nette/application 3.3 (plán počítal s 3.2). Debug režim jen přes env NETTE_DEBUG=1 (compose.yaml). Mapování `App\Presentation\*\**Presenter`, šablony vedle presenterů.

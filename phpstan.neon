@@ -1,0 +1,9 @@
+parameters:
+	level: max
+	paths:
+		- app
+		- tests
+		- www
+	tmpDir: temp/phpstan
+	checkMissingCallableSignature: true
+	reportUnmatchedIgnoredErrors: true
