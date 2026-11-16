@@ -31,18 +31,19 @@
 | A2 | **Doctrine ORM 3** přes `nettrine/*` (ne Nette Database Explorer) | Opravdové entity s chováním, abstrakce DB platformy (SQLite → MySQL = změna konfigurace), migrace, optimistic locking. |
 | A3 | **SQLite** (WAL, `foreign_keys=ON`, `busy_timeout`) pro vývoj i první provoz, později **MySQL/MariaDB** (T41) | Nulová instalace teď, jasná cesta dál. |
 | A4 | Migrace dědí z `SchemaMigration` a píšou se přes `createTable()` + `TableBuilder` / `alterTable()` (nedeprekované DBAL editor API, SQL generuje platforma za běhu), ne raw SQL. Výjimka: FTS indexy (T32), větvené podle platformy. | Stejné migrace poběží na SQLite i MySQL. |
-| A5 | Vrstvy **Domain / Application / Infrastructure / Presentation** (viz struktura níže) | Doména je testovatelná bez frameworku, presentery jsou tenké. |
+| A5 | Struktura **Model + moduly** (viz níže): `app/Model/<Doména>/` = entity, fasády, repozitáře a commandy pohromadě; `app/<Název>Module/<Presenter>/` = presenter, šablony a data formulářů v jedné složce (AdminModule, PublicModule, ApiModule, ErrorModule) | Zvyklost vlastníka projektu (změněno v T12a). Pravidla zůstávají: presentery jen přes fasády, entity bez závislosti na Nette. |
 | A6 | Kód, třídy a DB **anglicky**, UI a dokumenty **česky**, vazby přes slovníček v CLAUDE.md | Konzistence a žádné „Zasedani“ vedle „Meeting“. |
 | A7 | **Multi-tenant od začátku** (entita `Municipality` + Doctrine SQL filtr) | Teď to stojí málo, později by to byl přepis. Provozovat se dá i jen pro jednu obec. |
 | A8 | Testy **Nette Tester**, statická analýza **PHPStan level max** (+ nette, doctrine, strict rules), coding standard **ECS** | Vstupní brána kvality pro každý task. |
 | A9 | Frontend: server-side Latte + **Naja** (AJAX snippety) + **Bootstrap 5.3**, build přes **Vite**. Žádné SPA. | Jednoduché, robustní, nativní pro Nette. |
 | A10 | Texty bodů a usnesení jako **prostý text s odstavci** (ne rich text) | Bezbolestný převod do DOCX. Rich text se dá přidat později. |
 | A11 | DOCX přes **PhpWord TemplateProcessor** (šablony s `${placeholder}`), PDF přes **Gotenberg** (LibreOffice v samostatném kontejneru, HTTP API), obojí za rozhraním | Šablony obce 1:1, LibreOffice nezatěžuje PHP image. |
-| A12 | Externí služby (AI, přepis audia, ARES, mail, storage) vždy za **rozhraním v Domain/Application**, implementace v Infrastructure | Testovatelnost a možnost vyměnit dodavatele (data v EU). |
+| A12 | Externí služby (AI, přepis audia, ARES, mail, storage) vždy za **rozhraním v `Model/<Doména>`**, implementace vedle něj s prefixem technologie (`OpenAi…`, `Local…`) | Testovatelnost a možnost vyměnit dodavatele. |
 | A13 | Zastupitelé se přihlašují přes **osobní token v odkazu** (per osoba × zasedání, v DB jen hash, expirace, revokace) | Pohodlí jako u konkurence, ale dohledatelné a odvolatelné. |
 | A14 | Souběžná editace = **zámek bodu s TTL + heartbeat** a k tomu Doctrine `#[Version]` jako pojistka. Synchronizace přes polling snippetů (bez websocketů). | Jednoduché a spolehlivé. Mercure/SSE se dá doplnit později. |
 | A15 | Čas jen přes `Psr\Clock\ClockInterface` (symfony/clock: `NativeClock`, v testech `MockClock`), vždy `DateTimeImmutable`, časová zóna Europe/Prague | Deterministické testy lhůt, zámků a tokenů. |
 | A16 | **Vše běží v Dockeru** (docker compose): PHP + Apache, Node/Vite, Mailpit, Gotenberg, později MariaDB. Na hostiteli se nic neinstaluje, příkazy jdou přes `make` (wrapper nad `docker compose`). | Čistý Mac, stejné prostředí pro vývoj i produkci. |
+| A17 | **AI = OpenAI GPT API** za rozhraním `AiClient`. API klíč zadává správce obce v Nastavení, v DB je šifrovaný (libsodium, klíč aplikace mimo repo). Bez klíče se AI funkce v UI nezobrazí. | Přání vlastníka (T12b). Každá obec platí vlastní spotřebu, klíč neleží v repu ani v čitelné podobě v DB. |
 
 ---
 
@@ -52,55 +53,41 @@
 konsel/
 ├── app/
 │   ├── Bootstrap.php
-│   ├── Core/                         # průřezová infrastruktura, bez doménové logiky
-│   │   ├── Routing/RouterFactory.php
-│   │   ├── Clock/                    # SystemClock, FrozenClock
-│   │   ├── Tenancy/                  # CurrentMunicipality, TenantFilter (Doctrine SQL filter)
-│   │   ├── Security/                 # Authenticator, Authorizator, Role, #[Allowed] atribut
-│   │   ├── Doctrine/                 # SqlitePragmaMiddleware, base typy, traity
-│   │   └── Latte/                    # LatteExtension (filtry czDate, czDateTime, fileSize…), ViteAssets
-│   ├── Domain/                       # entity, enumy, value objecty, rozhraní repozitářů, doménové výjimky
-│   │   ├── Shared/                   # DomainException, Timestampable, …
-│   │   ├── Municipality/
-│   │   ├── People/                   # Person, Body, Term, Membership
-│   │   ├── User/
-│   │   ├── Meeting/                  # Meeting, AgendaItem, Attendance, VotingRound, Vote, AgendaItemLock
-│   │   ├── Resolution/               # Resolution, NumberingMask, NumberingSequence, ResolutionTask
-│   │   ├── Comment/
-│   │   ├── Attachment/
-│   │   ├── Template/                 # MeetingTemplate, ResolutionTemplate
-│   │   ├── Document/                 # DocumentTemplate, GeneratedDocument
-│   │   ├── Access/                   # MeetingAccessToken
-│   │   └── Audit/
-│   ├── Application/                  # use-case fasády = jediný vstup z Presentation do domény
-│   │   ├── Meeting/MeetingFacade.php, AgendaFacade.php, VotingFacade.php, …
-│   │   └── */Command/*.php            # readonly vstupní DTO
-│   ├── Infrastructure/
-│   │   ├── Persistence/Repository/   # Doctrine implementace repozitářů
-│   │   ├── Storage/                  # LocalFileStorage
-│   │   ├── Document/                 # PhpWordRenderer, LibreOfficePdfConverter
-│   │   ├── Mail/
-│   │   ├── Search/                   # SqliteFtsSearchIndex, MysqlFulltextSearchIndex
-│   │   ├── Ares/
-│   │   └── Ai/
-│   ├── Presentation/
+│   ├── @layout.latte                 # společný HTML layout (moduly ho najdou samy)
+│   ├── Model/                        # vše doménové, po doménách – entity, enumy, VO, fasády, repozitáře, commandy
+│   │   ├── Shared/                   # výjimky, IntegerId, TenantOwned, Timestampable, TransactionManager, ValueObject/
+│   │   ├── Storage/                  # FileStorage (rozhraní), LocalFileStorage, UploadedFile
+│   │   ├── Municipality/             # Municipality, MunicipalityFacade, DoctrineMunicipalityRepository, Command/
+│   │   ├── User/                     # User, Role, UserFacade, LoginThrottle, PasswordPolicy, …
+│   │   ├── People/                   # Person, Body, Term, Membership, PeopleFacade, …
+│   │   ├── Meeting/                  # Meeting, MeetingStatus, MeetingFacade, (AgendaItem, Attendance, VotingRound, …)
+│   │   ├── Ai/                       # AiClient (rozhraní), OpenAiClient, AiFacade (T12b)
+│   │   ├── Resolution/  Comment/  Attachment/  Template/  Document/  Access/  Audit/  Search/  Ares/
+│   │   └── <Doména>/Command/*.php    # readonly vstupní DTO fasád
+│   ├── AdminModule/                  # administrace úřadu (/admin)
 │   │   ├── @layout.latte
-│   │   ├── Accessory/                # BasePresenter, SecuredPresenter, FormFactory, sdílené komponenty
-│   │   ├── Sign/
-│   │   ├── Admin/                    # Dashboard, Meeting, Agenda, Minutes, Resolution, Member, User, Settings, Search
-│   │   ├── Portal/                   # pohled zastupitele přes token
-│   │   └── Error/
-│   └── Console/                      # Symfony console příkazy
+│   │   ├── SecuredPresenter.php      # předek admin presenterů: přihlášení, obec, #[Allowed]
+│   │   ├── Dashboard/                # DashboardPresenter.php + default.latte
+│   │   ├── Meeting/                  # MeetingPresenter.php, MeetingFormData.php, default.latte, detail.latte, …
+│   │   └── Member/ Person/ User/ Settings/ Account/ …
+│   ├── PublicModule/                 # veřejná část: Homepage/, Sign/ (přihlášení)
+│   ├── PortalModule/                 # pohled zastupitele přes token (T18)
+│   ├── ApiModule/                    # JSON API: Health/ (/api/health)
+│   ├── ErrorModule/                  # Error4xx/, Error5xx/
+│   ├── UI/                           # BasePresenter, Form/ (FormFactory, BootstrapFormRenderer, FormErrors), Menu/
+│   ├── Core/                         # průřezová infrastruktura bez doménové logiky
+│   │   ├── Routing/  Security/  Tenancy/  Latte/
+│   │   └── Doctrine/                 # middleware, typy, subscribery, Migration/ (SchemaMigration, TableBuilder)
+│   └── Console/                      # Symfony console příkazy, Demo/DemoSeeder
 ├── assets/                           # js, scss → Vite → www/assets
 ├── bin/console
-├── config/                           # common.neon, services.neon, doctrine.neon, local.neon (gitignored), local.neon.dist
+├── config/                           # common.neon, services.neon, doctrine.neon, local.neon (gitignored)
 ├── migrations/
-├── resources/docx/                   # výchozí DOCX šablony
-├── tests/                            # bootstrap.php, Unit/, Integration/, fixtures/
-├── var/                              # database.sqlite, storage/ (přílohy, dokumenty) – mimo www, gitignored
+├── resources/                        # docx šablony, prompty AI, šablona migrace
+├── tests/                            # Unit/, Integration/ (zrcadlí app/), Support/, fixtures/
+├── var/                              # database.sqlite, storage/ – mimo www, gitignored
 ├── temp/  log/
 ├── www/index.php
-├── composer.json  phpstan.neon  ecs.php  package.json  vite.config.js
 └── doc/
 ```
 
@@ -232,6 +219,20 @@ konsel/
 - Dashboard: nejbližší a poslední zasedání
 - kontrola lhůty: při sdílení méně než 7 dní před zasedáním varování (úřední deska)
 **Hotovo když:** jde založit zasedání a projít celým cyklem. Unit testy pokrývají všechny přechody.
+
+### [x] T12a – Struktura podle zvyklostí vlastníka (Model + moduly)
+**Cíl:** Projekt má strukturu, na kterou je vlastník zvyklý (zadání mimo původní plán).
+- `app/Model/<Doména>/` místo Domain/Application/Infrastructure, moduly `AdminModule`, `PublicModule`, `ApiModule`, `ErrorModule` přímo v `app/`, každý presenter ve vlastní složce s PHP i Latte
+- `Home` → `PublicModule/Homepage`, přihlášení `Public:Sign`, `/api/health` jako první endpoint ApiModule
+- CLAUDE.md, ADR A5/A12 a cílová struktura přepsané
+**Hotovo když:** `make qa` je zelené a všechny stránky fungují na nových cestách.
+
+### [ ] T12b – Napojení na OpenAI (GPT), klíč v nastavení
+**Cíl:** Základ pro AI funkce (T37, T38, T40).
+- rozhraní `AiClient` (Model/Ai) + `OpenAiClient` (HTTP klient nad Chat Completions / Responses API), timeout, srozumitelné chyby
+- Nastavení obce: API klíč (šifrovaný v DB, v UI jen poslední 4 znaky), model, tlačítko „Otestovat připojení“
+- bez klíče se AI funkce nezobrazují. Testy s fake klientem, žádné volání ven v testech.
+**Hotovo když:** správce uloží klíč, test připojení ukáže výsledek a klíč není v DB čitelný.
 
 ### [ ] T13 – Body programu
 **Cíl:** Sestavení programu.
@@ -429,8 +430,7 @@ konsel/
 **Hotovo když:** test s mockem HTTP klienta funguje a ruční test s IČO obce projde.
 
 ### [ ] T37 – AI asistent textů
-- při implementaci **načíst skill `claude-api`** (aktuální modely a SDK)
-- rozhraní `AiTextGenerator`, implementace přes Claude API. Model a klíč v local.neon, nikdy v repu.
+- staví na `AiClient` z T12b (OpenAI GPT, klíč a model z Nastavení obce)
 - funkce: text bodu z názvu a kontextu, návrh usnesení, úprava stylu („úředně“, „zkrátit“)
 - prompty v souborech (resources/prompts/), kontext obce, příklady z knihovny šablon
 - návrh se vždy jen **vloží k revizi**, nikdy se neuloží sám. Log použití (`AiUsageLog`: kdo, kdy, tokeny).
@@ -509,3 +509,4 @@ Vše od T32 je rozšíření, pořadí se dá upravit podle potřeby.
 - 2026-11-16 T10 – `Body` je agregát (členství jen přes `addMember/endMembership/removeMembership`), hlídá souběh členství, unikátní funkce (starosta), počet míst i období. Upozornění na složení (rada < 15 zastupitelů, sudý počet, neobsazená místa) vrací `PeopleFacade::getStructureWarnings()`. **Rozhodnutí: bez contributte/datagrid** – seznamy jsou prosté Latte tabulky (desítky záznamů); pro dlouhé seznamy (usnesení) přidat v T26 jednoduchý filtr + Paginator. Osoby mají vlastní presenter `Admin:Person`. Přidána druhá vrstva izolace obcí `SecuredPresenter::assertOwned()` (SQL filtr nepokrývá identity mapu). Přepínač orgánu v layoutu → T34. Mazání přes POST formulář + `#[Requires(methods: 'POST', sameOrigin: true)]`, potvrzení `data-confirm`.
 - 2026-11-16 T11 – Správa uživatelů (`Admin:User`): dočasné heslo se zobrazí jednou (flash), ochrana posledního správce obce, nelze měnit vlastní roli ani se deaktivovat. `Admin:Account` (Můj účet) + vynucená změna dočasného hesla v `SecuredPresenter`. `DemoSeeder` (Console/Demo) + `app:seed-demo` (v produkci jen s --force), součást `composer db:reset`. Demo účty `spravce@ / editor@ / ctenar@ / superadmin@demo.konsel.test`, heslo `demo-heslo-123`. Test `DemoSeederTest` hlídá, že seeder projde na prázdné DB.
 - 2026-11-16 T12 – `Meeting` se stavovým automatem v entitě (`MeetingTransition` má source/target, stav mění jen share/start/close/approveMinutes/reopen). Znovuotevření (Closed → InProgress) jen s `Privilege::Manage` (správce obce), zápis do auditu doplní T39. Navíc proti plánu: `correctTimes()` pro zpětné zadání skutečných časů (UI v T23), mazání jen zasedání v přípravě, předsedající a ověřovatelé musí být k datu zasedání členy orgánu, jediné ustavující zasedání na orgán a jen u zastupitelstva. Lhůta 7 dní (§ 93 odst. 1) jen pro zastupitelstvo a jen jako varování. Číslo zasedání = pořadí v orgánu (unikátní body + number), prázdné = další v pořadí. Dashboard: připravovaná (nedokončená) a poslední (proběhlá) zasedání. Smazání osoby, která je u zasedání v nějaké funkci, je zakázané. `PresenterTester` umí POST signály (vymění http.request).
+- 2026-11-16 T12a – Na přání vlastníka přestavěná struktura (mimo původní plán, ADR A5/A12 upravené): `app/Model/<Doména>` (entity + fasády + rozhraní repozitářů + `Doctrine*Repository` + Command/), moduly `AdminModule` / `PublicModule` / `ApiModule` / `ErrorModule` přímo v `app/`, presenter a jeho šablony v jedné složce. Mapování `App\*Module\**Presenter`, layout `app/@layout.latte`, sdílené UI (BasePresenter, Form, Menu) v `app/UI`, migrační builder v `Core/Doctrine/Migration`. `Home` → `Public:Homepage`, `Sign` → `Public:Sign`. Nový endpoint `/api/health` (stav DB pro monitoring). Testy zrcadlí novou strukturu.

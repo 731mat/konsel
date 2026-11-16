@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Migrations;
 
-use App\Infrastructure\Persistence\Migration\ColumnFactory as C;
-use App\Infrastructure\Persistence\Migration\SchemaMigration;
+use App\Core\Doctrine\Migration\ColumnFactory as C;
+use App\Core\Doctrine\Migration\SchemaMigration;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\DBAL\Schema\TableEditor;
 

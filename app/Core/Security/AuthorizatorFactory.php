@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Security;
 
-use App\Domain\User\Role;
+use App\Model\User\Role;
 use Nette\Security\Permission;
 use Nette\StaticClass;
 

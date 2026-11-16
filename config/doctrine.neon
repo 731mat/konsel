@@ -39,8 +39,8 @@ nettrine.orm:
 			mapping:
 				App:
 					type: attributes
-					directories: [%appDir%/Domain]
-					namespace: App\Domain
+					directories: [%appDir%/Model]
+					namespace: App\Model
 			filters:
 				tenant:
 					class: App\Core\Tenancy\TenantFilter

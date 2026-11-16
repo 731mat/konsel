@@ -8,27 +8,28 @@ services:
 	- App\Core\Tenancy\CurrentMunicipality
 	- App\Core\Doctrine\TimestampableSubscriber
 	- App\Core\Doctrine\MigrationsTableSchemaSubscriber
-	- App\Infrastructure\Persistence\DoctrineTransactionManager
-	- App\Infrastructure\Storage\LocalFileStorage(%varDir%/storage)
+	- App\Core\Doctrine\DatabaseHealth
+	- App\Model\Shared\DoctrineTransactionManager
+	- App\Model\Storage\LocalFileStorage(%varDir%/storage)
 	- App\Core\Security\Authenticator
 	- App\Core\Security\AuthorizatorFactory::create
-	- App\Application\Security\LoginThrottle
+	- App\Model\User\LoginThrottle
 	- App\Console\Demo\DemoSeeder
 	- App\Console\Demo\SeedDemoCommand(productionMode: %productionMode%)
-	- App\Presentation\Accessory\FormFactory
-	- App\Presentation\Accessory\Menu\AdminMenuFactory
+	- App\UI\Form\FormFactory
+	- App\UI\Menu\AdminMenuFactory
 	viteAssets: App\Core\Latte\ViteAssets(%rootDir%/www/assets/.vite/manifest.json)
 
 
 # Automatická registrace podle konvence adresářů
 search:
 	facades:
-		in: %appDir%/Application
+		in: %appDir%/Model
 		classes: [*Facade]
 
 	repositories:
-		in: %appDir%/Infrastructure/Persistence/Repository
-		classes: [*Repository]
+		in: %appDir%/Model
+		classes: [Doctrine*Repository]
 
 	commands:
 		in: %appDir%/Console

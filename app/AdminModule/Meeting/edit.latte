@@ -1,0 +1,13 @@
+{block title}Upravit {$meeting->getTitle()}{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href="default">Zasedání</a></li>
+	<li class="breadcrumb-item"><a n:href="detail, id: $meeting->getId()">{$meeting->getTitle()}</a></li>
+	<li class="breadcrumb-item active" aria-current="page">Upravit</li>
+{/block}
+
+{block content}
+{varType App\Model\Meeting\Meeting $meeting}
+<h1 class="h3 mb-1">Upravit {$meeting->getTitle()}</h1>
+<p class="text-body-secondary mb-4">{$meeting->getBody()->getName()}</p>
+<div class="card" style="max-width: 40rem"><div class="card-body">{control meetingForm}</div></div>

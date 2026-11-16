@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Application\People\Command\SavePerson;
-use App\Application\People\PeopleFacade;
 use App\Core\Tenancy\CurrentMunicipality;
-use App\Domain\Shared\Exception\NotFoundException;
+use App\Model\People\Command\SavePerson;
+use App\Model\People\PeopleFacade;
+use App\Model\Shared\Exception\NotFoundException;
 use Doctrine\ORM\EntityManagerInterface;
 use Tester\Assert;
 use Tests\Support\ContainerFactory;
@@ -29,6 +29,6 @@ test('data of another municipality is invisible once current municipality is set
 	$container->getByType(CurrentMunicipality::class)->set($facade->getPerson(1)->getMunicipality());
 
 	Assert::exception(fn() => $facade->getPerson($foreignId), NotFoundException::class);
-	$all = $container->getByType(EntityManagerInterface::class)->createQuery('SELECT p FROM App\Domain\People\Person p')->getResult();
+	$all = $container->getByType(EntityManagerInterface::class)->createQuery('SELECT p FROM App\Model\People\Person p')->getResult();
 	Assert::count(1, $all);
 });

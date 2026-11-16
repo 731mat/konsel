@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Support;
 
 use App\Core\Security\Authenticator;
-use App\Domain\User\User as AppUser;
+use App\Model\User\User as AppUser;
 use Nette\Application\IPresenterFactory;
 use Nette\Application\Request;
 use Nette\Application\Response;

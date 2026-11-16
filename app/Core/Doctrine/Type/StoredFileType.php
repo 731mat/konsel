@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Doctrine\Type;
 
-use App\Domain\Shared\ValueObject\StoredFile;
+use App\Model\Shared\ValueObject\StoredFile;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Types\ConversionException;
 use Doctrine\DBAL\Types\JsonType;

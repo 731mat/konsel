@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Doctrine;
 
-use App\Domain\Shared\Timestampable;
+use App\Model\Shared\Timestampable;
 use Doctrine\Common\EventSubscriber;
 use Doctrine\ORM\Event\OnFlushEventArgs;
 use Doctrine\ORM\Event\PrePersistEventArgs;

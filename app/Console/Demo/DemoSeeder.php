@@ -4,23 +4,23 @@ declare(strict_types=1);
 
 namespace App\Console\Demo;
 
-use App\Application\Meeting\Command\AssignOfficials;
-use App\Application\Meeting\Command\SaveMeeting;
-use App\Application\Meeting\MeetingFacade;
-use App\Application\Municipality\Command\CreateMunicipality;
-use App\Application\Municipality\Command\UpdateMunicipalitySettings;
-use App\Application\Municipality\MunicipalityFacade;
-use App\Application\People\Command\AddMember;
-use App\Application\People\Command\SaveBody;
-use App\Application\People\Command\SavePerson;
-use App\Application\People\PeopleFacade;
-use App\Application\User\Command\CreateUser;
-use App\Application\User\UserFacade;
-use App\Domain\Meeting\MeetingTransition;
-use App\Domain\Meeting\MeetingType;
-use App\Domain\People\BodyType;
-use App\Domain\People\MemberFunction;
-use App\Domain\User\Role;
+use App\Model\Meeting\Command\AssignOfficials;
+use App\Model\Meeting\Command\SaveMeeting;
+use App\Model\Meeting\MeetingFacade;
+use App\Model\Meeting\MeetingTransition;
+use App\Model\Meeting\MeetingType;
+use App\Model\Municipality\Command\CreateMunicipality;
+use App\Model\Municipality\Command\UpdateMunicipalitySettings;
+use App\Model\Municipality\MunicipalityFacade;
+use App\Model\People\BodyType;
+use App\Model\People\Command\AddMember;
+use App\Model\People\Command\SaveBody;
+use App\Model\People\Command\SavePerson;
+use App\Model\People\MemberFunction;
+use App\Model\People\PeopleFacade;
+use App\Model\User\Command\CreateUser;
+use App\Model\User\Role;
+use App\Model\User\UserFacade;
 use Psr\Clock\ClockInterface;
 
 /**

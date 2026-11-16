@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Console\Municipality;
 
-use App\Application\Municipality\Command\CreateMunicipality;
-use App\Application\Municipality\MunicipalityFacade;
-use App\Domain\Shared\Exception\ValidationException;
+use App\Model\Municipality\Command\CreateMunicipality;
+use App\Model\Municipality\MunicipalityFacade;
+use App\Model\Shared\Exception\ValidationException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Core\Security;
 
-use App\Application\Security\LoginThrottle;
-use App\Application\Shared\TransactionManager;
-use App\Domain\Shared\Exception\ValidationException;
-use App\Domain\Shared\ValueObject\Email;
-use App\Domain\User\User;
-use App\Domain\User\UserRepository;
+use App\Model\Shared\Exception\ValidationException;
+use App\Model\Shared\TransactionManager;
+use App\Model\Shared\ValueObject\Email;
+use App\Model\User\LoginThrottle;
+use App\Model\User\User;
+use App\Model\User\UserRepository;
 use Nette\Http\IRequest;
 use Nette\Security\AuthenticationException;
 use Nette\Security\IdentityHandler;

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Application\Security\LoginThrottle;
-use App\Application\Shared\TransactionManager;
 use App\Core\Security\Authenticator;
-use App\Domain\User\UserRepository;
+use App\Model\Shared\TransactionManager;
+use App\Model\User\LoginThrottle;
+use App\Model\User\UserRepository;
 use Nette\Security\AuthenticationException;
 use Nette\Security\SimpleIdentity;
 use Tester\Assert;
@@ -59,7 +59,7 @@ test('deactivated user cannot log in and loses session identity', function (): v
 test('identity is refreshed from database on wakeup', function (): void {
 	[$authenticator, $fixtures, $container] = bootAuthenticator();
 	$user = $fixtures->user($fixtures->municipality());
-	$container->getByType(TransactionManager::class)->run(fn() => $user->changeRole(App\Domain\User\Role::Admin));
+	$container->getByType(TransactionManager::class)->run(fn() => $user->changeRole(App\Model\User\Role::Admin));
 
 	$identity = $authenticator->wakeupIdentity($authenticator->sleepIdentity(new SimpleIdentity($user->getId(), ['editor'])));
 

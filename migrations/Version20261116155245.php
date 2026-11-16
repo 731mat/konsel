@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Migrations;
 
-use App\Infrastructure\Persistence\Migration\SchemaMigration;
-use App\Infrastructure\Persistence\Migration\TableBuilder;
+use App\Core\Doctrine\Migration\SchemaMigration;
+use App\Core\Doctrine\Migration\TableBuilder;
 use Doctrine\DBAL\Schema\ForeignKeyConstraint\ReferentialAction;
 use Doctrine\DBAL\Schema\Schema;
 

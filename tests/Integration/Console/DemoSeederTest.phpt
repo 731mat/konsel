@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Application\Meeting\MeetingFacade;
-use App\Application\People\PeopleFacade;
 use App\Console\Demo\DemoSeeder;
 use App\Core\Security\Authenticator;
-use App\Domain\Meeting\MeetingStatus;
+use App\Model\Meeting\MeetingFacade;
+use App\Model\Meeting\MeetingStatus;
+use App\Model\People\PeopleFacade;
 use Tester\Assert;
 use Tests\Support\ContainerFactory;
 use Tests\Support\TestDatabase;

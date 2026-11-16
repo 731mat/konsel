@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Console\User;
 
-use App\Application\Municipality\MunicipalityFacade;
-use App\Application\Security\PasswordPolicy;
-use App\Application\User\Command\CreateUser;
-use App\Application\User\UserFacade;
-use App\Domain\Shared\Exception\DomainException;
-use App\Domain\User\Role;
+use App\Model\Municipality\MunicipalityFacade;
+use App\Model\Shared\Exception\DomainException;
+use App\Model\User\Command\CreateUser;
+use App\Model\User\PasswordPolicy;
+use App\Model\User\Role;
+use App\Model\User\UserFacade;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;

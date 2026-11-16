@@ -14,13 +14,17 @@ final class RouterFactory
 	public static function createRouter(): RouteList
 	{
 		$router = new RouteList();
-		$router->addRoute('prihlaseni', 'Sign:in');
-		$router->addRoute('odhlaseni', 'Sign:out');
+
+		$router->withModule('Api')
+			->addRoute('api/<presenter>[/<action>[/<id \d+>]]', 'Health:default');
 
 		$router->withModule('Admin')
 			->addRoute('admin[/<presenter>[/<action>[/<id \d+>]]]', 'Dashboard:default');
 
-		$router->addRoute('<presenter>/<action>[/<id>]', 'Home:default');
+		$router->withModule('Public')
+			->addRoute('prihlaseni', 'Sign:in')
+			->addRoute('odhlaseni', 'Sign:out')
+			->addRoute('<presenter>/<action>[/<id>]', 'Homepage:default');
 
 		return $router;
 	}

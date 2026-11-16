@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Tenancy;
 
-use App\Domain\Shared\TenantOwned;
+use App\Model\Shared\TenantOwned;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Query\Filter\SQLFilter;
 

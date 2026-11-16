@@ -1,0 +1,9 @@
+{parameters App\Model\Meeting\MeetingStatus $status}
+{var $tone = [
+	'draft' => 'text-bg-secondary',
+	'shared' => 'text-bg-info',
+	'in_progress' => 'text-bg-warning',
+	'closed' => 'text-bg-primary',
+	'minutes_approved' => 'text-bg-success',
+][$status->value]}
+<span class="badge {$tone}">{$status->label()}</span>

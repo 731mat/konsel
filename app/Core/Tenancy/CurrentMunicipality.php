@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Tenancy;
 
-use App\Domain\Municipality\Municipality;
+use App\Model\Municipality\Municipality;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 

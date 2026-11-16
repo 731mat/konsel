@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Core\Security\AuthorizatorFactory;
 use App\Core\Security\Privilege as P;
 use App\Core\Security\Resource as R;
-use App\Domain\User\Role;
+use App\Model\User\Role;
 use Tester\Assert;
 
 require __DIR__ . '/../../../bootstrap.php';

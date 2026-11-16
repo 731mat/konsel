@@ -1,0 +1,6 @@
+{varType App\UI\Menu\MenuItem[] $items}
+<nav class="nav nav-pills flex-column gap-1">
+	<a n:foreach="$items as $item" href="{$presenter->link($item->destination())}" n:class="nav-link, $presenter->isLinkCurrent($item->linkMask()) ? active">
+		<i class="bi bi-{$item->icon}" aria-hidden="true"></i> {$item->label}
+	</a>
+</nav>

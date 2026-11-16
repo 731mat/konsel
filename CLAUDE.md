@@ -25,20 +25,29 @@ make db-reset             # smazat DB → migrace → demo data
 ## Pravidla kódu
 
 - `declare(strict_types=1)`, třídy `final` (výjimky jen u Doctrine proxy, kde je to nutné), `readonly`, kde to jde. Nativní typy všude.
-- **Vrstvy:** `Presentation → Application (fasády) → Domain ← Infrastructure`.
-  - Presentery a komponenty **nikdy** nepoužívají `EntityManager` ani repozitáře přímo, jen fasády z `App\Application`.
-  - `Domain` nezávisí na Nette ani na Infrastructure (Doctrine mapovací atributy jsou jediná povolená výjimka).
-  - Externí služby (mail, storage, AI, ARES, PDF, STT, search) jsou rozhraní v Domain/Application, implementace v Infrastructure.
-- **Entity mají chování, ne settery:** `$meeting->start($clock)`, ne `$meeting->setStatus(...)`. Invarianty hlídá entita a porušení vyhodí doménovou výjimku (`App\Domain\Shared\Exception\*`).
+- **Struktura** (podrobně v doc/todo-v2.md, sekce Cílová struktura):
+  ```
+  app/Model/<Doména>/      entity, enumy, VO, rozhraní repozitáře + Doctrine*Repository, *Facade, Command/
+  app/Model/Shared/        výjimky, IntegerId, TenantOwned, TransactionManager
+  app/AdminModule/<Presenter>/   XxxPresenter.php + šablony *.latte + XxxFormData.php (vše v jedné složce)
+  app/PublicModule/, app/ApiModule/, app/ErrorModule/   stejný princip
+  app/UI/                  BasePresenter, Form/ (FormFactory, renderer), Menu/; layout je app/@layout.latte
+  app/Core/                routing, ACL, tenancy, Doctrine (typy, migrace), Latte
+  ```
+  - Presentery a komponenty **nikdy** nepoužívají `EntityManager` ani repozitáře přímo, jen fasády (`App\Model\*\*Facade`).
+  - Entity a doménová pravidla nezávisí na Nette (Doctrine mapovací atributy jsou jediná povolená výjimka). Rozhraní repozitáře je vedle entity, implementace `Doctrine*Repository` ve stejné složce.
+  - Externí služby (mail, storage, AI, ARES, PDF, STT, search) jsou rozhraní v `Model/<Doména>` a implementace vedle něj s prefixem technologie (`LocalFileStorage`, `OpenAi…`).
+  - Presenter `Admin:Meeting` = třída `App\AdminModule\Meeting\MeetingPresenter` (mapování `App\*Module\**Presenter`), odkazy mezi moduly `:Public:Sign:in`.
+- **Entity mají chování, ne settery:** `$meeting->start($clock)`, ne `$meeting->setStatus(...)`. Invarianty hlídá entita a porušení vyhodí doménovou výjimku (`App\Model\Shared\Exception\*`).
 - Stavy a číselníky = PHP backed enumy s metodou `label(): string` pro české UI.
 - Jedna metoda fasády = jedna transakce přes `TransactionManager::run()` (flush + commit). Nepoužívej `EntityManager::wrapInTransaction()` – při doménové chybě zavře EntityManager. Vstupy jsou readonly Command DTO, nahrané soubory jako `UploadedFile` (ne Nette FileUpload).
 - Validuj před změnou stavu: doménové metody vyhodí výjimku dřív, než změní pole.
 - Čas jen přes `Psr\Clock\ClockInterface`, vždy `DateTimeImmutable`. Nikdy `new DateTime()` ani `time()` v doméně.
 - Entity patřící obci implementují `TenantOwned` (asociace `municipality`). Izolaci hlídá `TenantFilter` a navíc v presenterech `assertOwned($entita)` u každé entity načtené podle ID z URL (filtr se neuplatní na entity už načtené v identity mapě).
 - Migrace dědí z `SchemaMigration` a používají `createTable('x', fn (TableBuilder $t) => …)` / `alterTable()` / `dropTable()`. Žádné raw SQL ani deprekované `$schema->createTable()`. `make console ARGS="migrations:diff"` slouží jen jako předloha. Test `DatabaseSchemaTest` ověří, že migrace = mapping.
-- Nové služby se registrují samy podle konvence (`search:` v config/services.neon): `*Facade` v Application, `*Repository` v Infrastructure/Persistence/Repository, `*Command` v Console.
+- Nové služby se registrují samy podle konvence (`search:` v config/services.neon): `*Facade` a `Doctrine*Repository` v Model, `*Command` v Console.
 - Soubory se ukládají jen přes `FileStorage` a servírují přes presenter s kontrolou ACL. Nic uživatelského ve `www/`.
-- Každá `action*`/`handle*` v Admin modulu má `#[Allowed(resource, privilege)]`.
+- Každá `action*`/`render*`/`handle*` v AdminModule má `#[Allowed(resource, privilege)]` (hlídá `AllowedCoverageTest`). Admin presentery dědí z `App\AdminModule\SecuredPresenter`.
 - Formuláře přes `FormFactory`. Zpracování formuláře volá fasádu a doménové výjimky převádí na chyby formuláře.
 - Testy: doménová pravidla = unit testy (povinné), fasády = integrační testy nad SQLite, presentery přes `Tests\Support\PresenterTester` (loginAs, render, submitForm). Data přes `Tests\Support\Fixtures`. Nová funkce rozšíří `DemoSeeder`.
 - Migrace s daty: nový NOT NULL sloupec = (1) přidat s výchozí hodnotou + UPDATE, (2) v další migraci výchozí hodnotu odebrat. `alterTable()` nekombinuj s jinou změnou téže tabulky v jedné migraci.

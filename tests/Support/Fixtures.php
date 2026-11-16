@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Support;
 
-use App\Application\Municipality\Command\CreateMunicipality;
-use App\Application\Municipality\MunicipalityFacade;
-use App\Application\User\Command\CreateUser;
-use App\Application\User\UserFacade;
-use App\Domain\Municipality\Municipality;
-use App\Domain\User\Role;
-use App\Domain\User\User;
+use App\Model\Municipality\Command\CreateMunicipality;
+use App\Model\Municipality\Municipality;
+use App\Model\Municipality\MunicipalityFacade;
+use App\Model\User\Command\CreateUser;
+use App\Model\User\Role;
+use App\Model\User\User;
+use App\Model\User\UserFacade;
 use Nette\DI\Container;
 
 /**

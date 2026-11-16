@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use App\Core\Tenancy\TenantFilter;
-use App\Domain\Municipality\Municipality;
-use App\Domain\Shared\TenantOwned;
+use App\Model\Municipality\Municipality;
+use App\Model\Shared\TenantOwned;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\Persistence\Mapping\RuntimeReflectionService;
