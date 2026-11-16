@@ -34,7 +34,8 @@ make db-reset             # smazat DB → migrace → demo data
 - Jedna metoda fasády = jedna transakce (`wrapInTransaction` / flush na konci). Vstupy jsou readonly Command DTO.
 - Čas jen přes `Psr\Clock\ClockInterface`, vždy `DateTimeImmutable`. Nikdy `new DateTime()` ani `time()` v doméně.
 - Entity patřící obci implementují `TenantOwned`. Izolaci hlídá `TenantFilter`, nespoléhej na ruční `WHERE`.
-- Migrace přes Doctrine Schema API (platformově nezávislé). `migrations:diff` jen jako předloha.
+- Migrace dědí z `SchemaMigration` a používají `createTable('x', fn (TableBuilder $t) => …)` / `alterTable()` / `dropTable()`. Žádné raw SQL ani deprekované `$schema->createTable()`. `make console ARGS="migrations:diff"` slouží jen jako předloha. Test `DatabaseSchemaTest` ověří, že migrace = mapping.
+- Nové služby se registrují samy podle konvence (`search:` v config/services.neon): `*Facade` v Application, `*Repository` v Infrastructure/Persistence/Repository, `*Command` v Console.
 - Soubory se ukládají jen přes `FileStorage` a servírují přes presenter s kontrolou ACL. Nic uživatelského ve `www/`.
 - Každá `action*`/`handle*` v Admin modulu má `#[Allowed(resource, privilege)]`.
 - Formuláře přes `FormFactory`. Zpracování formuláře volá fasádu a doménové výjimky převádí na chyby formuláře.

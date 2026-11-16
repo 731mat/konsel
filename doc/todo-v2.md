@@ -30,7 +30,7 @@
 | A1 | **PHP 8.4, Nette 3.3 (application), Latte 3.1**, `declare(strict_types=1)` všude | Aktuální stabilní stack. |
 | A2 | **Doctrine ORM 3** přes `nettrine/*` (ne Nette Database Explorer) | Opravdové entity s chováním, abstrakce DB platformy (SQLite → MySQL = změna konfigurace), migrace, optimistic locking. |
 | A3 | **SQLite** (WAL, `foreign_keys=ON`, `busy_timeout`) pro vývoj i první provoz, později **MySQL/MariaDB** (T41) | Nulová instalace teď, jasná cesta dál. |
-| A4 | Migrace se píšou přes **Doctrine Schema API** (`$schema->createTable()`), ne raw SQL. Výjimka: FTS indexy (T31), větvené podle platformy. | Stejné migrace poběží na SQLite i MySQL. |
+| A4 | Migrace dědí z `SchemaMigration` a píšou se přes `createTable()` + `TableBuilder` / `alterTable()` (nedeprekované DBAL editor API, SQL generuje platforma za běhu), ne raw SQL. Výjimka: FTS indexy (T32), větvené podle platformy. | Stejné migrace poběží na SQLite i MySQL. |
 | A5 | Vrstvy **Domain / Application / Infrastructure / Presentation** (viz struktura níže) | Doména je testovatelná bez frameworku, presentery jsou tenké. |
 | A6 | Kód, třídy a DB **anglicky**, UI a dokumenty **česky**, vazby přes slovníček v CLAUDE.md | Konzistence a žádné „Zasedani“ vedle „Meeting“. |
 | A7 | **Multi-tenant od začátku** (entita `Municipality` + Doctrine SQL filtr) | Teď to stojí málo, později by to byl přepis. Provozovat se dá i jen pro jednu obec. |
@@ -41,7 +41,7 @@
 | A12 | Externí služby (AI, přepis audia, ARES, mail, storage) vždy za **rozhraním v Domain/Application**, implementace v Infrastructure | Testovatelnost a možnost vyměnit dodavatele (data v EU). |
 | A13 | Zastupitelé se přihlašují přes **osobní token v odkazu** (per osoba × zasedání, v DB jen hash, expirace, revokace) | Pohodlí jako u konkurence, ale dohledatelné a odvolatelné. |
 | A14 | Souběžná editace = **zámek bodu s TTL + heartbeat** a k tomu Doctrine `#[Version]` jako pojistka. Synchronizace přes polling snippetů (bez websocketů). | Jednoduché a spolehlivé. Mercure/SSE se dá doplnit později. |
-| A15 | Čas jen přes `Psr\Clock\ClockInterface` (`SystemClock` / `FrozenClock` v testech), vždy `DateTimeImmutable` | Deterministické testy lhůt, zámků a tokenů. |
+| A15 | Čas jen přes `Psr\Clock\ClockInterface` (symfony/clock: `NativeClock`, v testech `MockClock`), vždy `DateTimeImmutable`, časová zóna Europe/Prague | Deterministické testy lhůt, zámků a tokenů. |
 | A16 | **Vše běží v Dockeru** (docker compose): PHP + Apache, Node/Vite, Mailpit, Gotenberg, později MariaDB. Na hostiteli se nic neinstaluje, příkazy jdou přes `make` (wrapper nad `docker compose`). | Čistý Mac, stejné prostředí pro vývoj i produkci. |
 
 ---
@@ -146,7 +146,7 @@ konsel/
 - testy: integrační testy používají samostatnou SQLite DB (soubor v temp/, nebo in-memory) s migracemi
 **Hotovo když:** `bin/console migrations:migrate` vytvoří DB, `orm:validate-schema` je OK, PHPStan rozumí repozitářům.
 
-### [ ] T04 – Doménové základy a tenancy
+### [x] T04 – Doménové základy a tenancy
 **Cíl:** Společné stavební kameny pro všechny další entity.
 - `Domain/Shared`: `DomainException` (hierarchie: `NotFound`, `InvalidState`, `AccessDenied`, `ValidationFailed`), trait `Timestampable` (createdAt/updatedAt přes lifecycle callbacks a Clock)
 - `Core/Clock`: `SystemClock`, `FrozenClock` (+ registrace v DI)
@@ -500,3 +500,4 @@ Vše od T32 je rozšíření, pořadí se dá upravit podle potřeby.
 - 2026-11-16 T01 – Composer vybral nette/application 3.3 (plán počítal s 3.2). Debug režim jen přes env NETTE_DEBUG=1 (compose.yaml). Mapování `App\Presentation\*\**Presenter`, šablony vedle presenterů.
 - 2026-11-16 T02 – ECS se sadou PER-CS + common + cleanCode, odsazení tabulátory (Nette konvence). PHPStan max + strict + deprecation rules, analyzuje i .phpt. Pravidlo `final` tříd zatím jen v CLAUDE.md, ne jako fixer (kvůli Doctrine proxy, rozhodne se v T03).
 - 2026-11-16 T03 – nettrine/cache je opuštěný → metadata cache přes symfony/cache (PhpFilesAdapter). ORM s `lazyNativeObjects: true` (PHP 8.4), entity tedy mohou být `final`. Integrační testy: SQLite in-memory + migrace + SchemaValidator (nahrazuje orm:validate-schema v qa). Každé vlákno Testeru má vlastní temp/tests/N. Šablona migrací resources/migration.tpl.
+- 2026-11-16 T04 – Clock = symfony/clock (NativeClock/MockClock) místo vlastních tříd. DBAL 4.6 deprekoval `$schema->createTable()/addColumn()` → vlastní `SchemaMigration` + `TableBuilder` (app/Infrastructure/Persistence/Migration), názvy indexů/FK generuje stejně jako ORM. Transakce přes `Application\Shared\TransactionManager`. Služby se registrují přes `search:` v services.neon (*Facade, *Repository, *Command). Integrační test TenantFilteru na reálné entitě doplnit v T10 (zatím jen unit test SQL podmínky).

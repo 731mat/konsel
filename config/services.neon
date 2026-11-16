@@ -1,2 +1,25 @@
 services:
 	- App\Core\Routing\RouterFactory::createRouter
+
+	clock:
+		type: Psr\Clock\ClockInterface
+		factory: Symfony\Component\Clock\NativeClock('Europe/Prague')
+
+	- App\Core\Tenancy\CurrentMunicipality
+	- App\Core\Doctrine\TimestampableSubscriber
+	- App\Infrastructure\Persistence\DoctrineTransactionManager
+
+
+# Automatická registrace podle konvence adresářů
+search:
+	facades:
+		in: %appDir%/Application
+		classes: [*Facade]
+
+	repositories:
+		in: %appDir%/Infrastructure/Persistence/Repository
+		classes: [*Repository]
+
+	commands:
+		in: %appDir%/Console
+		classes: [*Command]

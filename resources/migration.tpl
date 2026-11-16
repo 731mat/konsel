@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace <namespace>;
 
+use App\Infrastructure\Persistence\Migration\SchemaMigration;
+use App\Infrastructure\Persistence\Migration\TableBuilder;
 use Doctrine\DBAL\Schema\Schema;
-use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Migrace se píše přes Schema API ($schema->createTable() …), ne raw SQL – musí běžet na SQLite i MySQL.
+ * Píše se přes createTable()/alterTable()/dropTable() (SchemaMigration), ne raw SQL.
+ * Výstup migrations:diff slouží jen jako předloha.
  */
-final class <className> extends AbstractMigration
+final class <className> extends SchemaMigration
 {
 	public function getDescription(): string
 	{

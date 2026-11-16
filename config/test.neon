@@ -7,3 +7,9 @@ nettrine.dbal:
 			driver: pdo_sqlite
 			memory: true
 			path: ':memory:'
+
+
+services:
+	clock:
+		type: Psr\Clock\ClockInterface
+		factory: Symfony\Component\Clock\MockClock('2026-11-16 10:00:00', 'Europe/Prague')

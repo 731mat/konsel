@@ -34,6 +34,10 @@ nettrine.orm:
 					type: attributes
 					directories: [%appDir%/Domain]
 					namespace: App\Domain
+			filters:
+				tenant:
+					class: App\Core\Tenancy\TenantFilter
+					enabled: false
 			defaultCache: Symfony\Component\Cache\Adapter\PhpFilesAdapter(namespace: doctrine, directory: %tempDir%/cache/doctrine)
 
 

@@ -2,6 +2,8 @@ parameters:
 	level: max
 	paths:
 		- app
+		- bin/console
+		- migrations
 		- tests
 		- www
 	tmpDir: temp/phpstan
