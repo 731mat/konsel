@@ -16,6 +16,14 @@ latte:
 session:
 	expiration: 14 days
 	cookieSamesite: Lax
+	cookieSecure: auto
+	name: konsel_sid
+
+
+security:
+	authentication:
+		storage: session
+		expiration: 60 minutes
 
 
 di:

@@ -8,6 +8,9 @@ services:
 	- App\Core\Tenancy\CurrentMunicipality
 	- App\Core\Doctrine\TimestampableSubscriber
 	- App\Infrastructure\Persistence\DoctrineTransactionManager
+	- App\Core\Security\Authenticator
+	- App\Application\Security\LoginThrottle
+	- App\Presentation\Accessory\FormFactory
 
 
 # Automatická registrace podle konvence adresářů

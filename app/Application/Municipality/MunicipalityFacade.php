@@ -43,6 +43,16 @@ final readonly class MunicipalityFacade
 		});
 	}
 
+	public function get(int $id): Municipality
+	{
+		return $this->municipalities->get($id);
+	}
+
+	public function findBySlug(string $slug): ?Municipality
+	{
+		return $this->municipalities->findBySlug($slug);
+	}
+
 	/**
 	 * @return list<Municipality>
 	 */

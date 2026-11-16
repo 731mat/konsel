@@ -14,6 +14,12 @@ final class RouterFactory
 	public static function createRouter(): RouteList
 	{
 		$router = new RouteList();
+		$router->addRoute('prihlaseni', 'Sign:in');
+		$router->addRoute('odhlaseni', 'Sign:out');
+
+		$router->withModule('Admin')
+			->addRoute('admin[/<presenter>[/<action>[/<id \d+>]]]', 'Dashboard:default');
+
 		$router->addRoute('<presenter>/<action>[/<id>]', 'Home:default');
 
 		return $router;

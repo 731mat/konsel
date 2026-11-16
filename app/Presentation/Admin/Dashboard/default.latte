@@ -1,0 +1,8 @@
+{block title}Přehled{/block}
+
+{block content}
+<main>
+	<h1>Přehled</h1>
+	<p>Přihlášen: {$user->getIdentity()->getData()['name']}{if $municipality} · {$municipality->getName()}{/if}</p>
+	<p><a n:href=":Sign:out">Odhlásit se</a></p>
+</main>

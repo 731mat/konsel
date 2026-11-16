@@ -175,6 +175,24 @@ final class TableBuilder
 		return $this->addIndex(IndexType::UNIQUE, 'uniq', [$column, ...array_values($columns)]);
 	}
 
+	/**
+	 * Index s explicitním názvem (odpovídá #[ORM\Index(name: …)]).
+	 *
+	 * @param non-empty-string $name
+	 * @param non-empty-string $column
+	 * @param non-empty-string ...$columns
+	 */
+	public function namedIndex(string $name, string $column, string ...$columns): self
+	{
+		$this->indexes[] = Index::editor()
+			->setUnquotedName($name)
+			->setType(IndexType::REGULAR)
+			->setUnquotedColumnNames($column, ...array_values($columns))
+			->create();
+
+		return $this;
+	}
+
 	public function build(): Table
 	{
 		$editor = Table::editor()->setUnquotedName($this->name);
