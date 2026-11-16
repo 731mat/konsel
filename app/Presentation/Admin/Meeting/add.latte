@@ -1,0 +1,20 @@
+{block title}Nové zasedání{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href="default">Zasedání</a></li>
+	<li class="breadcrumb-item active" aria-current="page">Nové zasedání</li>
+{/block}
+
+{block content}
+{varType bool $hasBodies}
+<h1 class="h3 mb-4">Nové zasedání</h1>
+{if $hasBodies}
+	<div class="card" style="max-width: 40rem"><div class="card-body">{control meetingForm}</div></div>
+{else}
+	<div class="card" style="max-width: 40rem">
+		<div class="card-body">
+			<p>Zasedání patří vždy konkrétnímu orgánu. Nejdřív založte volební období a zastupitelstvo.</p>
+			<a n:href="Member:" class="btn btn-primary">Osoby a orgány</a>
+		</div>
+	</div>
+{/if}

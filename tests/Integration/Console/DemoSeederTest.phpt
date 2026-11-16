@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Application\Meeting\MeetingFacade;
 use App\Application\People\PeopleFacade;
 use App\Console\Demo\DemoSeeder;
 use App\Core\Security\Authenticator;
+use App\Domain\Meeting\MeetingStatus;
 use Tester\Assert;
 use Tests\Support\ContainerFactory;
 use Tests\Support\TestDatabase;
@@ -29,4 +31,7 @@ test('demo seeder fills empty database with usable data', function (): void {
 	Assert::notNull($term);
 	assert($term !== null);
 	Assert::same([], $people->getStructureWarnings($term->getId()));
+
+	$statuses = array_map(static fn($m) => $m->getStatus(), $container->getByType(MeetingFacade::class)->find($municipalityId));
+	Assert::same([MeetingStatus::Draft, MeetingStatus::Shared, MeetingStatus::Closed, MeetingStatus::MinutesApproved], $statuses);
 });

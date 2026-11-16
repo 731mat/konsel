@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Console\Demo;
 
+use App\Application\Meeting\Command\AssignOfficials;
+use App\Application\Meeting\Command\SaveMeeting;
+use App\Application\Meeting\MeetingFacade;
 use App\Application\Municipality\Command\CreateMunicipality;
 use App\Application\Municipality\Command\UpdateMunicipalitySettings;
 use App\Application\Municipality\MunicipalityFacade;
@@ -13,9 +16,12 @@ use App\Application\People\Command\SavePerson;
 use App\Application\People\PeopleFacade;
 use App\Application\User\Command\CreateUser;
 use App\Application\User\UserFacade;
+use App\Domain\Meeting\MeetingTransition;
+use App\Domain\Meeting\MeetingType;
 use App\Domain\People\BodyType;
 use App\Domain\People\MemberFunction;
 use App\Domain\User\Role;
+use Psr\Clock\ClockInterface;
 
 /**
  * Realistická demo data pro vývoj a ukázky. Zakládá vše přes fasády (stejné cesty jako aplikace).
@@ -41,6 +47,8 @@ final readonly class DemoSeeder
 		private MunicipalityFacade $municipalities,
 		private UserFacade $users,
 		private PeopleFacade $people,
+		private MeetingFacade $meetings,
+		private ClockInterface $clock,
 	) {}
 
 	/**
@@ -92,10 +100,44 @@ final readonly class DemoSeeder
 		$this->people->addMember($control->getId(), new AddMember($persons[7]->getId(), MemberFunction::Member, $constituentDay));
 		$this->people->addMember($control->getId(), new AddMember($persons[8]->getId(), MemberFunction::Member, $constituentDay));
 
+		$officeRoom = 'Zasedací místnost obecního úřadu, Hlavní 1';
+		$constituent = $this->meetings->create($council->getId(), new SaveMeeting(MeetingType::Constituent, $constituentDay->setTime(18, 0), 'Kulturní dům Neplachovice'));
+		$this->meetings->assignOfficials($constituent->getId(), new AssignOfficials($persons[0]->getId(), $persons[7]->getId(), $persons[2]->getId(), $persons[3]->getId()));
+		$this->runMeeting($constituent->getId(), $constituentDay->setTime(18, 0), $constituentDay->setTime(19, 40), approveMinutes: true);
+
+		// Další zasedání se vztahují k dnešku, aby demo vždy ukazovalo proběhlé, sdílené i připravované zasedání.
+		$today = $this->clock->now()->setTime(18, 0);
+		$pastDay = max($constituentDay->modify('+14 days'), $today->modify('-5 days'))->setTime(18, 0);
+		$past = $this->meetings->create($council->getId(), new SaveMeeting(MeetingType::Regular, $pastDay, $officeRoom));
+		$this->meetings->assignOfficials($past->getId(), new AssignOfficials($persons[0]->getId(), $persons[7]->getId(), $persons[4]->getId(), $persons[5]->getId()));
+		$this->runMeeting($past->getId(), $pastDay, $pastDay->setTime(20, 10), approveMinutes: false);
+
+		$shared = $this->meetings->create($council->getId(), new SaveMeeting(MeetingType::Regular, $today->modify('+3 weeks'), $officeRoom));
+		$this->meetings->assignOfficials($shared->getId(), new AssignOfficials(chairpersonId: $persons[0]->getId(), recorderId: $persons[7]->getId()));
+		$this->meetings->transition($shared->getId(), MeetingTransition::Share);
+
+		$this->meetings->create($council->getId(), new SaveMeeting(MeetingType::Regular, $today->modify('+9 weeks'), $officeRoom));
+
 		return [
 			'Obec Neplachovice (650 obyvatel)',
 			'Uživatelé (heslo ' . self::Password . '): spravce@, editor@, ctenar@, superadmin@demo.konsel.test',
 			'Volební období 2026–2030, zastupitelstvo 9 členů, finanční a kontrolní výbor',
+			'Zasedání zastupitelstva: ustavující (zápis ověřen), proběhlé, sdílené a v přípravě',
 		];
+	}
+
+	/**
+	 * Proběhlé zasedání: sdílení → zahájení → ukončení se skutečnými časy (případně ověření zápisu).
+	 */
+	private function runMeeting(int $meetingId, \DateTimeImmutable $startedAt, \DateTimeImmutable $endedAt, bool $approveMinutes): void
+	{
+		foreach ([MeetingTransition::Share, MeetingTransition::Start, MeetingTransition::Close] as $transition) {
+			$this->meetings->transition($meetingId, $transition);
+		}
+
+		$this->meetings->correctTimes($meetingId, $startedAt, $endedAt);
+		if ($approveMinutes) {
+			$this->meetings->transition($meetingId, MeetingTransition::ApproveMinutes);
+		}
 	}
 }

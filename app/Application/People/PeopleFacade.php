@@ -8,6 +8,7 @@ use App\Application\People\Command\AddMember;
 use App\Application\People\Command\SaveBody;
 use App\Application\People\Command\SavePerson;
 use App\Application\Shared\TransactionManager;
+use App\Domain\Meeting\MeetingRepository;
 use App\Domain\Municipality\MunicipalityRepository;
 use App\Domain\People\Body;
 use App\Domain\People\BodyRepository;
@@ -34,6 +35,7 @@ final readonly class PeopleFacade
 		private PersonRepository $persons,
 		private TermRepository $terms,
 		private BodyRepository $bodies,
+		private MeetingRepository $meetings,
 		private TransactionManager $transaction,
 		private ClockInterface $clock,
 	) {}
@@ -64,7 +66,7 @@ final readonly class PeopleFacade
 	}
 
 	/**
-	 * @throws InvalidStateException osoba má (měla) členství – smazání by zničilo historii
+	 * @throws InvalidStateException osoba má (měla) členství nebo funkci u zasedání – smazání by zničilo historii
 	 */
 	public function deletePerson(int $personId): void
 	{
@@ -72,6 +74,10 @@ final readonly class PeopleFacade
 			$person = $this->persons->get($personId);
 			if ($this->persons->hasMemberships($person)) {
 				throw new InvalidStateException("{$person->getFullName()} je nebo byl(a) členem orgánu – osobu nelze smazat.");
+			}
+
+			if ($this->meetings->hasOfficial($person)) {
+				throw new InvalidStateException("{$person->getFullName()} je uveden(a) u zasedání jako předsedající, zapisovatel nebo ověřovatel – osobu nelze smazat.");
 			}
 
 			$this->persons->remove($person);

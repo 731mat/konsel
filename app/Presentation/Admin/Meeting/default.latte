@@ -1,0 +1,82 @@
+{block title}Zasedání{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item active" aria-current="page">Zasedání</li>
+{/block}
+
+{block content}
+{varType App\Domain\Meeting\Meeting[] $meetings}
+{varType array<string, App\Domain\People\Body[]> $bodies}
+{varType int[] $years}
+{varType App\Domain\Meeting\MeetingStatus[] $statuses}
+{varType App\Domain\People\Body|null $selectedBody}
+{varType int|null $selectedYear}
+{varType App\Domain\Meeting\MeetingStatus|null $selectedStatus}
+{varType bool $canEdit}
+{var $filtered = $selectedBody || $selectedYear || $selectedStatus}
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+	<h1 class="h3 mb-0 me-auto">Zasedání</h1>
+	<a n:if="$canEdit && $bodies" n:href="add" class="btn btn-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nové zasedání</a>
+</div>
+
+<form method="get" action="{link default}" class="row g-2 align-items-end mb-3" aria-label="Filtr zasedání">
+	<div class="col-sm-auto">
+		<label for="filter-body" class="form-label small text-body-secondary mb-1">Orgán</label>
+		<select id="filter-body" name="body" class="form-select form-select-sm">
+			<option value="">Všechny orgány</option>
+			<optgroup n:foreach="$bodies as $termName => $termBodies" label="{$termName}">
+				<option n:foreach="$termBodies as $body" value="{$body->getId()}" selected={$body === $selectedBody}>{$body->getName()}</option>
+			</optgroup>
+		</select>
+	</div>
+	<div class="col-sm-auto">
+		<label for="filter-year" class="form-label small text-body-secondary mb-1">Rok</label>
+		<select id="filter-year" name="year" class="form-select form-select-sm">
+			<option value="">Všechny roky</option>
+			<option n:foreach="$years as $year" value="{$year}" selected={$year === $selectedYear}>{$year}</option>
+		</select>
+	</div>
+	<div class="col-sm-auto">
+		<label for="filter-status" class="form-label small text-body-secondary mb-1">Stav</label>
+		<select id="filter-status" name="status" class="form-select form-select-sm">
+			<option value="">Všechny stavy</option>
+			<option n:foreach="$statuses as $status" value="{$status->value}" selected={$status === $selectedStatus}>{$status->label()}</option>
+		</select>
+	</div>
+	<div class="col-sm-auto">
+		<button type="submit" class="btn btn-sm btn-outline-primary">Filtrovat</button>
+		<a n:if="$filtered" n:href="default" class="btn btn-sm btn-link">Zrušit filtr</a>
+	</div>
+</form>
+
+<div class="card">
+	{if $meetings}
+	<div class="table-responsive">
+		<table class="table table-hover align-middle mb-0">
+			<thead>
+				<tr><th>Zasedání</th><th>Orgán</th><th>Datum a čas</th><th>Místo</th><th>Stav</th></tr>
+			</thead>
+			<tbody>
+				<tr n:foreach="$meetings as $meeting">
+					<td><a n:href="detail, id: $meeting->getId()" class="fw-semibold">{$meeting->getTitle()}</a></td>
+					<td>{$meeting->getBody()->getName()}</td>
+					<td class="text-nowrap">{$meeting->getScheduledAt()|czDateTime}</td>
+					<td>{$meeting->getPlace()}</td>
+					<td>{include '@status.latte', status: $meeting->getStatus()}</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+	{elseif $filtered}
+	<div class="card-body text-body-secondary">Filtru neodpovídá žádné zasedání.</div>
+	{elseif !$bodies}
+	<div class="card-body">
+		<h2 class="h5">Nejdřív založte orgán</h2>
+		<p class="text-body-secondary">Zasedání patří vždy konkrétnímu orgánu – zastupitelstvu, radě nebo výboru.</p>
+		<a n:href="Member:" class="btn btn-primary">Osoby a orgány</a>
+	</div>
+	{else}
+	<div class="card-body text-body-secondary">Zatím nejsou založená žádná zasedání.</div>
+	{/if}
+</div>

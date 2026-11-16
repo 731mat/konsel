@@ -14,6 +14,8 @@ use Nette\Application\Responses\TextResponse;
 use Nette\Application\UI\Presenter;
 use Nette\Bridges\ApplicationLatte\Template;
 use Nette\DI\Container;
+use Nette\Http\IRequest;
+use Nette\Http\Request as HttpRequest;
 use Nette\Security\SimpleIdentity;
 use Nette\Security\User;
 use Tester\Assert;
@@ -47,12 +49,13 @@ final readonly class PresenterTester
 		array $post = [],
 		array $files = [],
 	): Response {
+		$method = $post === [] && $files === [] ? 'GET' : 'POST';
+		$this->useHttpMethod($method);
 		$instance = $this->container->getByType(IPresenterFactory::class)->createPresenter($presenter);
 		Assert::type(Presenter::class, $instance);
 		assert($instance instanceof Presenter);
 		$instance->autoCanonicalize = false;
 
-		$method = $post === [] && $files === [] ? 'GET' : 'POST';
 		$request = new Request($presenter, $method, [
 			'action' => $action,
 		] + $params, $post, $files);
@@ -93,6 +96,26 @@ final readonly class PresenterTester
 		], $values + [
 			'_submit' => '1',
 		], $files);
+	}
+
+	/**
+	 * #[Requires(methods: 'POST')] kontroluje metodu HTTP požadavku (ne aplikačního) – v testu ji podle potřeby vyměníme.
+	 */
+	private function useHttpMethod(string $method): void
+	{
+		$current = $this->container->getByType(IRequest::class);
+		if ($current->getMethod() === $method) {
+			return;
+		}
+
+		$name = $this->container->findByType(IRequest::class)[0] ?? throw new \LogicException('Missing HTTP request service.');
+		$this->container->removeService($name);
+		$this->container->addService($name, new HttpRequest(
+			$current->getUrl(),
+			headers: $current->getHeaders(),
+			method: $method,
+			remoteAddress: $current->getRemoteAddress(),
+		));
 	}
 
 	public static function assertRedirect(Response $response): RedirectResponse
