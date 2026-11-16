@@ -8,6 +8,7 @@ use App\Model\Comment\Comment;
 use App\Model\Meeting\AgendaItem;
 use App\Model\Meeting\Meeting;
 use App\Model\Municipality\Municipality;
+use App\Model\Project\Project;
 use App\Model\Shared\Exception\ValidationException;
 use App\Model\Shared\IntegerId;
 use App\Model\Shared\TenantOwned;
@@ -40,6 +41,10 @@ final class Attachment implements TenantOwned, Timestampable
 	#[ORM\JoinColumn(onDelete: 'CASCADE')]
 	private ?Comment $comment;
 
+	#[ORM\ManyToOne(targetEntity: Project::class)]
+	#[ORM\JoinColumn(onDelete: 'CASCADE')]
+	private ?Project $project = null;
+
 	#[ORM\Column(type: 'stored_file')]
 	private StoredFile $file;
 
@@ -68,6 +73,14 @@ final class Attachment implements TenantOwned, Timestampable
 		$this->uploadedBy = $uploadedBy;
 		$this->publicForMembers = $publicForMembers;
 		$this->rename($file->originalName);
+	}
+
+	public static function forProject(Project $project, StoredFile $file, ?User $uploadedBy): self
+	{
+		$attachment = new self($project->getMunicipality(), null, null, $file, $uploadedBy, true);
+		$attachment->project = $project;
+
+		return $attachment;
 	}
 
 	public static function forAgendaItem(AgendaItem $item, StoredFile $file, ?User $uploadedBy, bool $publicForMembers = true): self
@@ -123,7 +136,15 @@ final class Attachment implements TenantOwned, Timestampable
 	 */
 	public function getMeeting(): ?Meeting
 	{
-		return $this->agendaItem?->getMeeting() ?? $this->comment?->getAgendaItem()->getMeeting();
+		return $this->agendaItem?->getMeeting() ?? $this->comment?->getAgendaItem()?->getMeeting();
+	}
+
+	/**
+	 * Úkol, ke kterému soubor patří (přímo, nebo přes komentář v jeho diskusi).
+	 */
+	public function getProject(): ?Project
+	{
+		return $this->project ?? $this->comment?->getProject();
 	}
 
 	public function getFile(): StoredFile

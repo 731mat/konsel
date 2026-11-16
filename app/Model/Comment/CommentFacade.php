@@ -9,6 +9,7 @@ use App\Model\Attachment\AttachmentRepository;
 use App\Model\Meeting\AgendaItemRepository;
 use App\Model\Meeting\Meeting;
 use App\Model\People\PersonRepository;
+use App\Model\Project\ProjectRepository;
 use App\Model\Shared\Exception\AccessDeniedException;
 use App\Model\Shared\Exception\InvalidStateException;
 use App\Model\Shared\Exception\ValidationException;
@@ -29,6 +30,7 @@ final readonly class CommentFacade
 		private AgendaItemRepository $items,
 		private UserRepository $users,
 		private PersonRepository $persons,
+		private ProjectRepository $projects,
 		private AttachmentRepository $attachments,
 		private AttachmentPolicy $policy,
 		private FileStorage $storage,
@@ -45,18 +47,60 @@ final readonly class CommentFacade
 	 */
 	public function addByUser(int $itemId, int $userId, string $body, ?int $parentId = null, array $files = []): Comment
 	{
-		return $this->add($itemId, fn(): CommentAuthor => CommentAuthor::user($this->users->get($userId)), $body, $parentId, $files);
+		$item = $this->items->get($itemId);
+
+		return $this->create($item->getMunicipality()->getId(), $files, fn(bool $withFiles): Comment => Comment::onAgendaItem(
+			$this->items->get($itemId),
+			CommentAuthor::user($this->users->get($userId)),
+			$body,
+			$this->parent($parentId),
+			$withFiles,
+		));
 	}
 
 	/**
 	 * Komentář zastupitele z portálu.
-	 */
-	/**
+	 *
 	 * @param list<UploadedFile> $files
 	 */
 	public function addByPerson(int $itemId, int $personId, string $body, ?int $parentId = null, array $files = []): Comment
 	{
-		return $this->add($itemId, fn(): CommentAuthor => CommentAuthor::person($this->persons->get($personId)), $body, $parentId, $files);
+		$item = $this->items->get($itemId);
+
+		return $this->create($item->getMunicipality()->getId(), $files, fn(bool $withFiles): Comment => Comment::onAgendaItem(
+			$this->items->get($itemId),
+			CommentAuthor::person($this->persons->get($personId)),
+			$body,
+			$this->parent($parentId),
+			$withFiles,
+		));
+	}
+
+	/**
+	 * Komentář k úkolu v úkolníčku.
+	 *
+	 * @param list<UploadedFile> $files
+	 */
+	public function addToProject(int $projectId, CommentAuthorRef $author, string $body, ?int $parentId = null, array $files = [], bool $publicForCitizens = false): Comment
+	{
+		$project = $this->projects->get($projectId);
+
+		return $this->create($project->getMunicipality()->getId(), $files, function (bool $withFiles) use ($projectId, $author, $body, $parentId, $publicForCitizens): Comment {
+			$comment = Comment::onProject($this->projects->get($projectId), $this->author($author), $body, $this->parent($parentId), $withFiles);
+			$comment->changeVisibility($publicForCitizens);
+
+			return $comment;
+		});
+	}
+
+	/**
+	 * Zveřejnění komentáře k úkolu občanům (rozhoduje úřad).
+	 */
+	public function changeVisibility(int $commentId, bool $publicForCitizens): void
+	{
+		$this->transaction->run(function () use ($commentId, $publicForCitizens): void {
+			$this->comments->get($commentId)->changeVisibility($publicForCitizens);
+		});
 	}
 
 	/**
@@ -85,7 +129,29 @@ final readonly class CommentFacade
 	 */
 	public function findThreads(int $itemId): array
 	{
-		$all = $this->comments->findByAgendaItem($this->items->get($itemId));
+		return self::threads($this->comments->findByAgendaItem($this->items->get($itemId)));
+	}
+
+	/**
+	 * @param bool $onlyPublic jen komentáře zveřejněné občanům
+	 * @return list<CommentThread>
+	 */
+	public function findProjectThreads(int $projectId, bool $onlyPublic = false): array
+	{
+		$comments = $this->comments->findByProject($this->projects->get($projectId));
+		if ($onlyPublic) {
+			$comments = array_values(array_filter($comments, static fn(Comment $c): bool => $c->isPublicForCitizens() && !$c->isDeleted()));
+		}
+
+		return self::threads($comments);
+	}
+
+	/**
+	 * @param list<Comment> $all
+	 * @return list<CommentThread>
+	 */
+	private static function threads(array $all): array
+	{
 		$replies = [];
 		foreach ($all as $comment) {
 			$parent = $comment->getParent();
@@ -120,12 +186,11 @@ final readonly class CommentFacade
 	}
 
 	/**
-	 * @param callable(): CommentAuthor $author
 	 * @param list<UploadedFile> $files
+	 * @param callable(bool): Comment $build
 	 */
-	private function add(int $itemId, callable $author, string $body, ?int $parentId, array $files): Comment
+	private function create(int $municipalityId, array $files, callable $build): Comment
 	{
-		$item = $this->items->get($itemId);
 		foreach ($files as $file) {
 			$stat = fstat($file->stream);
 			$this->policy->assertAllowed($file->originalName, $stat === false ? 0 : $stat['size']);
@@ -134,16 +199,13 @@ final readonly class CommentFacade
 		$stored = [];
 		try {
 			foreach ($files as $file) {
-				$stored[] = $this->storage->store($file->stream, $file->originalName, "m{$item->getMunicipality()->getId()}/comments");
+				$stored[] = $this->storage->store($file->stream, $file->originalName, "m{$municipalityId}/comments");
 			}
 
-			return $this->transaction->run(function () use ($itemId, $author, $body, $parentId, $stored): Comment {
-				$item = $this->items->get($itemId);
-				$parent = $parentId === null ? null : $this->comments->get($parentId);
-				$commentAuthor = $author();
-				$comment = new Comment($item, $commentAuthor, $body, $parent, withFiles: $stored !== []);
+			return $this->transaction->run(function () use ($build, $stored): Comment {
+				$comment = $build($stored !== []);
 				foreach ($stored as $file) {
-					$comment->attach($file, $commentAuthor->user);
+					$comment->attach($file, $comment->getAuthorUser());
 				}
 
 				$this->comments->add($comment);
@@ -155,6 +217,18 @@ final readonly class CommentFacade
 
 			throw $e;
 		}
+	}
+
+	private function parent(?int $parentId): ?Comment
+	{
+		return $parentId === null ? null : $this->comments->get($parentId);
+	}
+
+	private function author(CommentAuthorRef $ref): CommentAuthor
+	{
+		return $ref->userId !== null
+			? CommentAuthor::user($this->users->get($ref->userId))
+			: CommentAuthor::person($this->persons->get($ref->personId ?? 0));
 	}
 
 	/**

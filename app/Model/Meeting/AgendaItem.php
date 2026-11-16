@@ -6,6 +6,8 @@ namespace App\Model\Meeting;
 
 use App\Model\Municipality\Municipality;
 use App\Model\People\Person;
+use App\Model\Project\Project;
+use App\Model\Shared\Exception\ValidationException;
 use App\Model\Shared\IntegerId;
 use App\Model\Shared\TenantOwned;
 use App\Model\Shared\Timestampable;
@@ -49,6 +51,13 @@ final class AgendaItem implements TenantOwned, Timestampable
 	private ?Person $rapporteur = null;
 
 	/**
+	 * Úkol z úkolníčku, ke kterému bod patří (stejné téma napříč zasedáními).
+	 */
+	#[ORM\ManyToOne(targetEntity: Project::class)]
+	#[ORM\JoinColumn(onDelete: 'SET NULL')]
+	private ?Project $project = null;
+
+	/**
 	 * @internal použijte Meeting::addAgendaItem()
 	 */
 	public function __construct(Meeting $meeting, int $position, AgendaItemContent $content)
@@ -76,6 +85,25 @@ final class AgendaItem implements TenantOwned, Timestampable
 	public function moveTo(int $position): void
 	{
 		$this->position = $position;
+	}
+
+	/**
+	 * Propojení s úkolem jde měnit kdykoli (i u proběhlého zasedání) – nejde o obsah programu.
+	 *
+	 * @throws ValidationException
+	 */
+	public function linkProject(?Project $project): void
+	{
+		if ($project !== null && $project->getMunicipality() !== $this->municipality) {
+			throw new ValidationException('Úkol patří k jiné obci.', 'project');
+		}
+
+		$this->project = $project;
+	}
+
+	public function getProject(): ?Project
+	{
+		return $this->project;
 	}
 
 	public function getMunicipality(): Municipality

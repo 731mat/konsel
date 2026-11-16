@@ -18,6 +18,11 @@ enum Resource: string
 	case Document = 'document';
 	case Template = 'template';
 	case Member = 'member';
+
+	/**
+	 * Úkolníček (dlouhodobé úkoly, podněty občanů).
+	 */
+	case Project = 'project';
 	case User = 'user';
 	case Settings = 'settings';
 	case Audit = 'audit';

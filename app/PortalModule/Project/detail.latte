@@ -1,0 +1,90 @@
+{import '../../UI/Comment/@discussion.latte'}
+{block title}{$project->getTitle()}{/block}
+
+{block content}
+{varType App\Model\Project\Project $project}
+{varType App\Model\Project\TimelineEntry[] $timeline}
+{varType App\Model\Project\ProjectStatus[] $path}
+{varType bool $canComment}
+{varType Closure $canDelete}
+{varType Closure $deleteLink}
+{varType Closure $attachmentLink}
+{varType Closure|null $visibilityLink}
+
+<nav aria-label="Drobečková navigace"><ol class="breadcrumb mb-3"><li class="breadcrumb-item"><a n:href="default">Úkolníček</a></li><li class="breadcrumb-item active" aria-current="page">{$project->getTitle()|truncate: 40}</li></ol></nav>
+<div class="d-flex flex-wrap gap-1 mb-2">{include '../../AdminModule/Project/@badges.latte', project: $project}</div>
+<h1 class="h3 mb-3">{$project->getTitle()}</h1>
+{var $step = $project->getStatus()->step()}
+<ol class="project-steps mb-4" aria-label="Fáze úkolu">
+	<li n:foreach="$path as $phase" n:class="$step !== null && $phase->step() < $step ? done, $phase === $project->getStatus() ? current"><span>{$phase->label()}</span></li>
+</ol>
+<div class="card mb-4" n:if="$project->getDescription()">
+	<div class="card-body text-break">{$project->getDescription()|nl2p}</div>
+</div>
+<div class="card">
+			<div class="card-header"><i class="bi bi-signpost-split text-primary me-1" aria-hidden="true"></i> Vlákno úkolu</div>
+			<div class="card-body">
+				{snippet thread}
+				<div class="timeline">
+					{foreach $timeline as $entry}
+						{switch $entry->kind}
+							{case 'created'}
+								<div class="timeline-item">
+									<span class="timeline-icon"><i class="bi bi-flag" aria-hidden="true"></i></span>
+									<div class="small"><strong>Úkol založen</strong> · {$project->getCreatedByName()} <span class="text-body-secondary">· {$entry->at|czDateTime}</span></div>
+								</div>
+							{case 'status'}
+								{var $change = $entry->statusChange}
+								<div n:if="$change" class="timeline-item">
+									<span class="timeline-icon"><i class="bi bi-arrow-right-circle" aria-hidden="true"></i></span>
+									<div class="small">
+										Fáze <strong>{$change->getFromStatus()->label()}</strong> → <strong>{$change->getToStatus()->label()}</strong>
+										<span class="text-body-secondary">· {$change->getChangedByName()} · {$entry->at|czDateTime}</span>
+										<div n:if="$change->getNote()" class="text-body-secondary">{$change->getNote()}</div>
+									</div>
+								</div>
+							{case 'agenda'}
+								{var $item = $entry->agendaItem}
+								<div n:if="$item" class="timeline-item">
+									<span class="timeline-icon timeline-icon-primary"><i class="bi bi-calendar-event" aria-hidden="true"></i></span>
+									<div class="timeline-card flex-grow-1 min-w-0">
+										<div class="small text-body-secondary mb-1">
+											{$item->getMeeting()->getTitle()|firstUpper} · {$item->getMeeting()->getBody()->getName()}
+											· {$entry->at|czDate}
+											{include '../../AdminModule/Meeting/@status.latte', status: $item->getMeeting()->getStatus()}
+										</div>
+										<span class="fw-semibold">{$item->getPosition()}. {$item->getTitle()}</span>
+										<div n:if="$item->getProposedResolution()" class="small mt-1"><i class="bi bi-journal-check text-primary" aria-hidden="true"></i> {$item->getProposedResolution()|truncate: 220}</div>
+									</div>
+								</div>
+							{case 'file'}
+								{var $file = $entry->file}
+								<div n:if="$file" class="timeline-item">
+									<span class="timeline-icon"><i class="bi bi-paperclip" aria-hidden="true"></i></span>
+									<div class="small">
+										<a n:href="file, id: $file->getId()" target="_blank" rel="noopener" class="comment-file"><i class="bi {$file->getFile()|fileIcon}" aria-hidden="true"></i> <span class="text-truncate">{$file->getTitle()}</span></a>
+										<span class="text-body-secondary">{$file->getUploadedBy()?->getName()} · {$entry->at|czDateTime}</span>
+									</div>
+								</div>
+							{case 'thread'}
+								{var $thread = $entry->thread}
+								<div n:if="$thread" class="timeline-item">
+									<span class="timeline-icon"><i class="bi bi-chat-left-text" aria-hidden="true"></i></span>
+									<div class="flex-grow-1 min-w-0">
+										{include comment, comment: $thread->comment, reply: false}
+										<div n:if="$thread->replies" class="comment-replies">
+											{foreach $thread->replies as $reply}
+												{include comment, comment: $reply, reply: true}
+											{/foreach}
+										</div>
+									</div>
+								</div>
+						{/switch}
+					{/foreach}
+				</div>
+				<div class="mt-3">
+					{include commentForm, formName: 'commentForm'}
+				</div>
+				{/snippet}
+			</div>
+		</div>

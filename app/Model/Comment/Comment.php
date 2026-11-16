@@ -8,6 +8,7 @@ use App\Model\Attachment\Attachment;
 use App\Model\Meeting\AgendaItem;
 use App\Model\Municipality\Municipality;
 use App\Model\People\Person;
+use App\Model\Project\Project;
 use App\Model\Shared\Exception\InvalidStateException;
 use App\Model\Shared\Exception\ValidationException;
 use App\Model\Shared\IntegerId;
@@ -21,7 +22,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Komentář (připomínka) k bodu programu. Autorem je uživatel úřadu, nebo zastupitel (Person) z portálu.
+ * Komentář k bodu programu nebo k úkolu v úkolníčku. Autorem je uživatel úřadu, nebo zastupitel (Person) z portálu.
  * Vlákna mají jednu úroveň: komentář → odpovědi. Smazání je měkké, aby vlákno dávalo smysl.
  */
 #[ORM\Entity]
@@ -39,8 +40,18 @@ final class Comment implements TenantOwned, Timestampable
 	private Municipality $municipality;
 
 	#[ORM\ManyToOne(targetEntity: AgendaItem::class)]
-	#[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-	private AgendaItem $agendaItem;
+	#[ORM\JoinColumn(onDelete: 'CASCADE')]
+	private ?AgendaItem $agendaItem;
+
+	#[ORM\ManyToOne(targetEntity: Project::class)]
+	#[ORM\JoinColumn(onDelete: 'CASCADE')]
+	private ?Project $project;
+
+	/**
+	 * Komentář k úkolu je vidět i občanům na veřejné stránce (o zveřejnění rozhoduje úřad).
+	 */
+	#[ORM\Column]
+	private bool $publicForCitizens = false;
 
 	#[ORM\ManyToOne(targetEntity: self::class)]
 	#[ORM\JoinColumn(onDelete: 'CASCADE')]
@@ -82,28 +93,55 @@ final class Comment implements TenantOwned, Timestampable
 	/**
 	 * @param bool $withFiles komentář nese soubory – text pak není povinný
 	 */
-	public function __construct(AgendaItem $agendaItem, CommentAuthor $author, string $body, ?self $parent = null, bool $withFiles = false)
+	private function __construct(Municipality $municipality, ?AgendaItem $agendaItem, ?Project $project, CommentAuthor $author, string $body, ?self $parent, bool $withFiles)
 	{
-		if (!$agendaItem->getMeeting()->canEditAttachments()) {
-			throw new InvalidStateException('Zasedání je uzavřené, diskuse k bodům už není možná.');
+		if ($parent !== null && ($parent->agendaItem !== $agendaItem || $parent->project !== $project || $parent->parent !== null)) {
+			throw new ValidationException('Odpovídat lze jen na komentář ve stejné diskusi.', 'parentId');
 		}
 
-		if ($parent !== null && ($parent->agendaItem !== $agendaItem || $parent->parent !== null)) {
-			throw new ValidationException('Odpovídat lze jen na komentář u téhož bodu.', 'parentId');
-		}
-
-		if ($author->municipality() !== $agendaItem->getMunicipality()) {
+		if ($author->municipality() !== $municipality) {
 			throw new InvalidStateException('Autor komentáře patří k jiné obci.');
 		}
 
-		$this->municipality = $agendaItem->getMunicipality();
+		$this->municipality = $municipality;
 		$this->agendaItem = $agendaItem;
+		$this->project = $project;
 		$this->parent = $parent;
 		$this->authorUser = $author->user;
 		$this->authorPerson = $author->person;
 		$this->authorName = $author->name();
 		$this->body = self::normalize($body, $withFiles);
 		$this->attachments = new ArrayCollection();
+	}
+
+	/**
+	 * @throws ValidationException
+	 * @throws InvalidStateException zasedání je uzavřené
+	 */
+	public static function onAgendaItem(AgendaItem $item, CommentAuthor $author, string $body, ?self $parent = null, bool $withFiles = false): self
+	{
+		if (!$item->getMeeting()->canEditAttachments()) {
+			throw new InvalidStateException('Zasedání je uzavřené, diskuse k bodům už není možná.');
+		}
+
+		return new self($item->getMunicipality(), $item, null, $author, $body, $parent, $withFiles);
+	}
+
+	/**
+	 * @throws ValidationException
+	 */
+	public static function onProject(Project $project, CommentAuthor $author, string $body, ?self $parent = null, bool $withFiles = false): self
+	{
+		return new self($project->getMunicipality(), null, $project, $author, $body, $parent, $withFiles);
+	}
+
+	public function changeVisibility(bool $publicForCitizens): void
+	{
+		if ($this->project === null && $publicForCitizens) {
+			throw new InvalidStateException('Občanům lze zveřejnit jen komentáře v úkolníčku.');
+		}
+
+		$this->publicForCitizens = $publicForCitizens;
 	}
 
 	public function attach(StoredFile $file, ?User $uploadedBy): Attachment
@@ -149,14 +187,29 @@ final class Comment implements TenantOwned, Timestampable
 		return $this->municipality;
 	}
 
-	public function getAgendaItem(): AgendaItem
+	public function getAgendaItem(): ?AgendaItem
 	{
 		return $this->agendaItem;
+	}
+
+	public function getProject(): ?Project
+	{
+		return $this->project;
+	}
+
+	public function isPublicForCitizens(): bool
+	{
+		return $this->publicForCitizens;
 	}
 
 	public function getParent(): ?self
 	{
 		return $this->parent;
+	}
+
+	public function getAuthorUser(): ?User
+	{
+		return $this->authorUser;
 	}
 
 	public function getAuthorUserId(): ?int

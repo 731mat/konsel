@@ -6,6 +6,7 @@ namespace App\Model\Attachment;
 
 use App\Model\Meeting\AgendaItem;
 use App\Model\Meeting\Meeting;
+use App\Model\Project\Project;
 use App\Model\Shared\Exception\NotFoundException;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -88,6 +89,15 @@ final readonly class DoctrineAttachmentRepository implements AttachmentRepositor
 			->setParameter('item', $item)
 			->getQuery()
 			->getResult();
+	}
+
+	public function findByProject(Project $project): array
+	{
+		return $this->entityManager->getRepository(Attachment::class)->findBy([
+			'project' => $project,
+		], [
+			'id' => 'ASC',
+		]);
 	}
 
 	public function add(Attachment $attachment): void

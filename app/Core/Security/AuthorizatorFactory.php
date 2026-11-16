@@ -38,6 +38,7 @@ final class AuthorizatorFactory
 			Resource::Document->value,
 			Resource::Template->value,
 			Resource::Member->value,
+			Resource::Project->value,
 		], Privilege::View->value);
 
 		// Editor (úředník, zapisovatel): příprava a vedení zasedání
@@ -49,6 +50,7 @@ final class AuthorizatorFactory
 			Resource::Attachment->value,
 			Resource::Document->value,
 			Resource::Template->value,
+			Resource::Project->value,
 		], Privilege::Edit->value);
 		$acl->allow(Role::Editor->value, [
 			Resource::Agenda->value,
@@ -64,6 +66,7 @@ final class AuthorizatorFactory
 			Resource::Document->value,
 			Resource::Template->value,
 			Resource::Member->value,
+			Resource::Project->value,
 		], Privilege::View->value);
 
 		// Správce obce: vše v rámci obce kromě správy systému

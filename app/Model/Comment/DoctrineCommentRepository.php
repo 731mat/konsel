@@ -6,6 +6,7 @@ namespace App\Model\Comment;
 
 use App\Model\Meeting\AgendaItem;
 use App\Model\Meeting\Meeting;
+use App\Model\Project\Project;
 use App\Model\Shared\Exception\NotFoundException;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -24,6 +25,16 @@ final readonly class DoctrineCommentRepository implements CommentRepository
 	{
 		return $this->entityManager->getRepository(Comment::class)->findBy([
 			'agendaItem' => $item,
+		], [
+			'createdAt' => 'ASC',
+			'id' => 'ASC',
+		]);
+	}
+
+	public function findByProject(Project $project): array
+	{
+		return $this->entityManager->getRepository(Comment::class)->findBy([
+			'project' => $project,
 		], [
 			'createdAt' => 'ASC',
 			'id' => 'ASC',

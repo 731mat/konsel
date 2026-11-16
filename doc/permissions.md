@@ -15,6 +15,7 @@ Privilegia: **V** = view (náhled), **E** = edit (úpravy), **D** = delete (maz�
 | document – generované dokumenty | V | VE | VEDM | VEDM |
 | template – šablony | V | VE | VEDM | VEDM |
 | member – osoby, orgány, členství | V | V | VEDM | VEDM |
+| project – úkolníček, podněty občanů | V | VE | VEDM | VEDM |
 | user – uživatelé úřadu | – | – | VEDM | VEDM |
 | settings – nastavení obce | – | – | VEDM | VEDM |
 | audit – historie změn | – | – | VEDM | VEDM |

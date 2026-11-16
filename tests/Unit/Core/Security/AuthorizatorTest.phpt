@@ -32,6 +32,7 @@ function expectedMatrix(): array
 		R::Document->value => $view,
 		R::Template->value => $view,
 		R::Member->value => $view,
+		R::Project->value => $view,
 	];
 
 	$editor = [
@@ -44,6 +45,7 @@ function expectedMatrix(): array
 		R::Document->value => $viewEdit,
 		R::Template->value => $viewEdit,
 		R::Member->value => $view,
+		R::Project->value => $viewEdit,
 	];
 
 	$admin = [];

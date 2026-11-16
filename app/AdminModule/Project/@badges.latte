@@ -1,0 +1,8 @@
+{* Štítky úkolu: {include '@badges.latte', project: $project} *}
+{parameters App\Model\Project\Project $project}
+{var $tone = $project->getStatus()->tone()}
+<span class="badge status-badge bg-{$tone}-subtle text-{$tone}-emphasis border-{$tone}-subtle">{$project->getStatus()->label()}</span>
+{if in_array($project->getPriority()->value, ['high', 'urgent'], true)}
+	<span n:class="badge, $project->getPriority()->value === 'urgent' ? text-bg-danger : 'bg-danger-subtle text-danger-emphasis'"><i class="bi bi-exclamation-lg" aria-hidden="true"></i>{$project->getPriority()->label()} priorita</span>
+{/if}
+<span n:if="$project->isPublic()" class="badge bg-success-subtle text-success-emphasis"><i class="bi bi-globe" aria-hidden="true"></i> veřejné</span>

@@ -10,6 +10,8 @@ final class ItemFormData
 
 	public ?int $rapporteur = null;
 
+	public ?int $project = null;
+
 	public ?string $description = null;
 
 	public ?string $proposedResolution = null;

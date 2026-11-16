@@ -148,3 +148,38 @@ test('admin issues links and sees them once', function (): void {
 		'id' => $scenario->meeting->getId(),
 	]));
 });
+
+test('member sees project thread in portal and comments as member', function (): void {
+	$container = ContainerFactory::create();
+	TestDatabase::migrate($container);
+	$scenario = MeetingScenario::create($container);
+	$people = $container->getByType(PeopleFacade::class);
+	$member = $people->createPerson($scenario->municipality->getId(), new SavePerson('Petr', 'Novotný'));
+	$projects = $container->getByType(App\Model\Project\ProjectFacade::class);
+	$project = $projects->create($scenario->municipality->getId(), new App\Model\Project\Command\SaveProject('Nová škola'), 'Úřad');
+	$hidden = $projects->create($scenario->municipality->getId(), new App\Model\Project\Command\SaveProject('Neposouzený podnět'), 'Občan', App\Model\Project\ProjectStatus::Submitted);
+	$projects->linkAgendaItem($scenario->item->getId(), $project->getId());
+	$issued = $container->getByType(AccessFacade::class)->issueFor($scenario->meeting->getId(), $member->getId());
+	$tester = new PresenterTester($container);
+	$tester->run('Portal:Entry', 'default', [
+		'token' => $issued->token,
+	]);
+
+	Assert::contains('Nová škola', $tester->render('Portal:Project'));
+	PresenterTester::assertRedirect($tester->submitForm('Portal:Project', 'commentForm', [
+		'parentId' => '',
+		'body' => 'Podporuji, ale chci vidět rozpočet.',
+	], action: 'detail', params: [
+		'id' => $project->getId(),
+	]));
+	$html = $tester->render('Portal:Project', 'detail', [
+		'id' => $project->getId(),
+	]);
+	Assert::contains('Podporuji, ale chci vidět rozpočet.', $html);
+	Assert::contains('Rozpočet na rok 2027', $html);
+
+	$e = Assert::exception(fn() => $tester->run('Portal:Project', 'detail', [
+		'id' => $hidden->getId(),
+	]), BadRequestException::class);
+	Assert::same(404, $e?->getHttpCode());
+});

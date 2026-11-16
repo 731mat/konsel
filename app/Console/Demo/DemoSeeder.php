@@ -6,6 +6,7 @@ namespace App\Console\Demo;
 
 use App\Model\Access\AccessFacade;
 use App\Model\Attachment\AttachmentFacade;
+use App\Model\Comment\CommentAuthorRef;
 use App\Model\Comment\CommentFacade;
 use App\Model\Meeting\AgendaFacade;
 use App\Model\Meeting\Command\AssignOfficials;
@@ -23,6 +24,10 @@ use App\Model\People\Command\SaveBody;
 use App\Model\People\Command\SavePerson;
 use App\Model\People\MemberFunction;
 use App\Model\People\PeopleFacade;
+use App\Model\Project\Command\SaveProject;
+use App\Model\Project\ProjectFacade;
+use App\Model\Project\ProjectPriority;
+use App\Model\Project\ProjectStatus;
 use App\Model\Storage\UploadedFile;
 use App\Model\Template\TemplateFacade;
 use App\Model\User\Command\CreateUser;
@@ -60,6 +65,7 @@ final readonly class DemoSeeder
 		private CommentFacade $comments,
 		private AccessFacade $access,
 		private TemplateFacade $templates,
+		private ProjectFacade $projects,
 		private ClockInterface $clock,
 	) {}
 
@@ -163,12 +169,21 @@ final readonly class DemoSeeder
 
 		$draft = $this->meetings->create($council->getId(), new SaveMeeting(MeetingType::Regular, $today->modify('+9 weeks'), $officeRoom));
 		$this->agenda->addItem($draft->getId(), new SaveAgendaItem('Zpráva o činnosti finančního výboru', rapporteurId: $persons[2]->getId()));
+		$schoolDocumentation = $this->agenda->addItem($draft->getId(), new SaveAgendaItem(
+			'Schválení projektové dokumentace mateřské školy',
+			'Projektant předal dokumentaci pro stavební povolení. Odhad nákladů stavby 45 mil. Kč, obec podá žádost o dotaci z IROP.',
+			'Zastupitelstvo obce Neplachovice schvaluje projektovou dokumentaci stavby „Mateřská škola Neplachovice“ a pověřuje starostu podáním žádosti o dotaci.',
+			$persons[0]->getId(),
+		));
+
+		$this->seedProjects($municipalityId, $admin->getId(), $persons, $past->getId(), $sharedItems[3]->getId(), $schoolDocumentation->getId());
 
 		return [
 			'Obec Neplachovice (650 obyvatel)',
 			'Uživatelé (heslo ' . self::Password . '): spravce@, editor@, ctenar@, superadmin@demo.konsel.test',
 			'Volební období 2026–2030, zastupitelstvo 9 členů, finanční a kontrolní výbor',
 			'Knihovna šablon usnesení a programu (řádné a ustavující zasedání)',
+			'Úkolníček: mateřská škola (propojená se 2 zasedáními), oprava komunikace, LED osvětlení, podnět občana',
 			'Zasedání zastupitelstva s programem: ustavující (zápis ověřen), proběhlé, sdílené a v přípravě',
 			"Portál zastupitele (Petr Novotný, sdílené zasedání): /odkaz/{$portalLink->token}",
 		];
@@ -186,6 +201,52 @@ final readonly class DemoSeeder
 		}
 
 		$this->agenda->insertStandardItems($meetingId);
+	}
+
+	/**
+	 * Úkolníček: úkoly v různých fázích propojené s body zasedání, diskuse a veřejné komentáře.
+	 *
+	 * @param list<\App\Model\People\Person> $persons
+	 */
+	private function seedProjects(int $municipalityId, int $adminId, array $persons, int $pastMeetingId, int $budgetItemId, int $documentationItemId): void
+	{
+		$school = $this->projects->create($municipalityId, new SaveProject(
+			'Výstavba nové mateřské školy',
+			"Stávající školka má kapacitu 28 dětí, zájem je o 50 míst. Cílem je nová budova na pozemku za obecním úřadem.\n\nFinancování: dotace IROP (až 70 %) + úvěr.",
+			ProjectPriority::High,
+			$persons[0]->getId(),
+			45_000_000,
+		), 'Jana Správcová');
+		$this->projects->changeStatus($school->getId(), ProjectStatus::Preparation, 'Jana Správcová', 'Zastupitelstvo souhlasí se záměrem');
+		$this->comments->addToProject($school->getId(), CommentAuthorRef::person($persons[3]->getId()), 'Prosím o porovnání s variantou rozšíření stávající budovy – může vyjít levněji.');
+		$this->projects->changeStatus($school->getId(), ProjectStatus::Design, 'Jana Správcová', 'Objednána projektová dokumentace');
+		$this->comments->addToProject($school->getId(), CommentAuthorRef::user($adminId), 'Projektant předá dokumentaci do konce roku. Na projekt je v rozpočtu 2027 vyčleněno 2 mil. Kč.', publicForCitizens: true);
+		$this->projects->linkAgendaItem($budgetItemId, $school->getId());
+		$this->projects->linkAgendaItem($documentationItemId, $school->getId());
+		$this->projects->setPublic($school->getId(), true);
+
+		$road = $this->projects->create($municipalityId, new SaveProject(
+			'Oprava místní komunikace Za Školou',
+			'Výtluky a propadlé krajnice, v zimě nebezpečné pro autobus.',
+			ProjectPriority::Normal,
+			$persons[1]->getId(),
+			1_840_000,
+		), 'Jana Správcová');
+		$this->projects->changeStatus($road->getId(), ProjectStatus::Approved, 'Jana Správcová', 'Smlouva o dílo schválena zastupitelstvem');
+		$this->projects->changeStatus($road->getId(), ProjectStatus::InProgress, 'Jana Správcová');
+		foreach ($this->meetings->get($pastMeetingId)->getAgendaItems() as $item) {
+			if (strpos($item->getTitle(), 'Smlouva o dílo') === 0) {
+				$this->projects->linkAgendaItem($item->getId(), $road->getId());
+			}
+		}
+
+		$this->comments->addToProject($road->getId(), CommentAuthorRef::user($adminId), 'Stavba začne v pondělí, ulice bude 3 týdny průjezdná jen jedním pruhem.', publicForCitizens: true);
+		$this->projects->setPublic($road->getId(), true);
+
+		$lights = $this->projects->create($municipalityId, new SaveProject('Výměna veřejného osvětlení za LED', 'Úspora asi 60 % energie, možnost dotace z programu EFEKT.', ProjectPriority::Low), 'Jana Správcová');
+		$this->projects->setPublic($lights->getId(), true);
+
+		$this->projects->create($municipalityId, new SaveProject('Lavičky a odpadkové koše v parku u kostela', 'V parku chybí místo k sezení pro starší občany a koše se rychle zaplní.'), 'Marie Občanová (podnět občana)', ProjectStatus::Submitted);
 	}
 
 	private static function file(string $name, string $content): UploadedFile

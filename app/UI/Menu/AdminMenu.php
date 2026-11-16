@@ -31,6 +31,7 @@ final class AdminMenu extends Control
 		return [
 			new MenuItem('Přehled', 'Dashboard', 'house', Resource::Dashboard),
 			new MenuItem('Zasedání', 'Meeting', 'calendar-event', Resource::Meeting),
+			new MenuItem('Úkolníček', 'Project', 'kanban', Resource::Project),
 			new MenuItem('Usnesení', 'Resolution', 'journal-check', Resource::Resolution),
 			new MenuItem('Úkoly', 'Task', 'check2-square', Resource::Resolution),
 			new MenuItem('Hledat', 'Search', 'search', Resource::Meeting),

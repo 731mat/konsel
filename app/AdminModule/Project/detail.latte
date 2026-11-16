@@ -1,0 +1,173 @@
+{import '../../UI/Comment/@discussion.latte'}
+{block title}{$project->getTitle()}{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href="default">Úkolníček</a></li>
+	<li class="breadcrumb-item active" aria-current="page">{$project->getTitle()|truncate: 50}</li>
+{/block}
+
+{block content}
+{varType App\Model\Project\Project $project}
+{varType App\Model\Project\TimelineEntry[] $timeline}
+{varType App\Model\Meeting\AgendaItem[] $linkableItems}
+{varType bool $canEdit}
+{varType bool $canModerate}
+{varType int $currentUserId}
+{varType App\Model\Project\ProjectStatus[] $path}
+{varType bool $canComment}
+{varType Closure $canDelete}
+{varType Closure $deleteLink}
+{varType Closure $attachmentLink}
+{varType Closure|null $visibilityLink}
+
+<div class="d-flex flex-wrap align-items-start gap-3 mb-3">
+	<div class="me-auto">
+		<div class="d-flex flex-wrap gap-1 mb-2">{include '@badges.latte', project: $project}</div>
+		<h1 class="h3 mb-1">{$project->getTitle()}</h1>
+		<p class="text-body-secondary mb-0 small">Založil(a) {$project->getCreatedByName()} · {$project->getCreatedAt()|czDate}</p>
+	</div>
+	<div class="d-flex flex-wrap gap-2">
+		<a n:if="$canEdit" n:href="edit, id: $project->getId()" class="btn btn-outline-secondary"><i class="bi bi-pencil" aria-hidden="true"></i> Upravit</a>
+		<form n:if="$canEdit" method="post" action="{link togglePublic!}">
+			<button type="submit" n:class="btn, $project->isPublic() ? btn-outline-secondary : btn-outline-success">
+				<i n:class="bi, $project->isPublic() ? bi-eye-slash : bi-globe" aria-hidden="true"></i> {$project->isPublic() ? 'Skrýt před občany' : 'Zveřejnit občanům'}
+			</button>
+		</form>
+	</div>
+</div>
+
+{* ukazatel postupu po hlavní cestě *}
+{var $step = $project->getStatus()->step()}
+<ol class="project-steps mb-4" aria-label="Fáze úkolu">
+	<li n:foreach="$path as $phase" n:class="$step !== null && $phase->step() < $step ? done, $phase === $project->getStatus() ? current">
+		<span>{$phase->label()}</span>
+	</li>
+</ol>
+
+<div class="row g-4">
+	<div class="col-xl-8 d-flex flex-column gap-4">
+		<div class="card" n:if="$project->getDescription()">
+			<div class="card-header">Popis</div>
+			<div class="card-body text-break">{$project->getDescription()|nl2p}</div>
+		</div>
+
+		<div class="card">
+			<div class="card-header"><i class="bi bi-signpost-split text-primary me-1" aria-hidden="true"></i> Vlákno úkolu</div>
+			<div class="card-body">
+				{snippet thread}
+				<div class="timeline">
+					{foreach $timeline as $entry}
+						{switch $entry->kind}
+							{case 'created'}
+								<div class="timeline-item">
+									<span class="timeline-icon"><i class="bi bi-flag" aria-hidden="true"></i></span>
+									<div class="small"><strong>Úkol založen</strong> · {$project->getCreatedByName()} <span class="text-body-secondary">· {$entry->at|czDateTime}</span></div>
+								</div>
+							{case 'status'}
+								{var $change = $entry->statusChange}
+								<div n:if="$change" class="timeline-item">
+									<span class="timeline-icon"><i class="bi bi-arrow-right-circle" aria-hidden="true"></i></span>
+									<div class="small">
+										Fáze <strong>{$change->getFromStatus()->label()}</strong> → <strong>{$change->getToStatus()->label()}</strong>
+										<span class="text-body-secondary">· {$change->getChangedByName()} · {$entry->at|czDateTime}</span>
+										<div n:if="$change->getNote()" class="text-body-secondary">{$change->getNote()}</div>
+									</div>
+								</div>
+							{case 'agenda'}
+								{var $item = $entry->agendaItem}
+								<div n:if="$item" class="timeline-item">
+									<span class="timeline-icon timeline-icon-primary"><i class="bi bi-calendar-event" aria-hidden="true"></i></span>
+									<div class="timeline-card flex-grow-1 min-w-0">
+										<div class="small text-body-secondary mb-1">
+											<a n:href="Meeting:detail, id: $item->getMeeting()->getId()" class="link-secondary">{$item->getMeeting()->getTitle()|firstUpper} · {$item->getMeeting()->getBody()->getName()}</a>
+											· {$entry->at|czDate}
+											{include '../Meeting/@status.latte', status: $item->getMeeting()->getStatus()}
+										</div>
+										<a n:href="Agenda:detail, id: $item->getId()" class="fw-semibold">{$item->getPosition()}. {$item->getTitle()}</a>
+										<div n:if="$item->getProposedResolution()" class="small mt-1"><i class="bi bi-journal-check text-primary" aria-hidden="true"></i> {$item->getProposedResolution()|truncate: 220}</div>
+										<form n:if="$canEdit" method="post" action="{link unlinkItem!, itemId: $item->getId()}" class="mt-1">
+											<button type="submit" class="btn btn-link btn-sm p-0 text-body-secondary text-decoration-none" data-confirm="Zrušit propojení bodu s úkolem?">Zrušit propojení</button>
+										</form>
+									</div>
+								</div>
+							{case 'file'}
+								{var $file = $entry->file}
+								<div n:if="$file" class="timeline-item">
+									<span class="timeline-icon"><i class="bi bi-paperclip" aria-hidden="true"></i></span>
+									<div class="small">
+										<a n:href="Attachment:preview, id: $file->getId()" target="_blank" rel="noopener" class="comment-file"><i class="bi {$file->getFile()|fileIcon}" aria-hidden="true"></i> <span class="text-truncate">{$file->getTitle()}</span></a>
+										<span class="text-body-secondary">{$file->getUploadedBy()?->getName()} · {$entry->at|czDateTime}</span>
+									</div>
+								</div>
+							{case 'thread'}
+								{var $thread = $entry->thread}
+								<div n:if="$thread" class="timeline-item">
+									<span class="timeline-icon"><i class="bi bi-chat-left-text" aria-hidden="true"></i></span>
+									<div class="flex-grow-1 min-w-0">
+										{include comment, comment: $thread->comment, reply: false}
+										<div n:if="$thread->replies" class="comment-replies">
+											{foreach $thread->replies as $reply}
+												{include comment, comment: $reply, reply: true}
+											{/foreach}
+										</div>
+									</div>
+								</div>
+						{/switch}
+					{/foreach}
+				</div>
+				<div class="mt-3">
+					{include commentForm, formName: 'commentForm'}
+				</div>
+				{/snippet}
+			</div>
+		</div>
+	</div>
+
+	<div class="col-xl-4 d-flex flex-column gap-4">
+		<div class="card">
+			<div class="card-header">Údaje</div>
+			<div class="card-body">
+				<dl class="row mb-0 small">
+					<dt class="col-5 fw-normal text-body-secondary">Fáze</dt><dd class="col-7">{$project->getStatus()->label()}</dd>
+					<dt class="col-5 fw-normal text-body-secondary">Priorita</dt><dd class="col-7">{$project->getPriority()->label()}</dd>
+					<dt class="col-5 fw-normal text-body-secondary">Odpovídá</dt><dd class="col-7">{$project->getResponsible()?->getFullName() ?? '—'}</dd>
+					<dt class="col-5 fw-normal text-body-secondary">Odhad nákladů</dt><dd class="col-7">{if $project->getEstimatedCost() !== null}{$project->getEstimatedCost()|number: 0, ',', ' '} Kč{else}—{/if}</dd>
+					<dt class="col-5 fw-normal text-body-secondary">Pro občany</dt><dd class="col-7 mb-0">{$project->isPublic() ? 'zveřejněno' : 'neveřejné'}</dd>
+				</dl>
+			</div>
+		</div>
+
+		<div n:if="$canEdit" class="card">
+			<div class="card-header">Změnit fázi</div>
+			<div class="card-body">{control statusForm}</div>
+		</div>
+
+		<div n:if="$canEdit" class="card">
+			<div class="card-header"><i class="bi bi-link-45deg" aria-hidden="true"></i> Propojit s bodem zasedání</div>
+			<div class="card-body">
+				{if $linkableItems}
+					{control linkForm}
+				{else}
+					<p class="small text-body-secondary mb-0">Za poslední rok nejsou žádné body k propojení.</p>
+				{/if}
+				<p class="small text-body-secondary mt-2 mb-0">Propojený bod (např. schválení projektu, investice) se objeví ve vlákně úkolu.</p>
+			</div>
+		</div>
+
+		<div n:if="$canEdit" class="card">
+			<div class="card-header"><i class="bi bi-paperclip" aria-hidden="true"></i> Nahrát soubory</div>
+			<div class="card-body">
+				{form fileForm}
+					<div n:foreach="$form->getOwnErrors() as $error" class="alert alert-danger py-2">{$error}</div>
+					<div class="dropzone" data-dropzone>
+						<input n:name="files" n:class="form-control, form-control-sm, $form['files']->hasErrors() ? is-invalid" data-dropzone-input>
+						<ul class="dropzone-list list-unstyled small mb-0 mt-2" data-dropzone-list hidden></ul>
+						<div class="dropzone-overlay" aria-hidden="true"><i class="bi bi-cloud-arrow-up"></i> Pusťte soubory sem</div>
+					</div>
+					<div n:ifcontent class="invalid-feedback d-block">{inputError files}</div>
+					<button n:name="upload" class="btn btn-sm btn-primary mt-2"><i class="bi bi-upload" aria-hidden="true"></i> Nahrát</button>
+				{/form}
+			</div>
+		</div>
+	</div>
+</div>

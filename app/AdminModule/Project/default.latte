@@ -1,0 +1,48 @@
+{block title}Úkolníček{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item active" aria-current="page">Úkolníček</li>
+{/block}
+
+{block content}
+{varType App\Model\Project\Project[] $projects}
+{varType array<string, int> $counts}
+{varType App\Model\Project\ProjectStatus[] $statuses}
+{varType string|null $selectedStatus}
+{varType bool $canEdit}
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+	<div class="me-auto">
+		<h1 class="h3 mb-0">Úkolníček</h1>
+		<p class="text-body-secondary mb-0">Dlouhodobé úkoly a záměry obce – od námětu přes schválení na zasedání až po dokončení.</p>
+	</div>
+	<a n:if="$canEdit" n:href="add" class="btn btn-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nový úkol</a>
+</div>
+
+<ul class="nav nav-pills gap-1 mb-3 small">
+	<li class="nav-item"><a n:href="default" n:class="nav-link, py-1, $selectedStatus === null ? active">Rozpracované</a></li>
+	{foreach $statuses as $status}
+		<li n:if="$counts[$status->value] ?? 0" class="nav-item">
+			<a n:href="default, status: $status->value" n:class="nav-link, py-1, $selectedStatus === $status->value ? active">{$status->label()} <span class="badge text-bg-light">{$counts[$status->value]}</span></a>
+		</li>
+	{/foreach}
+	<li class="nav-item"><a n:href="default, status: all" n:class="nav-link, py-1, $selectedStatus === 'all' ? active">Vše</a></li>
+</ul>
+
+<div class="row g-3">
+	<div n:foreach="$projects as $project" class="col-md-6 col-xxl-4">
+		<a n:href="detail, id: $project->getId()" class="card h-100 project-card text-reset">
+			<div class="card-body">
+				<div class="d-flex flex-wrap gap-1 mb-2">{include '@badges.latte', project: $project}</div>
+				<h2 class="h6 mb-1">{$project->getTitle()}</h2>
+				<p n:if="$project->getDescription()" class="small text-body-secondary mb-2">{$project->getDescription()|truncate: 140}</p>
+				<div class="small text-body-secondary d-flex flex-wrap gap-3">
+					<span n:if="$project->getResponsible()"><i class="bi bi-person" aria-hidden="true"></i> {$project->getResponsible()->getFullName()}</span>
+					<span n:if="$project->getEstimatedCost()"><i class="bi bi-cash-coin" aria-hidden="true"></i> {$project->getEstimatedCost()|number: 0, ',', ' '} Kč</span>
+					<span><i class="bi bi-clock" aria-hidden="true"></i> {$project->getUpdatedAt()|czDate}</span>
+				</div>
+			</div>
+		</a>
+	</div>
+</div>
+<div n:if="!$projects" class="card"><div class="card-body empty-state"><i class="bi bi-kanban" aria-hidden="true"></i>V této skupině nejsou žádné úkoly.</div></div>

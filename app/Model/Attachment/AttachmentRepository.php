@@ -6,6 +6,7 @@ namespace App\Model\Attachment;
 
 use App\Model\Meeting\AgendaItem;
 use App\Model\Meeting\Meeting;
+use App\Model\Project\Project;
 use App\Model\Shared\Exception\NotFoundException;
 
 interface AttachmentRepository
@@ -43,6 +44,11 @@ interface AttachmentRepository
 	 * @return list<Attachment>
 	 */
 	public function findAllForAgendaItem(AgendaItem $item): array;
+
+	/**
+	 * @return list<Attachment> soubory nahrané přímo k úkolu (bez souborů v komentářích)
+	 */
+	public function findByProject(Project $project): array;
 
 	public function add(Attachment $attachment): void;
 

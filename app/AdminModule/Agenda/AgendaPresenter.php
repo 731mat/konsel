@@ -17,6 +17,7 @@ use App\Model\Meeting\Command\SaveAgendaItem;
 use App\Model\Meeting\Meeting;
 use App\Model\Meeting\MeetingFacade;
 use App\Model\People\PeopleFacade;
+use App\Model\Project\ProjectFacade;
 use App\Model\Shared\Exception\DomainException;
 use App\Model\Shared\Exception\NotFoundException;
 use App\Model\Shared\Exception\ValidationException;
@@ -45,6 +46,7 @@ final class AgendaPresenter extends SecuredPresenter
 		private readonly AttachmentPolicy $attachmentPolicy,
 		private readonly CommentFacade $commentFacade,
 		private readonly TemplateFacade $templateFacade,
+		private readonly ProjectFacade $projectFacade,
 		private readonly FormFactory $formFactory,
 	) {
 		parent::__construct();
@@ -74,6 +76,7 @@ final class AgendaPresenter extends SecuredPresenter
 			'rapporteur' => $item->getRapporteur()?->getId(),
 			'description' => $item->getDescription(),
 			'proposedResolution' => $item->getProposedResolution(),
+			'project' => $item->getProject()?->getId(),
 		]);
 	}
 
@@ -266,6 +269,18 @@ final class AgendaPresenter extends SecuredPresenter
 			->setHtmlAttribute('placeholder', 'Např. Rozpočtové opatření č. 5/2026');
 		$form->addSelect('rapporteur', 'Předkladatel', $persons)
 			->setPrompt('— neurčeno —');
+		$projects = [];
+		foreach ($this->projectFacade->find($meeting->getMunicipality()->getId(), onlyActive: true) as $project) {
+			$projects[$project->getId()] = $project->getTitle();
+		}
+
+		if ($this->item?->getProject() !== null) {
+			$projects[$this->item->getProject()->getId()] = $this->item->getProject()->getTitle();
+		}
+
+		$form->addSelect('project', 'Úkol z úkolníčku', $projects)
+			->setPrompt('— bez úkolu —')
+			->setOption('description', 'Bod se objeví ve vlákně úkolu (např. schválení projektu, investice).');
 		$form->addTextArea('description', 'Důvodová zpráva / popis', null, 8)
 			->setNullable()
 			->setOption('description', 'Prostý text, odstavce oddělte prázdným řádkem.');
@@ -286,6 +301,8 @@ final class AgendaPresenter extends SecuredPresenter
 					$item = $this->item;
 					$this->flashMessage('Změny byly uloženy.', 'success');
 				}
+
+				$this->projectFacade->linkAgendaItem($item->getId(), $data->project);
 			} catch (ValidationException $e) {
 				FormErrors::apply($form, $e);
 

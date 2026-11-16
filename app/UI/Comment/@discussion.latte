@@ -27,26 +27,7 @@
 		</div>
 
 		{if $canComment}
-			{form $formName, class: 'ajax comment-form'}
-				<div class="alert alert-light border py-2 px-3 small d-flex align-items-center mb-2" data-reply-info hidden>
-					<span>Odpověď pro <strong data-reply-name></strong></span>
-					<button type="button" class="btn-close ms-auto" data-reply-cancel aria-label="Zrušit odpověď"></button>
-				</div>
-				<div n:foreach="$form->getOwnErrors() as $error" class="alert alert-danger py-2">{$error}</div>
-				{input parentId}
-				<div class="dropzone" data-dropzone>
-					<textarea n:name="body" n:class="form-control, $form['body']->hasErrors() ? is-invalid"></textarea>
-					<input n:name="files" class="d-none" data-dropzone-input>
-					<ul class="dropzone-list list-unstyled small mb-0 mt-2" data-dropzone-list hidden></ul>
-					<div class="dropzone-overlay" aria-hidden="true"><i class="bi bi-cloud-arrow-up"></i> Pusťte soubory sem</div>
-				</div>
-				<div n:ifcontent class="invalid-feedback d-block">{inputError body}{inputError files}</div>
-				<div class="d-flex align-items-center gap-2 mt-2">
-					<button type="button" class="btn btn-link btn-sm text-decoration-none px-0 me-auto" data-dropzone-pick><i class="bi bi-paperclip" aria-hidden="true"></i> Přiložit soubor</button>
-					<span class="small text-body-secondary d-none d-md-inline">nebo přetáhněte soubory do pole</span>
-					<button n:name="send" class="btn btn-primary btn-sm"><i class="bi bi-send" aria-hidden="true"></i> Odeslat</button>
-				</div>
-			{/form}
+			{include commentForm, formName: $formName}
 		{else}
 			<p class="small text-body-secondary mb-0"><i class="bi bi-lock" aria-hidden="true"></i> Diskuse je uzavřená.</p>
 		{/if}
@@ -60,6 +41,7 @@
 			<div class="small">
 				<strong>{$comment->getAuthorName()}</strong>
 				<span n:if="$comment->isFromMember()" class="badge bg-primary-subtle text-primary-emphasis ms-1">zastupitel</span>
+				<span n:if="$comment->isPublicForCitizens()" class="badge bg-success-subtle text-success-emphasis ms-1"><i class="bi bi-globe" aria-hidden="true"></i> vidí občané</span>
 				<span class="text-body-secondary ms-1">{$comment->getCreatedAt()|czDateTime}</span>
 			</div>
 			{if $comment->isDeleted()}
@@ -75,6 +57,9 @@
 				</div>
 				<div class="d-flex gap-3 small">
 					<button n:if="!$reply && $canComment" type="button" class="btn btn-link btn-sm p-0 text-decoration-none" data-reply-to="{$comment->getId()}" data-reply-name="{$comment->getAuthorName()}">Odpovědět</button>
+					<form n:if="$visibilityLink ?? null" method="post" action="{$visibilityLink($comment, !$comment->isPublicForCitizens())}" class="ajax">
+						<button type="submit" class="btn btn-link btn-sm p-0 text-decoration-none">{$comment->isPublicForCitizens() ? 'Skrýt před občany' : 'Zveřejnit občanům'}</button>
+					</form>
 					<form n:if="$canDelete($comment)" method="post" action="{$deleteLink($comment)}" class="ajax">
 						<button type="submit" class="btn btn-link btn-sm p-0 text-danger text-decoration-none" data-confirm="Smazat komentář?">Smazat</button>
 					</form>
@@ -82,4 +67,27 @@
 			{/if}
 		</div>
 	</div>
+{/define}
+
+{define commentForm, string $formName}
+		{form $formName, class: 'ajax comment-form'}
+			<div class="alert alert-light border py-2 px-3 small d-flex align-items-center mb-2" data-reply-info hidden>
+				<span>Odpověď pro <strong data-reply-name></strong></span>
+				<button type="button" class="btn-close ms-auto" data-reply-cancel aria-label="Zrušit odpověď"></button>
+			</div>
+			<div n:foreach="$form->getOwnErrors() as $error" class="alert alert-danger py-2">{$error}</div>
+			{input parentId}
+			<div class="dropzone" data-dropzone>
+				<textarea n:name="body" n:class="form-control, $form['body']->hasErrors() ? is-invalid"></textarea>
+				<input n:name="files" class="d-none" data-dropzone-input>
+				<ul class="dropzone-list list-unstyled small mb-0 mt-2" data-dropzone-list hidden></ul>
+				<div class="dropzone-overlay" aria-hidden="true"><i class="bi bi-cloud-arrow-up"></i> Pusťte soubory sem</div>
+			</div>
+			<div n:ifcontent class="invalid-feedback d-block">{inputError body}{inputError files}</div>
+			<div class="d-flex align-items-center gap-2 mt-2">
+				<button type="button" class="btn btn-link btn-sm text-decoration-none px-0 me-auto" data-dropzone-pick><i class="bi bi-paperclip" aria-hidden="true"></i> Přiložit soubor</button>
+				<span class="small text-body-secondary d-none d-md-inline">nebo přetáhněte soubory do pole</span>
+				<button n:name="send" class="btn btn-primary btn-sm"><i class="bi bi-send" aria-hidden="true"></i> Odeslat</button>
+			</div>
+		{/form}
 {/define}

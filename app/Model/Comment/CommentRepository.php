@@ -6,6 +6,7 @@ namespace App\Model\Comment;
 
 use App\Model\Meeting\AgendaItem;
 use App\Model\Meeting\Meeting;
+use App\Model\Project\Project;
 use App\Model\Shared\Exception\NotFoundException;
 
 interface CommentRepository
@@ -19,6 +20,11 @@ interface CommentRepository
 	 * @return list<Comment> od nejstaršího
 	 */
 	public function findByAgendaItem(AgendaItem $item): array;
+
+	/**
+	 * @return list<Comment> od nejstaršího
+	 */
+	public function findByProject(Project $project): array;
 
 	/**
 	 * @return array<int, int> ID bodu → počet nesmazaných komentářů
