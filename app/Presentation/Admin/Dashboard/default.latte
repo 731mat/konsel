@@ -1,8 +1,15 @@
 {block title}Přehled{/block}
 
 {block content}
-<main>
-	<h1>Přehled</h1>
-	<p>Přihlášen: {$user->getIdentity()->getData()['name']}{if $municipality} · {$municipality->getName()}{/if}</p>
-	<p><a n:href=":Sign:out">Odhlásit se</a></p>
-</main>
+<h1 class="h3 mb-4">Přehled</h1>
+
+<div class="row g-3">
+	<div class="col-md-6 col-xl-4">
+		<div class="card h-100">
+			<div class="card-body">
+				<h2 class="h6 text-body-secondary">Vítejte</h2>
+				<p class="mb-0">{$user->getIdentity()?->getData()['name'] ?? ''}{if $currentMunicipality} · {$currentMunicipality->getName()}{/if}</p>
+			</div>
+		</div>
+	</div>
+</div>

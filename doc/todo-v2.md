@@ -178,7 +178,7 @@ konsel/
 - matice oprávnění zdokumentovaná v doc/permissions.md
 **Hotovo když:** testy ověří celou matici. Reader nesmí editovat (403).
 
-### [ ] T07 – Admin layout a UI kit
+### [x] T07 – Admin layout a UI kit
 **Cíl:** Jednotný vzhled a nástroje pro všechny další obrazovky.
 - služba `node` v compose.yaml (Vite dev server na portu 5173, `make npm ARGS=…`)
 - Vite + Bootstrap 5.3 + Naja + netteForms.js, `ViteAssets` (čte manifest, v dev režimu dev server)
@@ -503,3 +503,4 @@ Vše od T32 je rozšíření, pořadí se dá upravit podle potřeby.
 - 2026-11-16 T04 – Clock = symfony/clock (NativeClock/MockClock) místo vlastních tříd. DBAL 4.6 deprekoval `$schema->createTable()/addColumn()` → vlastní `SchemaMigration` + `TableBuilder` (app/Infrastructure/Persistence/Migration), názvy indexů/FK generuje stejně jako ORM. Transakce přes `Application\Shared\TransactionManager`. Služby se registrují přes `search:` v services.neon (*Facade, *Repository, *Command). Integrační test TenantFilteru na reálné entitě doplnit v T10 (zatím jen unit test SQL podmínky).
 - 2026-11-16 T05 – Tabulka uživatelů `app_user` ("user" je v některých DB rezervované). Pokusy o přihlášení v DB (`login_attempt`), limit 5/e-mail a 20/IP za 15 min, úspěch nuluje počítadlo e-mailu. Identita se obnovuje z DB při každém requestu (IdentityHandler). CSRF řeší Nette Forms 3.3 samo (`addProtection` je deprecated). Admin modul na /admin, přihlášení /prihlaseni. Superadmin bez obce zatím nemá výběr obce – doplnit v T10/T11. Testovací helper `Tests\Support\Fixtures`.
 - 2026-11-16 T06 – Zdroje a privilegia jako enumy `Core\Security\Resource` / `Privilege` (+ `dashboard`, `audit`, `system` navíc proti plánu). `#[Allowed]` na třídě i metodě, test `AllowedCoverageTest` hlídá, že žádný vstupní bod Admin modulu nezůstane bez oprávnění.
+- 2026-11-16 T07 – Node kontejner pouští `vite build --watch` (bez dev serveru/HMR) → ViteAssets vždy čte manifest, dev = prod. Bootstrap 5.3 (SCSS) + Bootstrap Icons + Naja + nette-forms. Menu (`AdminMenu`) ukazuje jen položky s oprávněním a existujícím presenterem. **contributte/datagrid odložen** – rozhodnout v T10 (alternativa: vlastní Latte tabulky + Paginator). Přepínač orgánu přesunut do T10/T34 (zatím nejsou orgány). Odkazy na presenter v šabloně komponenty: `$presenter->link()`.

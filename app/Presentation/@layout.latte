@@ -1,14 +1,29 @@
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="cs" data-bs-theme="light">
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="robots" content="noindex, nofollow">
 	<title>{ifset title}{include title|stripHtml} · {/ifset}Konšel</title>
+	<script>
+		document.documentElement.dataset.bsTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+	</script>
+	{vite('assets/main.js')}
 </head>
 
-<body>
-	<div n:foreach="$flashes as $flash" class="flash {$flash->type}">{$flash->message}</div>
-
-	{include content}
+<body class="bg-body-tertiary">
+	{block body}
+	<div class="container py-5">
+		{include flashes}
+		{include content}
+	</div>
+	{/block}
 </body>
 </html>
+
+{define flashes}
+	<div n:foreach="$flashes as $flash" class="alert alert-{$flash->type === 'error' ? 'danger' : $flash->type} alert-dismissible fade show" role="alert">
+		{$flash->message}
+		<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Zavřít"></button>
+	</div>
+{/define}

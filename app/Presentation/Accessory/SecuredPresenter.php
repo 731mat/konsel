@@ -7,6 +7,8 @@ namespace App\Presentation\Accessory;
 use App\Application\Municipality\MunicipalityFacade;
 use App\Core\Security\Allowed;
 use App\Core\Tenancy\CurrentMunicipality;
+use App\Presentation\Accessory\Menu\AdminMenu;
+use App\Presentation\Accessory\Menu\AdminMenuFactory;
 use Nette\DI\Attributes\Inject;
 use Nette\Security\User;
 
@@ -21,6 +23,9 @@ abstract class SecuredPresenter extends BasePresenter
 
 	#[Inject]
 	public MunicipalityFacade $municipalityFacade;
+
+	#[Inject]
+	public AdminMenuFactory $adminMenuFactory;
 
 	public function checkRequirements(mixed $element): void
 	{
@@ -48,5 +53,16 @@ abstract class SecuredPresenter extends BasePresenter
 				$this->error('K této stránce nemáte oprávnění.', 403);
 			}
 		}
+	}
+
+	protected function beforeRender(): void
+	{
+		parent::beforeRender();
+		$this->template->currentMunicipality = $this->currentMunicipality->isSet() ? $this->currentMunicipality->get() : null;
+	}
+
+	protected function createComponentAdminMenu(): AdminMenu
+	{
+		return $this->adminMenuFactory->create();
 	}
 }

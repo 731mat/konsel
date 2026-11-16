@@ -14,3 +14,16 @@ services:
     environment:
       NETTE_DEBUG: "1"
     restart: unless-stopped
+
+  # Vite v režimu watch – průběžně sestavuje www/assets (stejný výstup jako produkční build)
+  node:
+    image: node:22-alpine
+    user: "${UID:-1000}:${GID:-1000}"
+    working_dir: /app
+    volumes:
+      - .:/app
+    environment:
+      HOME: /tmp
+      npm_config_cache: /tmp/.npm
+    command: sh -c "npm install --no-audit --no-fund && npm run watch"
+    restart: unless-stopped

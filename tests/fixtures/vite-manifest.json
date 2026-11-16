@@ -1,0 +1,7 @@
+{
+  "assets/main.js": {
+    "file": "main-abc123.js",
+    "isEntry": true,
+    "css": ["main-def456.css"]
+  }
+}

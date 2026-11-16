@@ -12,6 +12,8 @@ services:
 	- App\Core\Security\AuthorizatorFactory::create
 	- App\Application\Security\LoginThrottle
 	- App\Presentation\Accessory\FormFactory
+	- App\Presentation\Accessory\Menu\AdminMenuFactory
+	- App\Core\Latte\ViteAssets(%rootDir%/www/assets/.vite/manifest.json)
 
 
 # Automatická registrace podle konvence adresářů

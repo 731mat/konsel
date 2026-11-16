@@ -1,0 +1,20 @@
+{
+  "name": "konsel",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "watch": "vite build --watch --mode development"
+  },
+  "devDependencies": {
+    "sass": "^1.108.2",
+    "vite": "^8.3.8"
+  },
+  "dependencies": {
+    "@popperjs/core": "^2.11.8",
+    "bootstrap": "^5.3.9",
+    "bootstrap-icons": "^1.13.2",
+    "naja": "^3.3.3",
+    "nette-forms": "^3.5.4"
+  }
+}

@@ -11,6 +11,8 @@ application:
 latte:
 	strictTypes: yes
 	strictParsing: yes
+	extensions:
+		- App\Core\Latte\LatteExtension
 
 
 session:

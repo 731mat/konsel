@@ -6,7 +6,7 @@ DC   = docker compose
 EXEC = $(DC) exec -u www-data app
 
 .DEFAULT_GOAL := help
-.PHONY: help up down build rebuild sh logs composer console qa test stan cs cs-fix db-reset
+.PHONY: help up down build rebuild sh logs composer console npm assets qa test stan cs cs-fix db-reset
 
 help: ## Vypíše dostupné příkazy
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -34,6 +34,12 @@ composer: ## Composer, např. make composer ARGS="require foo/bar"
 
 console: ## bin/console, např. make console ARGS="migrations:migrate"
 	$(EXEC) php bin/console $(ARGS)
+
+npm: ## npm v node kontejneru, např. make npm ARGS="install bootstrap"
+	$(DC) run --rm --no-deps node npm $(ARGS)
+
+assets: ## Jednorázový build assetů (www/assets)
+	$(DC) run --rm --no-deps node sh -c "npm install --no-audit --no-fund && npm run build"
 
 qa: ## Coding standard + PHPStan + testy
 	$(EXEC) composer qa

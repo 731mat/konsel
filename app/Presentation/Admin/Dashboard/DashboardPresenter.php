@@ -11,8 +11,5 @@ use App\Presentation\Accessory\SecuredPresenter;
 #[Allowed(Resource::Dashboard)]
 final class DashboardPresenter extends SecuredPresenter
 {
-	public function renderDefault(): void
-	{
-		$this->template->municipality = $this->currentMunicipality->isSet() ? $this->currentMunicipality->get() : null;
-	}
+	public function renderDefault(): void {}
 }

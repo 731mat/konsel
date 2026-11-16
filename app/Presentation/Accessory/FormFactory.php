@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Presentation\Accessory;
 
+use App\Presentation\Accessory\Form\BootstrapFormRenderer;
 use Nette\Application\UI\Form;
 
 /**
@@ -14,6 +15,9 @@ final class FormFactory
 {
 	public function create(): Form
 	{
-		return new Form();
+		$form = new Form();
+		$form->setRenderer(new BootstrapFormRenderer());
+
+		return $form;
 	}
 }
