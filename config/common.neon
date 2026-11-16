@@ -1,6 +1,8 @@
 parameters:
 	# Šifrovací klíč aplikace (base64, 32 B) – nastavuje se v local.neon, vygeneruje: make console ARGS="app:encryption-key"
 	encryptionKey: ''
+	# Maximální velikost jedné přílohy (bajty); u běžného nahrávání omezuje i upload_max_filesize v php.ini
+	attachmentMaxSize: 67108864
 
 
 application:

@@ -13,6 +13,9 @@
 {varType App\Model\Meeting\AgendaItem|null $next}
 {varType bool $canEdit}
 {varType bool $canDelete}
+{varType App\Model\Attachment\Attachment[] $attachments}
+{varType bool $canUpload}
+{varType bool $canDeleteAttachment}
 
 <div class="d-flex flex-wrap align-items-start gap-3 mb-4">
 	<div class="me-auto">
@@ -52,7 +55,35 @@
 			</div>
 		</div>
 
-		{block itemExtras}{/block}
+		<div class="card" id="prilohy">
+			<div class="card-header d-flex align-items-center">
+				<span class="me-auto"><i class="bi bi-paperclip" aria-hidden="true"></i> Přílohy</span>
+				<span n:if="$attachments" class="badge text-bg-light">{count($attachments)}</span>
+			</div>
+			<ul n:if="$attachments" class="list-group list-group-flush">
+				<li n:foreach="$attachments as $attachment" class="list-group-item d-flex align-items-center gap-3 py-3">
+					<i class="bi {$attachment->getFile()|fileIcon} fs-3 text-primary" aria-hidden="true"></i>
+					<div class="me-auto min-w-0">
+						<a n:href="Attachment:preview, id: $attachment->getId()" target="_blank" rel="noopener" class="fw-semibold text-break">{$attachment->getTitle()}</a>
+						<div class="small text-body-secondary">
+							{$attachment->getFile()->size|bytes} · {$attachment->getCreatedAt()|czDateTime}{if $attachment->getUploadedBy()} · {$attachment->getUploadedBy()->getName()}{/if}
+							<span n:if="!$attachment->isPublicForMembers()" class="badge bg-warning-subtle text-warning-emphasis ms-1">jen pro úřad</span>
+						</div>
+					</div>
+					<a n:href="Attachment:download, id: $attachment->getId()" class="btn btn-sm btn-light" title="Stáhnout"><i class="bi bi-download" aria-hidden="true"></i><span class="visually-hidden">Stáhnout</span></a>
+					<form n:if="$canDeleteAttachment" method="post" action="{link deleteAttachment!, attachmentId: $attachment->getId()}">
+						<button type="submit" class="btn btn-sm btn-light text-danger" title="Smazat" data-confirm="Smazat přílohu „{$attachment->getTitle()}“?"><i class="bi bi-trash" aria-hidden="true"></i><span class="visually-hidden">Smazat</span></button>
+					</form>
+				</li>
+			</ul>
+			<div n:if="!$attachments" class="card-body empty-state py-4">
+				<i class="bi bi-paperclip" aria-hidden="true"></i>
+				K bodu zatím nejsou přiložené podklady.
+			</div>
+			<div n:if="$canUpload" class="card-footer bg-transparent pt-3">
+				{control attachmentForm}
+			</div>
+		</div>
 	</div>
 
 	<div class="col-xl-4 d-flex flex-column gap-4">

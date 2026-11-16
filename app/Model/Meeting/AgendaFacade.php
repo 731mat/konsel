@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Model\Meeting;
 
+use App\Model\Attachment\AttachmentRepository;
 use App\Model\Meeting\Command\SaveAgendaItem;
 use App\Model\People\PersonRepository;
 use App\Model\Shared\Exception\InvalidStateException;
 use App\Model\Shared\Exception\ValidationException;
 use App\Model\Shared\TransactionManager;
+use App\Model\Shared\ValueObject\StoredFile;
+use App\Model\Storage\FileStorage;
 
 /**
  * Program zasedání: body, pořadí a standardní body.
@@ -19,6 +22,8 @@ final readonly class AgendaFacade
 		private MeetingRepository $meetings,
 		private AgendaItemRepository $items,
 		private PersonRepository $persons,
+		private AttachmentRepository $attachments,
+		private FileStorage $storage,
 		private TransactionManager $transaction,
 	) {}
 
@@ -39,12 +44,25 @@ final readonly class AgendaFacade
 		});
 	}
 
+	/**
+	 * Odstraní bod včetně příloh (soubory se smažou až po commitu).
+	 */
 	public function removeItem(int $itemId): void
 	{
-		$this->transaction->run(function () use ($itemId): void {
+		$files = $this->transaction->run(function () use ($itemId): array {
 			$item = $this->items->get($itemId);
+			$files = [];
+			foreach ($this->attachments->findByAgendaItem($item) as $attachment) {
+				$files[] = $attachment->getFile();
+				$this->attachments->remove($attachment);
+			}
+
 			$item->getMeeting()->removeAgendaItem($item);
+
+			return $files;
 		});
+
+		array_walk($files, fn(StoredFile $file) => $this->storage->delete($file));
 	}
 
 	public function moveItem(int $itemId, int $position): void

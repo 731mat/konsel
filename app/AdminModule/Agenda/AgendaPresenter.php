@@ -8,6 +8,8 @@ use App\AdminModule\SecuredPresenter;
 use App\Core\Security\Allowed;
 use App\Core\Security\Privilege;
 use App\Core\Security\Resource;
+use App\Model\Attachment\AttachmentFacade;
+use App\Model\Attachment\AttachmentPolicy;
 use App\Model\Meeting\AgendaFacade;
 use App\Model\Meeting\AgendaItem;
 use App\Model\Meeting\Command\SaveAgendaItem;
@@ -17,10 +19,12 @@ use App\Model\People\PeopleFacade;
 use App\Model\Shared\Exception\DomainException;
 use App\Model\Shared\Exception\NotFoundException;
 use App\Model\Shared\Exception\ValidationException;
+use App\Model\Storage\UploadedFile;
 use App\UI\Form\FormErrors;
 use App\UI\Form\FormFactory;
 use Nette\Application\Attributes\Requires;
 use Nette\Application\UI\Form;
+use Nette\Http\FileUpload;
 
 /**
  * Bod programu: založení, úprava, detail (text, návrh usnesení, přílohy, komentáře).
@@ -36,6 +40,8 @@ final class AgendaPresenter extends SecuredPresenter
 		private readonly AgendaFacade $agendaFacade,
 		private readonly MeetingFacade $meetingFacade,
 		private readonly PeopleFacade $peopleFacade,
+		private readonly AttachmentFacade $attachmentFacade,
+		private readonly AttachmentPolicy $attachmentPolicy,
 		private readonly FormFactory $formFactory,
 	) {
 		parent::__construct();
@@ -86,6 +92,9 @@ final class AgendaPresenter extends SecuredPresenter
 		$this->template->meeting = $meeting;
 		$this->template->canEdit = $meeting->canEditProgram() && $this->isAllowed(Resource::Agenda, Privilege::Edit);
 		$this->template->canDelete = $meeting->canEditProgram() && $this->isAllowed(Resource::Agenda, Privilege::Delete);
+		$this->template->attachments = $this->attachmentFacade->findByAgendaItem(($this->item ?? $this->error())->getId());
+		$this->template->canUpload = $meeting->canEditAttachments() && $this->isAllowed(Resource::Attachment, Privilege::Edit);
+		$this->template->canDeleteAttachment = $meeting->canEditAttachments() && $this->isAllowed(Resource::Attachment, Privilege::Delete);
 		$items = $meeting->getAgendaItems();
 		$index = array_search($this->item, $items, true);
 		$this->template->previous = is_int($index) ? ($items[$index - 1] ?? null) : null;
@@ -108,6 +117,73 @@ final class AgendaPresenter extends SecuredPresenter
 		$this->redirect('Meeting:detail', [
 			'id' => $meetingId,
 		]);
+	}
+
+	#[Allowed(Resource::Attachment, Privilege::Delete)]
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleDeleteAttachment(int $attachmentId): void
+	{
+		$item = $this->item ?? $this->error();
+		try {
+			$attachment = $this->assertOwned($this->attachmentFacade->get($attachmentId));
+			if ($attachment->getAgendaItem() !== $item) {
+				$this->error('Příloha nepatří k tomuto bodu.');
+			}
+
+			$this->attachmentFacade->delete($attachment->getId());
+			$this->flashMessage("Příloha „{$attachment->getTitle()}“ byla smazána.", 'success');
+		} catch (DomainException $e) {
+			$this->flashMessage($e->getMessage(), 'danger');
+		}
+
+		$this->redirect('this');
+	}
+
+	protected function createComponentAttachmentForm(): Form
+	{
+		$this->requirePermission(Resource::Attachment, Privilege::Edit);
+		$item = $this->item ?? $this->error();
+		$maxMb = intdiv($this->attachmentPolicy->maxSize, 1024 * 1024);
+
+		$form = $this->formFactory->create();
+		$form->addMultiUpload('files', 'Soubory')
+			->setRequired('Vyberte alespoň jeden soubor.')
+			->addRule(Form::MaxFileSize, "Soubor může mít nejvýše {$maxMb} MB.", $this->attachmentPolicy->maxSize)
+			->setHtmlAttribute('accept', '.' . implode(',.', AttachmentPolicy::AllowedExtensions))
+			->setOption('description', "Můžete vybrat více souborů najednou (max. {$maxMb} MB na soubor). PDF, Word, Excel, obrázky, ZIP…");
+		$form->addCheckbox('publicForMembers', 'Zpřístupnit zastupitelům')
+			->setDefaultValue(true);
+		$form->addSubmit('upload', 'Nahrát');
+		$form->onSuccess[] = function (Form $form) use ($item): void {
+			$data = $form->getValues(AttachmentFormData::class);
+			$files = array_values(array_map(
+				static fn(FileUpload $upload): UploadedFile => UploadedFile::fromPath($upload->getTemporaryFile(), $upload->getUntrustedName()),
+				array_filter($data->files, static fn(FileUpload $upload): bool => $upload->isOk()),
+			));
+			if ($files === []) {
+				$form->addError('Soubor se nepodařilo nahrát.');
+
+				return;
+			}
+
+			try {
+				$identityId = $this->getUser()->getId();
+				$uploaded = $this->attachmentFacade->upload($item->getId(), $files, is_int($identityId) ? $identityId : null, $data->publicForMembers);
+			} catch (ValidationException $e) {
+				FormErrors::apply($form, $e);
+
+				return;
+			} catch (DomainException $e) {
+				$form->addError($e->getMessage());
+
+				return;
+			}
+
+			$this->flashMessage(count($uploaded) === 1 ? 'Příloha byla nahrána.' : 'Nahráno ' . count($uploaded) . ' příloh.', 'success');
+			$this->redirect('this');
+		};
+
+		return $form;
 	}
 
 	protected function createComponentItemForm(): Form

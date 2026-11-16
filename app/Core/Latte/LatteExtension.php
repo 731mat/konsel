@@ -6,6 +6,7 @@ namespace App\Core\Latte;
 
 use App\Core\Security\Privilege;
 use App\Core\Security\Resource;
+use App\Model\Shared\ValueObject\StoredFile;
 use Latte\Extension;
 use Latte\Runtime\Html as LatteHtml;
 use Nette\Security\User;
@@ -14,7 +15,7 @@ use Nette\Utils\Html;
 /**
  * Filtry a funkce Latte pro celou aplikaci.
  *
- * Filtry:  |czDate  |czDateTime  |czMonth  |nl2p
+ * Filtry:  |czDate  |czDateTime  |czMonth  |nl2p  |fileIcon
  * Funkce:  vite('assets/main.js'), allowed(Resource::Meeting, Privilege::Edit)
  */
 final class LatteExtension extends Extension
@@ -33,6 +34,7 @@ final class LatteExtension extends Extension
 			'czDate' => self::czDate(...),
 			'czDateTime' => self::czDateTime(...),
 			'czMonth' => self::czMonth(...),
+			'fileIcon' => self::fileIcon(...),
 			'nl2p' => self::nl2p(...),
 		];
 	}
@@ -64,6 +66,24 @@ final class LatteExtension extends Extension
 	public static function czMonth(?\DateTimeInterface $date): string
 	{
 		return $date === null ? '' : ['led', 'úno', 'bře', 'dub', 'kvě', 'čvn', 'čvc', 'srp', 'zář', 'říj', 'lis', 'pro'][(int) $date->format('n') - 1];
+	}
+
+	/**
+	 * Třída Bootstrap ikony podle typu souboru.
+	 */
+	public static function fileIcon(StoredFile $file): string
+	{
+		return match ($file->getExtension()) {
+			'pdf' => 'bi-file-earmark-pdf',
+			'doc', 'docx', 'odt', 'rtf' => 'bi-file-earmark-word',
+			'xls', 'xlsx', 'ods', 'csv' => 'bi-file-earmark-excel',
+			'ppt', 'pptx', 'odp' => 'bi-file-earmark-ppt',
+			'jpg', 'jpeg', 'png', 'gif', 'webp', 'tif', 'tiff' => 'bi-file-earmark-image',
+			'zip', '7z' => 'bi-file-earmark-zip',
+			'mp3', 'm4a', 'wav' => 'bi-file-earmark-music',
+			'mp4' => 'bi-file-earmark-play',
+			default => 'bi-file-earmark',
+		};
 	}
 
 	/**

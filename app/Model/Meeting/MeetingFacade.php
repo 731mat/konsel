@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Model\Meeting;
 
+use App\Model\Attachment\AttachmentRepository;
 use App\Model\Meeting\Command\AssignOfficials;
 use App\Model\Meeting\Command\SaveMeeting;
 use App\Model\Municipality\MunicipalityRepository;
@@ -14,6 +15,8 @@ use App\Model\People\PersonRepository;
 use App\Model\Shared\Exception\InvalidStateException;
 use App\Model\Shared\Exception\ValidationException;
 use App\Model\Shared\TransactionManager;
+use App\Model\Shared\ValueObject\StoredFile;
+use App\Model\Storage\FileStorage;
 use Psr\Clock\ClockInterface;
 
 /**
@@ -26,6 +29,8 @@ final readonly class MeetingFacade
 		private BodyRepository $bodies,
 		private PersonRepository $persons,
 		private MunicipalityRepository $municipalities,
+		private AttachmentRepository $attachments,
+		private FileStorage $storage,
 		private TransactionManager $transaction,
 		private ClockInterface $clock,
 	) {}
@@ -101,11 +106,21 @@ final readonly class MeetingFacade
 	 */
 	public function delete(int $meetingId): void
 	{
-		$this->transaction->run(function () use ($meetingId): void {
+		$files = $this->transaction->run(function () use ($meetingId): array {
 			$meeting = $this->meetings->get($meetingId);
 			$meeting->assertDeletable();
+			$files = [];
+			foreach ($this->attachments->findByMeeting($meeting) as $attachment) {
+				$files[] = $attachment->getFile();
+				$this->attachments->remove($attachment);
+			}
+
 			$this->meetings->remove($meeting);
+
+			return $files;
 		});
+
+		array_walk($files, fn(StoredFile $file) => $this->storage->delete($file));
 	}
 
 	/**

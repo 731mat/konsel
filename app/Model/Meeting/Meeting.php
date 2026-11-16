@@ -433,6 +433,14 @@ final class Meeting implements TenantOwned, Timestampable
 		return $this->status->isPlanning();
 	}
 
+	/**
+	 * Podklady lze doplňovat i během zasedání; po ověření zápisu je zasedání uzavřené.
+	 */
+	public function canEditAttachments(): bool
+	{
+		return $this->status !== MeetingStatus::MinutesApproved;
+	}
+
 	public function canAssignOfficials(): bool
 	{
 		return $this->status !== MeetingStatus::MinutesApproved;

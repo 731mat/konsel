@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Demo;
 
+use App\Model\Attachment\AttachmentFacade;
 use App\Model\Meeting\AgendaFacade;
 use App\Model\Meeting\Command\AssignOfficials;
 use App\Model\Meeting\Command\SaveAgendaItem;
@@ -20,6 +21,7 @@ use App\Model\People\Command\SaveBody;
 use App\Model\People\Command\SavePerson;
 use App\Model\People\MemberFunction;
 use App\Model\People\PeopleFacade;
+use App\Model\Storage\UploadedFile;
 use App\Model\User\Command\CreateUser;
 use App\Model\User\Role;
 use App\Model\User\UserFacade;
@@ -51,6 +53,7 @@ final readonly class DemoSeeder
 		private PeopleFacade $people,
 		private MeetingFacade $meetings,
 		private AgendaFacade $agenda,
+		private AttachmentFacade $attachments,
 		private ClockInterface $clock,
 	) {}
 
@@ -135,6 +138,14 @@ final readonly class DemoSeeder
 			['Prodej pozemku p. č. 456/7 v k. ú. Neplachovice', 'Záměr prodeje byl zveřejněn od 2. do 18. listopadu. Přihlásil se jeden zájemce.', 'Zastupitelstvo obce Neplachovice schvaluje prodej pozemku p. č. 456/7 o výměře 312 m² za cenu 450 Kč/m².'],
 		]);
 		$this->meetings->transition($shared->getId(), MeetingTransition::Share);
+		$sharedItems = $this->meetings->get($shared->getId())->getAgendaItems();
+		$this->attachments->upload($sharedItems[3]->getId(), [
+			self::file('Návrh rozpočtu 2027.pdf', self::pdf(['Navrh rozpoctu obce Neplachovice na rok 2027', 'Prijmy: 14 200 000 Kc', 'Vydaje: 14 200 000 Kc'])),
+			self::file('Rozpočet 2027 – položky.csv', "Paragraf;Položka;Částka\n2212;Silnice;2 400 000\n3113;Základní škola;1 850 000\n3722;Odpady;1 100 000\n"),
+		], null);
+		$this->attachments->upload($sharedItems[6]->getId(), [
+			self::file('Záměr prodeje pozemku 456-7.pdf', self::pdf(['Zamer prodeje pozemku p. c. 456/7', 'Vymera 312 m2, k. u. Neplachovice'])),
+		], null);
 
 		$draft = $this->meetings->create($council->getId(), new SaveMeeting(MeetingType::Regular, $today->modify('+9 weeks'), $officeRoom));
 		$this->agenda->addItem($draft->getId(), new SaveAgendaItem('Zpráva o činnosti finančního výboru', rapporteurId: $persons[2]->getId()));
@@ -159,6 +170,51 @@ final readonly class DemoSeeder
 		}
 
 		$this->agenda->insertStandardItems($meetingId);
+	}
+
+	private static function file(string $name, string $content): UploadedFile
+	{
+		$stream = fopen('php://temp', 'w+b');
+		assert($stream !== false);
+		fwrite($stream, $content);
+		rewind($stream);
+
+		return new UploadedFile($stream, $name);
+	}
+
+	/**
+	 * Minimální platné PDF s řádky textu (ASCII) – demo podklady bez externích souborů.
+	 *
+	 * @param list<string> $lines
+	 */
+	private static function pdf(array $lines): string
+	{
+		$text = 'BT /F1 16 Tf 72 770 Td 22 TL';
+		foreach ($lines as $line) {
+			$text .= ' (' . addcslashes($line, '()\\') . ') Tj T*';
+		}
+
+		$objects = [
+			'<< /Type /Catalog /Pages 2 0 R >>',
+			'<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+			'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+			'<< /Length ' . (strlen($text) + 3) . " >>\nstream\n{$text} ET\nendstream",
+			'<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+		];
+		$pdf = "%PDF-1.4\n";
+		$offsets = [];
+		foreach ($objects as $i => $object) {
+			$offsets[] = strlen($pdf);
+			$pdf .= ($i + 1) . " 0 obj\n{$object}\nendobj\n";
+		}
+
+		$xref = strlen($pdf);
+		$pdf .= "xref\n0 " . (count($objects) + 1) . "\n0000000000 65535 f \n";
+		foreach ($offsets as $offset) {
+			$pdf .= sprintf("%010d 00000 n \n", $offset);
+		}
+
+		return $pdf . "trailer\n<< /Size " . (count($objects) + 1) . " /Root 1 0 R >>\nstartxref\n{$xref}\n%%EOF\n";
 	}
 
 	/**
