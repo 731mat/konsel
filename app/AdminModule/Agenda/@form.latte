@@ -1,0 +1,15 @@
+{parameters App\Model\Meeting\Meeting $meeting}
+<div class="row g-4">
+	<div class="col-xl-8">
+		<div class="card"><div class="card-body">{control itemForm}</div></div>
+	</div>
+	<div class="col-xl-4">
+		<div class="card">
+			<div class="card-header">Tipy</div>
+			<div class="card-body small text-body-secondary">
+				<p>Návrh usnesení pište celou větou, jak se bude číst při hlasování: <em>„{$meeting->getBody()->getName()} schvaluje rozpočtové opatření č. 5/2026 dle přílohy.“</em></p>
+				<p class="mb-0">Podklady (smlouvy, rozpočty, mapy) nahrajete k bodu po jeho uložení.</p>
+			</div>
+		</div>
+	</div>
+</div>

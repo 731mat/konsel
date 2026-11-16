@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Console\Demo;
 
+use App\Model\Meeting\AgendaFacade;
 use App\Model\Meeting\Command\AssignOfficials;
+use App\Model\Meeting\Command\SaveAgendaItem;
 use App\Model\Meeting\Command\SaveMeeting;
 use App\Model\Meeting\MeetingFacade;
 use App\Model\Meeting\MeetingTransition;
@@ -48,6 +50,7 @@ final readonly class DemoSeeder
 		private UserFacade $users,
 		private PeopleFacade $people,
 		private MeetingFacade $meetings,
+		private AgendaFacade $agenda,
 		private ClockInterface $clock,
 	) {}
 
@@ -103,6 +106,12 @@ final readonly class DemoSeeder
 		$officeRoom = 'Zasedací místnost obecního úřadu, Hlavní 1';
 		$constituent = $this->meetings->create($council->getId(), new SaveMeeting(MeetingType::Constituent, $constituentDay->setTime(18, 0), 'Kulturní dům Neplachovice'));
 		$this->meetings->assignOfficials($constituent->getId(), new AssignOfficials($persons[0]->getId(), $persons[7]->getId(), $persons[2]->getId(), $persons[3]->getId()));
+		$this->program($constituent->getId(), [
+			['Složení slibu členů zastupitelstva', 'Předsedající vyzve přítomné členy zastupitelstva ke složení slibu podle § 69 odst. 2 zákona o obcích.', null],
+			['Volba starosty a místostarosty', 'Určení funkcí, pro které budou členové zastupitelstva uvolněni, způsobu volby a samotná volba.', 'Zastupitelstvo obce Neplachovice volí starostou obce Ing. Jana Dvořáka a místostarostkou Marii Svobodovou.'],
+			['Zřízení finančního a kontrolního výboru', 'Zastupitelstvo zřizuje finanční a kontrolní výbor (§ 117 zákona o obcích) a volí jejich předsedy a členy.', 'Zastupitelstvo obce Neplachovice zřizuje finanční výbor a kontrolní výbor, oba tříčlenné.'],
+			['Odměny neuvolněným členům zastupitelstva', null, 'Zastupitelstvo obce Neplachovice stanoví měsíční odměny neuvolněným členům zastupitelstva podle nařízení vlády č. 318/2017 Sb.'],
+		]);
 		$this->runMeeting($constituent->getId(), $constituentDay->setTime(18, 0), $constituentDay->setTime(19, 40), approveMinutes: true);
 
 		// Další zasedání se vztahují k dnešku, aby demo vždy ukazovalo proběhlé, sdílené i připravované zasedání.
@@ -110,20 +119,46 @@ final readonly class DemoSeeder
 		$pastDay = max($constituentDay->modify('+14 days'), $today->modify('-5 days'))->setTime(18, 0);
 		$past = $this->meetings->create($council->getId(), new SaveMeeting(MeetingType::Regular, $pastDay, $officeRoom));
 		$this->meetings->assignOfficials($past->getId(), new AssignOfficials($persons[0]->getId(), $persons[7]->getId(), $persons[4]->getId(), $persons[5]->getId()));
+		$this->program($past->getId(), [
+			['Rozpočtové opatření č. 4/2026', 'Navýšení výdajů na opravu chodníku o 120 000 Kč, kryto vyššími daňovými příjmy.', 'Zastupitelstvo obce Neplachovice schvaluje rozpočtové opatření č. 4/2026 dle přílohy.'],
+			['Smlouva o dílo – oprava místní komunikace', 'Výběrové řízení vyhrála firma Silnice Morava s.r.o. s nabídkou 1 840 000 Kč bez DPH.', 'Zastupitelstvo obce Neplachovice schvaluje uzavření smlouvy o dílo na opravu místní komunikace se společností Silnice Morava s.r.o. a pověřuje starostu jejím podpisem.'],
+			['Plán inventarizace majetku obce za rok 2026', null, 'Zastupitelstvo obce Neplachovice schvaluje plán inventarizace a jmenuje inventarizační komisi.'],
+		]);
 		$this->runMeeting($past->getId(), $pastDay, $pastDay->setTime(20, 10), approveMinutes: false);
 
 		$shared = $this->meetings->create($council->getId(), new SaveMeeting(MeetingType::Regular, $today->modify('+3 weeks'), $officeRoom));
 		$this->meetings->assignOfficials($shared->getId(), new AssignOfficials(chairpersonId: $persons[0]->getId(), recorderId: $persons[7]->getId()));
+		$this->program($shared->getId(), [
+			['Rozpočet obce na rok 2027', "Návrh rozpočtu byl zveřejněn na úřední desce a webu obce 15 dní předem.\n\nRozpočet je navržen jako vyrovnaný: příjmy i výdaje 14,2 mil. Kč.", 'Zastupitelstvo obce Neplachovice schvaluje rozpočet obce na rok 2027 jako vyrovnaný ve výši 14 200 000 Kč.'],
+			['Střednědobý výhled rozpočtu na roky 2028–2029', null, 'Zastupitelstvo obce Neplachovice schvaluje střednědobý výhled rozpočtu na roky 2028–2029.'],
+			['Obecně závazná vyhláška o místním poplatku za obecní systém odpadového hospodářství', 'Poplatek se zvyšuje z 750 Kč na 850 Kč na osobu a rok kvůli vyšším nákladům na svoz.', 'Zastupitelstvo obce Neplachovice vydává obecně závaznou vyhlášku č. 1/2026 o místním poplatku za obecní systém odpadového hospodářství.'],
+			['Prodej pozemku p. č. 456/7 v k. ú. Neplachovice', 'Záměr prodeje byl zveřejněn od 2. do 18. listopadu. Přihlásil se jeden zájemce.', 'Zastupitelstvo obce Neplachovice schvaluje prodej pozemku p. č. 456/7 o výměře 312 m² za cenu 450 Kč/m².'],
+		]);
 		$this->meetings->transition($shared->getId(), MeetingTransition::Share);
 
-		$this->meetings->create($council->getId(), new SaveMeeting(MeetingType::Regular, $today->modify('+9 weeks'), $officeRoom));
+		$draft = $this->meetings->create($council->getId(), new SaveMeeting(MeetingType::Regular, $today->modify('+9 weeks'), $officeRoom));
+		$this->agenda->addItem($draft->getId(), new SaveAgendaItem('Zpráva o činnosti finančního výboru', rapporteurId: $persons[2]->getId()));
 
 		return [
 			'Obec Neplachovice (650 obyvatel)',
 			'Uživatelé (heslo ' . self::Password . '): spravce@, editor@, ctenar@, superadmin@demo.konsel.test',
 			'Volební období 2026–2030, zastupitelstvo 9 členů, finanční a kontrolní výbor',
-			'Zasedání zastupitelstva: ustavující (zápis ověřen), proběhlé, sdílené a v přípravě',
+			'Zasedání zastupitelstva s programem: ustavující (zápis ověřen), proběhlé, sdílené a v přípravě',
 		];
+	}
+
+	/**
+	 * Program: zadané body + standardní úvod (zahájení, ověřovatelé, schválení programu) a závěr.
+	 *
+	 * @param list<array{string, ?string, ?string}> $items [název, popis, návrh usnesení]
+	 */
+	private function program(int $meetingId, array $items): void
+	{
+		foreach ($items as [$title, $description, $resolution]) {
+			$this->agenda->addItem($meetingId, new SaveAgendaItem($title, $description, $resolution));
+		}
+
+		$this->agenda->insertStandardItems($meetingId);
 	}
 
 	/**

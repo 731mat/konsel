@@ -98,6 +98,7 @@ h1, .h1, h2, .h2, h3, .h3 {
 
 .app-sidebar {
 	width: var(--konsel-sidebar-width);
+	flex-shrink: 0;
 
 	.nav-section {
 		font-size: .7rem;
@@ -269,6 +270,33 @@ h1, .h1, h2, .h2, h3, .h3 {
 		border-radius: 50%;
 		background: currentcolor;
 	}
+}
+
+// --- Program zasedání ---------------------------------------------------------------
+.agenda-number {
+	min-width: 1.75rem;
+	font-weight: 700;
+	color: var(--bs-primary-text-emphasis);
+	font-variant-numeric: tabular-nums;
+}
+
+.drag-handle {
+	cursor: grab;
+	color: var(--bs-tertiary-color);
+	padding: 0 .1rem;
+
+	&:hover {
+		color: var(--bs-emphasis-color);
+	}
+}
+
+.sortable-ghost {
+	opacity: .5;
+	background: var(--bs-primary-bg-subtle);
+}
+
+.min-w-0 {
+	min-width: 0;
 }
 
 // --- Datum zasedání (dlaždice) ------------------------------------------------------

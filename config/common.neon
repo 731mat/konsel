@@ -17,10 +17,10 @@ latte:
 		- App\Core\Latte\LatteExtension
 
 
+# Příznak Secure u cookies řídí http.cookieSecure (výchozí auto = podle HTTPS). V sekci session by 'auto' znamenalo vždy true.
 session:
 	expiration: 14 days
 	cookieSamesite: Lax
-	cookieSecure: auto
 	name: konsel_sid
 
 

@@ -1,0 +1,74 @@
+{block title}{$item->getPosition()}. {$item->getTitle()}{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href="Meeting:">Zasedání</a></li>
+	<li class="breadcrumb-item"><a n:href="Meeting:detail, id: $meeting->getId()">{$meeting->getTitle()}</a></li>
+	<li class="breadcrumb-item active" aria-current="page">Bod {$item->getPosition()}</li>
+{/block}
+
+{block content}
+{varType App\Model\Meeting\AgendaItem $item}
+{varType App\Model\Meeting\Meeting $meeting}
+{varType App\Model\Meeting\AgendaItem|null $previous}
+{varType App\Model\Meeting\AgendaItem|null $next}
+{varType bool $canEdit}
+{varType bool $canDelete}
+
+<div class="d-flex flex-wrap align-items-start gap-3 mb-4">
+	<div class="me-auto">
+		<div class="small text-body-secondary mb-1">Bod {$item->getPosition()} z {count($meeting->getAgendaItems())} · {$meeting->getTitle()}, {$meeting->getScheduledAt()|czDate}</div>
+		<h1 class="h3 mb-1">{$item->getTitle()}</h1>
+		<p class="text-body-secondary mb-0" n:if="$item->getRapporteur()"><i class="bi bi-person" aria-hidden="true"></i> Předkládá {$item->getRapporteur()->getFullName()}</p>
+	</div>
+	<div class="d-flex flex-wrap gap-2">
+		<a n:if="$canEdit" n:href="edit, id: $item->getId()" class="btn btn-outline-secondary"><i class="bi bi-pencil" aria-hidden="true"></i> Upravit</a>
+		<form n:if="$canDelete" method="post" action="{link delete!}" class="d-inline">
+			<button type="submit" class="btn btn-outline-danger" data-confirm="Odstranit bod „{$item->getTitle()}“ z programu?" title="Odstranit bod"><i class="bi bi-trash" aria-hidden="true"></i><span class="visually-hidden">Odstranit</span></button>
+		</form>
+	</div>
+</div>
+
+<div class="row g-4">
+	<div class="col-xl-8 d-flex flex-column gap-4">
+		<div class="card">
+			<div class="card-header">Důvodová zpráva</div>
+			<div class="card-body">
+				{if $item->getDescription()}
+					<div class="text-break">{$item->getDescription()|nl2p}</div>
+				{else}
+					<p class="text-body-secondary mb-0">Bez popisu.</p>
+				{/if}
+			</div>
+		</div>
+
+		<div class="card border-primary-subtle">
+			<div class="card-header bg-primary-subtle text-primary-emphasis"><i class="bi bi-journal-check" aria-hidden="true"></i> Návrh usnesení</div>
+			<div class="card-body">
+				{if $item->getProposedResolution()}
+					<div class="text-break">{$item->getProposedResolution()|nl2p}</div>
+				{else}
+					<p class="text-body-secondary mb-0">Bod je bez usnesení (informace, diskuse).</p>
+				{/if}
+			</div>
+		</div>
+
+		{block itemExtras}{/block}
+	</div>
+
+	<div class="col-xl-4 d-flex flex-column gap-4">
+		{block itemSidebar}{/block}
+		<div class="card">
+			<div class="card-header">Program</div>
+			<div class="list-group list-group-flush small">
+				<a n:foreach="$meeting->getAgendaItems() as $programItem" n:href="detail, id: $programItem->getId()" n:class="list-group-item, list-group-item-action, $programItem === $item ? active">
+					{$programItem->getPosition()}. {$programItem->getTitle()}
+				</a>
+			</div>
+		</div>
+		<div class="d-flex justify-content-between">
+			<a n:if="$previous" n:href="detail, id: $previous->getId()" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-left" aria-hidden="true"></i> Bod {$previous->getPosition()}</a>
+			<span n:if="!$previous"></span>
+			<a n:if="$next" n:href="detail, id: $next->getId()" class="btn btn-sm btn-outline-secondary">Bod {$next->getPosition()} <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+		</div>
+	</div>
+</div>

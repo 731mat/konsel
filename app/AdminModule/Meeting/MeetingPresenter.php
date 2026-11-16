@@ -8,6 +8,7 @@ use App\AdminModule\SecuredPresenter;
 use App\Core\Security\Allowed;
 use App\Core\Security\Privilege;
 use App\Core\Security\Resource;
+use App\Model\Meeting\AgendaFacade;
 use App\Model\Meeting\Command\AssignOfficials;
 use App\Model\Meeting\Command\SaveMeeting;
 use App\Model\Meeting\Meeting;
@@ -45,6 +46,7 @@ final class MeetingPresenter extends SecuredPresenter
 
 	public function __construct(
 		private readonly MeetingFacade $meetingFacade,
+		private readonly AgendaFacade $agendaFacade,
 		private readonly PeopleFacade $peopleFacade,
 		private readonly FormFactory $formFactory,
 	) {
@@ -141,6 +143,7 @@ final class MeetingPresenter extends SecuredPresenter
 			MeetingTransition::Reopen->value => 'Znovu otevřít ukončené zasedání?',
 		]);
 		$this->template->canEdit = $canEdit;
+		$this->template->canEditProgram = $meeting->canEditProgram() && $this->isAllowed(Resource::Agenda, Privilege::Edit);
 		$this->template->canDelete = $this->isAllowed(Resource::Meeting, Privilege::Delete) && $meeting->getStatus() === MeetingStatus::Draft;
 	}
 
@@ -189,6 +192,39 @@ final class MeetingPresenter extends SecuredPresenter
 	public function handleReopen(): void
 	{
 		$this->runTransition($this->meeting ?? $this->error(), MeetingTransition::Reopen);
+	}
+
+	#[Allowed(Resource::Agenda, Privilege::Edit)]
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleInsertStandard(): void
+	{
+		$meeting = $this->meeting ?? $this->error();
+		$this->runProgramChange(function () use ($meeting): void {
+			$added = $this->agendaFacade->insertStandardItems($meeting->getId());
+			$this->flashMessage($added === 0 ? 'Standardní body už v programu jsou.' : "Do programu bylo vloženo {$added} standardních bodů.", 'success');
+		});
+	}
+
+	#[Allowed(Resource::Agenda, Privilege::Edit)]
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleMoveItem(int $itemId, int $position): void
+	{
+		$meeting = $this->meeting ?? $this->error();
+		$item = $meeting->findAgendaItem($itemId) ?? $this->error('Bod programu neexistuje.');
+		$this->runProgramChange(fn() => $this->agendaFacade->moveItem($item->getId(), $position));
+	}
+
+	/**
+	 * Nové pořadí po přetažení myší (AJAX, POST order[] = ID bodů).
+	 */
+	#[Allowed(Resource::Agenda, Privilege::Edit)]
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleReorder(): void
+	{
+		$meeting = $this->meeting ?? $this->error();
+		$order = $this->getRequest()->getPost('order');
+		$ids = is_array($order) ? array_values(array_map(intval(...), array_filter($order, is_numeric(...)))) : [];
+		$this->runProgramChange(fn() => $this->agendaFacade->reorder($meeting->getId(), $ids));
 	}
 
 	#[Allowed(Resource::Meeting, Privilege::Delete)]
@@ -320,6 +356,33 @@ final class MeetingPresenter extends SecuredPresenter
 			return;
 		} catch (DomainException $e) {
 			$form->addError($e->getMessage());
+
+			return;
+		}
+
+		$this->redirect('detail', [
+			'id' => $meeting->getId(),
+		]);
+	}
+
+	/**
+	 * Změna programu: chybu ukáže jako flash, při AJAXu překreslí jen program.
+	 *
+	 * @param callable(): mixed $change
+	 */
+	private function runProgramChange(callable $change): void
+	{
+		$meeting = $this->meeting ?? $this->error();
+		try {
+			$change();
+		} catch (DomainException $e) {
+			$this->flashMessage($e->getMessage(), 'danger');
+		}
+
+		if ($this->isAjax()) {
+			$this->meeting = $this->meetingFacade->get($meeting->getId());
+			$this->redrawControl('program');
+			$this->redrawControl('flashes');
 
 			return;
 		}

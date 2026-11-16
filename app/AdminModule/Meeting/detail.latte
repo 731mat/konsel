@@ -14,6 +14,7 @@
 {varType array<string, string> $confirmations}
 {varType bool $canEdit}
 {varType bool $canDelete}
+{varType bool $canEditProgram}
 
 <div class="d-flex flex-wrap align-items-start gap-3 mb-4">
 	<div class="me-auto">
@@ -59,26 +60,60 @@
 	<div class="col-xl-8">
 		<ul class="nav nav-tabs">
 			<li n:foreach="$tabs as $key => $label" class="nav-item">
-				<a n:href="detail, id: $meeting->getId(), tab: $key" n:class="nav-link, $key === $tab ? active" aria-current={$key === $tab ? 'page' : null}>{$label}</a>
+				<a n:href="detail, id: $meeting->getId(), tab: $key" n:class="nav-link, $key === $tab ? active" aria-current={$key === $tab ? 'page' : null}>{$label}{if $key === 'program' && $meeting->getAgendaItems()} <span class="badge text-bg-light">{count($meeting->getAgendaItems())}</span>{/if}</a>
 			</li>
 		</ul>
 		<div class="card border-top-0 rounded-top-0">
-			<div class="card-body empty-state">
-				{switch $tab}
-					{case 'program'}
+			{if $tab === 'program'}
+				{snippet program}
+					{var $items = $meeting->getAgendaItems()}
+					<ol n:if="$items" class="list-group list-group-flush agenda-list" data-sortable-url={$canEditProgram ? $presenter->link('reorder!') : null}>
+						<li n:foreach="$items as $item" class="list-group-item d-flex align-items-start gap-3 py-3" data-id="{$item->getId()}">
+							<span n:if="$canEditProgram" class="drag-handle" title="Přetáhněte pro změnu pořadí"><i class="bi bi-grip-vertical" aria-hidden="true"></i></span>
+							<span class="agenda-number">{$item->getPosition()}.</span>
+							<div class="me-auto min-w-0">
+								<a n:href="Agenda:detail, id: $item->getId()" class="fw-semibold">{$item->getTitle()}</a>
+								<div class="small text-body-secondary d-flex flex-wrap gap-3 mt-1">
+									<span n:if="$item->getRapporteur()"><i class="bi bi-person" aria-hidden="true"></i> {$item->getRapporteur()->getFullName()}</span>
+									<span n:if="$item->getProposedResolution()"><i class="bi bi-journal-check" aria-hidden="true"></i> návrh usnesení</span>
+								</div>
+							</div>
+							<div n:if="$canEditProgram" class="d-flex gap-1 flex-shrink-0">
+								<form n:if="!$iterator->first" method="post" action="{link moveItem!, itemId: $item->getId(), position: $item->getPosition() - 1}" class="ajax">
+									<button type="submit" class="btn btn-sm btn-light" title="Posunout nahoru"><i class="bi bi-arrow-up" aria-hidden="true"></i><span class="visually-hidden">Nahoru</span></button>
+								</form>
+								<form n:if="!$iterator->last" method="post" action="{link moveItem!, itemId: $item->getId(), position: $item->getPosition() + 1}" class="ajax">
+									<button type="submit" class="btn btn-sm btn-light" title="Posunout dolů"><i class="bi bi-arrow-down" aria-hidden="true"></i><span class="visually-hidden">Dolů</span></button>
+								</form>
+							</div>
+						</li>
+					</ol>
+					<div n:if="!$items" class="card-body empty-state">
 						<i class="bi bi-list-ol" aria-hidden="true"></i>
 						Program zasedání zatím není sestavený.
-					{case 'proceedings'}
-						<i class="bi bi-people" aria-hidden="true"></i>
-						Docházka, hlasování a diskuse k bodům se zaznamenávají po zahájení zasedání.
-					{case 'resolutions'}
-						<i class="bi bi-journal-check" aria-hidden="true"></i>
-						Usnesení vzniknou z hlasování o bodech programu.
-					{case 'documents'}
-						<i class="bi bi-file-earmark-text" aria-hidden="true"></i>
-						Pozvánka, zápis, výpisy z usnesení a prezenční listina se budou generovat zde.
-				{/switch}
-			</div>
+					</div>
+					<div n:if="$canEditProgram" class="card-footer bg-transparent d-flex flex-wrap gap-2">
+						<a n:href="Agenda:add, meeting: $meeting->getId()" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg" aria-hidden="true"></i> Přidat bod</a>
+						<form method="post" action="{link insertStandard!}" class="ajax">
+							<button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-magic" aria-hidden="true"></i> Vložit standardní body</button>
+						</form>
+					</div>
+				{/snippet}
+			{else}
+				<div class="card-body empty-state">
+					{switch $tab}
+						{case 'proceedings'}
+							<i class="bi bi-people" aria-hidden="true"></i>
+							Docházka, hlasování a diskuse k bodům se zaznamenávají po zahájení zasedání.
+						{case 'resolutions'}
+							<i class="bi bi-journal-check" aria-hidden="true"></i>
+							Usnesení vzniknou z hlasování o bodech programu.
+						{case 'documents'}
+							<i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+							Pozvánka, zápis, výpisy z usnesení a prezenční listina se budou generovat zde.
+					{/switch}
+				</div>
+			{/if}
 		</div>
 	</div>
 

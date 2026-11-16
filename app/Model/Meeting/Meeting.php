@@ -14,6 +14,8 @@ use App\Model\Shared\IntegerId;
 use App\Model\Shared\TenantOwned;
 use App\Model\Shared\Timestampable;
 use App\Model\Shared\TimestampableTrait;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Psr\Clock\ClockInterface;
 
@@ -82,10 +84,20 @@ final class Meeting implements TenantOwned, Timestampable
 	#[ORM\Column(nullable: true)]
 	private ?\DateTimeImmutable $endedAt = null;
 
+	/**
+	 * @var Collection<int, AgendaItem>
+	 */
+	#[ORM\OneToMany(targetEntity: AgendaItem::class, mappedBy: 'meeting', cascade: ['persist', 'remove'], orphanRemoval: true)]
+	#[ORM\OrderBy([
+		'position' => 'ASC',
+	])]
+	private Collection $agendaItems;
+
 	public function __construct(Body $body, int $number, MeetingType $type, \DateTimeImmutable $scheduledAt, string $place)
 	{
 		$this->municipality = $body->getMunicipality();
 		$this->body = $body;
+		$this->agendaItems = new ArrayCollection();
 		$this->renumber($number);
 		$this->reschedule($type, $scheduledAt, $place);
 	}
@@ -172,6 +184,118 @@ final class Meeting implements TenantOwned, Timestampable
 		$this->recorder = $recorder;
 		$this->firstVerifier = $firstVerifier;
 		$this->secondVerifier = $secondVerifier;
+	}
+
+	// --- Program ---
+
+	/**
+	 * Program lze sestavovat a měnit jen před zahájením zasedání.
+	 */
+	public function canEditProgram(): bool
+	{
+		return $this->status->isPlanning();
+	}
+
+	/**
+	 * @param ?int $position pozice nového bodu (1 = první); null = na konec
+	 * @throws InvalidStateException
+	 * @throws ValidationException
+	 */
+	public function addAgendaItem(AgendaItemContent $content, ?int $position = null): AgendaItem
+	{
+		$this->assertProgramEditable();
+		$this->assertRapporteur($content);
+
+		$items = $this->getAgendaItems();
+		$position = $position === null ? count($items) + 1 : max(1, min($position, count($items) + 1));
+		$item = new AgendaItem($this, $position, $content);
+		array_splice($items, $position - 1, 0, [$item]);
+		$this->agendaItems->add($item);
+		$this->renumberAgenda($items);
+
+		return $item;
+	}
+
+	/**
+	 * @throws InvalidStateException
+	 * @throws ValidationException
+	 */
+	public function updateAgendaItem(AgendaItem $item, AgendaItemContent $content): void
+	{
+		$this->assertProgramEditable();
+		$this->assertOwnsItem($item);
+		$this->assertRapporteur($content);
+		$item->changeContent($content);
+	}
+
+	/**
+	 * @throws InvalidStateException
+	 */
+	public function removeAgendaItem(AgendaItem $item): void
+	{
+		$this->assertProgramEditable();
+		$this->assertOwnsItem($item);
+		$this->agendaItems->removeElement($item);
+		$this->renumberAgenda($this->getAgendaItems());
+	}
+
+	/**
+	 * @throws InvalidStateException
+	 */
+	public function moveAgendaItem(AgendaItem $item, int $position): void
+	{
+		$this->assertProgramEditable();
+		$this->assertOwnsItem($item);
+
+		$items = array_values(array_filter($this->getAgendaItems(), static fn(AgendaItem $i): bool => $i !== $item));
+		$position = max(1, min($position, count($items) + 1));
+		array_splice($items, $position - 1, 0, [$item]);
+		$this->renumberAgenda($items);
+	}
+
+	/**
+	 * Nové pořadí celého programu (přetažení myší). Musí obsahovat právě všechny body.
+	 *
+	 * @param list<int> $itemIds
+	 * @throws InvalidStateException
+	 * @throws ValidationException
+	 */
+	public function reorderAgenda(array $itemIds): void
+	{
+		$this->assertProgramEditable();
+
+		$byId = [];
+		foreach ($this->agendaItems as $item) {
+			$byId[$item->getId()] = $item;
+		}
+
+		if (count($itemIds) !== count($byId) || count(array_unique($itemIds)) !== count($itemIds) || array_diff($itemIds, array_keys($byId)) !== []) {
+			throw new ValidationException('Pořadí bodů neodpovídá programu. Načtěte stránku znovu.');
+		}
+
+		$this->renumberAgenda(array_map(static fn(int $id): AgendaItem => $byId[$id], $itemIds));
+	}
+
+	/**
+	 * @return list<AgendaItem> seřazené podle pořadí
+	 */
+	public function getAgendaItems(): array
+	{
+		$items = $this->agendaItems->toArray();
+		usort($items, static fn(AgendaItem $a, AgendaItem $b): int => $a->getPosition() <=> $b->getPosition());
+
+		return $items;
+	}
+
+	public function findAgendaItem(int $itemId): ?AgendaItem
+	{
+		foreach ($this->agendaItems as $item) {
+			if ($item->isPersisted() && $item->getId() === $itemId) {
+				return $item;
+			}
+		}
+
+		return null;
 	}
 
 	/**
@@ -332,11 +456,7 @@ final class Meeting implements TenantOwned, Timestampable
 	public function getTitle(): string
 	{
 		$bodyType = $this->body->getType();
-		$noun = match ($bodyType) {
-			BodyType::Council => 'zasedání',
-			BodyType::Board => 'schůze',
-			BodyType::Committee => 'jednání',
-		};
+		$noun = $this->getKindNoun();
 		$adjective = match ($this->type) {
 			MeetingType::Regular => '',
 			MeetingType::Extraordinary => $bodyType === BodyType::Board ? 'mimořádná ' : 'mimořádné ',
@@ -344,6 +464,18 @@ final class Meeting implements TenantOwned, Timestampable
 		};
 
 		return "{$this->number}. {$adjective}{$noun}";
+	}
+
+	/**
+	 * Jak se jednání orgánu říká: zasedání (zastupitelstvo), schůze (rada), jednání (výbor).
+	 */
+	public function getKindNoun(): string
+	{
+		return match ($this->body->getType()) {
+			BodyType::Council => 'zasedání',
+			BodyType::Board => 'schůze',
+			BodyType::Committee => 'jednání',
+		};
 	}
 
 	public function getMunicipality(): Municipality
@@ -422,6 +554,39 @@ final class Meeting implements TenantOwned, Timestampable
 	public function getEndedAt(): ?\DateTimeImmutable
 	{
 		return $this->endedAt;
+	}
+
+	/**
+	 * @param list<AgendaItem> $items v požadovaném pořadí
+	 */
+	private function renumberAgenda(array $items): void
+	{
+		foreach ($items as $index => $item) {
+			if ($item->getPosition() !== $index + 1) {
+				$item->moveTo($index + 1);
+			}
+		}
+	}
+
+	private function assertProgramEditable(): void
+	{
+		if (!$this->canEditProgram()) {
+			throw new InvalidStateException('Program lze měnit jen před zahájením zasedání.');
+		}
+	}
+
+	private function assertOwnsItem(AgendaItem $item): void
+	{
+		if ($item->getMeeting() !== $this) {
+			throw new InvalidStateException('Bod nepatří k tomuto zasedání.');
+		}
+	}
+
+	private function assertRapporteur(AgendaItemContent $content): void
+	{
+		if ($content->rapporteur !== null && $content->rapporteur->getMunicipality() !== $this->municipality) {
+			throw new ValidationException('Předkladatel patří k jiné obci.', 'rapporteur');
+		}
 	}
 
 	private function move(MeetingTransition $transition): void

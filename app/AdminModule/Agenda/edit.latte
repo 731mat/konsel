@@ -1,0 +1,14 @@
+{block title}Upravit bod – {$item->getTitle()}{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href="Meeting:">Zasedání</a></li>
+	<li class="breadcrumb-item"><a n:href="Meeting:detail, id: $meeting->getId()">{$meeting->getTitle()}</a></li>
+	<li class="breadcrumb-item"><a n:href="detail, id: $item->getId()">{$item->getPosition()}. {$item->getTitle()|truncate: 40}</a></li>
+	<li class="breadcrumb-item active" aria-current="page">Upravit</li>
+{/block}
+
+{block content}
+{varType App\Model\Meeting\AgendaItem $item}
+{varType App\Model\Meeting\Meeting $meeting}
+<h1 class="h3 mb-4">Upravit bod {$item->getPosition()}</h1>
+{include '@form.latte', meeting: $meeting}

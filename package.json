@@ -16,6 +16,7 @@
     "bootstrap": "^5.3.9",
     "bootstrap-icons": "^1.13.2",
     "naja": "^3.3.3",
-    "nette-forms": "^3.5.4"
+    "nette-forms": "^3.5.4",
+    "sortablejs": "^1.15.6"
   }
 }
