@@ -1,0 +1,16 @@
+name: konsel
+
+services:
+  app:
+    build:
+      context: docker/php
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/app
+    environment:
+      NETTE_DEBUG: "1"
+    restart: unless-stopped

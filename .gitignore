@@ -1,0 +1,14 @@
+/vendor/
+/node_modules/
+/temp/*
+!/temp/.gitkeep
+/log/*
+!/log/.gitkeep
+/var/*
+!/var/.gitkeep
+/www/assets/
+/config/local.neon
+/.phpunit.cache/
+/tests/**/output/
+.DS_Store
+.idea/
