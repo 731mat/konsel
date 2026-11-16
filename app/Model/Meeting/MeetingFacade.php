@@ -110,7 +110,7 @@ final readonly class MeetingFacade
 			$meeting = $this->meetings->get($meetingId);
 			$meeting->assertDeletable();
 			$files = [];
-			foreach ($this->attachments->findByMeeting($meeting) as $attachment) {
+			foreach ($this->attachments->findAllForMeeting($meeting) as $attachment) {
 				$files[] = $attachment->getFile();
 				$this->attachments->remove($attachment);
 			}

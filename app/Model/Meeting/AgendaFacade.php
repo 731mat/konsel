@@ -52,7 +52,7 @@ final readonly class AgendaFacade
 		$files = $this->transaction->run(function () use ($itemId): array {
 			$item = $this->items->get($itemId);
 			$files = [];
-			foreach ($this->attachments->findByAgendaItem($item) as $attachment) {
+			foreach ($this->attachments->findAllForAgendaItem($item) as $attachment) {
 				$files[] = $attachment->getFile();
 				$this->attachments->remove($attachment);
 			}

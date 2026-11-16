@@ -8,5 +8,10 @@ final class CommentFormData
 {
 	public ?string $parentId = null;
 
-	public string $body;
+	public ?string $body = null;
+
+	/**
+	 * @var array<\Nette\Http\FileUpload>
+	 */
+	public array $files = [];
 }

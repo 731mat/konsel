@@ -6,6 +6,7 @@ namespace App\PortalModule\Meeting;
 
 use App\Model\Attachment\Attachment;
 use App\Model\Attachment\AttachmentFacade;
+use App\Model\Attachment\AttachmentPolicy;
 use App\Model\Comment\CommentFacade;
 use App\Model\Document\MeetingDocumentFacade;
 use App\Model\Document\MeetingDocumentType;
@@ -16,6 +17,7 @@ use App\Model\Shared\Exception\ValidationException;
 use App\PortalModule\PortalPresenter;
 use App\UI\Form\FormErrors;
 use App\UI\Form\FormFactory;
+use App\UI\Form\FormUploads;
 use Nette\Application\Attributes\Requires;
 use Nette\Application\Responses\CallbackResponse;
 use Nette\Application\Responses\FileResponse;
@@ -32,6 +34,7 @@ final class MeetingPresenter extends PortalPresenter
 		private readonly AttachmentFacade $attachmentFacade,
 		private readonly CommentFacade $commentFacade,
 		private readonly MeetingDocumentFacade $documentFacade,
+		private readonly AttachmentPolicy $attachmentPolicy,
 		private readonly FormFactory $formFactory,
 	) {
 		parent::__construct();
@@ -76,7 +79,7 @@ final class MeetingPresenter extends PortalPresenter
 			$this->error($e->getMessage());
 		}
 
-		if ($attachment->getAgendaItem()->getMeeting() !== $this->getMeeting() || !$attachment->isPublicForMembers()) {
+		if ($attachment->getMeeting() !== $this->getMeeting() || !$attachment->isPublicForMembers()) {
 			$this->error('Příloha neexistuje.');
 		}
 
@@ -127,14 +130,16 @@ final class MeetingPresenter extends PortalPresenter
 		$form->getElementPrototype()->addClass('ajax');
 		$form->addHidden('parentId')->setNullable();
 		$form->addTextArea('body', 'Komentář', null, 3)
-			->setRequired('Napište text komentáře.')
 			->setMaxLength(5000)
 			->setHtmlAttribute('placeholder', 'Dotaz nebo připomínka k bodu – uvidí ji úřad i ostatní zastupitelé…');
+		$form->addMultiUpload('files', 'Soubory')
+			->addRule(Form::MaxFileSize, 'Soubor je příliš velký.', $this->attachmentPolicy->maxSize);
 		$form->addSubmit('send', 'Odeslat');
 		$form->onSuccess[] = function (Form $form) use ($item): void {
 			$data = $form->getValues(CommentFormData::class);
+			$files = FormUploads::toUploadedFiles($data->files);
 			try {
-				$this->commentFacade->addByPerson($item->getId(), $this->getMember()->getId(), $data->body, is_numeric($data->parentId) ? (int) $data->parentId : null);
+				$this->commentFacade->addByPerson($item->getId(), $this->getMember()->getId(), (string) $data->body, is_numeric($data->parentId) ? (int) $data->parentId : null, $files);
 			} catch (ValidationException $e) {
 				FormErrors::apply($form, $e);
 

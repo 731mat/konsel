@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Model\Comment;
 
+use App\Model\Attachment\Attachment;
 use App\Model\Meeting\AgendaItem;
 use App\Model\Municipality\Municipality;
 use App\Model\People\Person;
@@ -13,7 +14,10 @@ use App\Model\Shared\IntegerId;
 use App\Model\Shared\TenantOwned;
 use App\Model\Shared\Timestampable;
 use App\Model\Shared\TimestampableTrait;
+use App\Model\Shared\ValueObject\StoredFile;
 use App\Model\User\User;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -63,10 +67,22 @@ final class Comment implements TenantOwned, Timestampable
 	private ?\DateTimeImmutable $deletedAt = null;
 
 	/**
+	 * @var Collection<int, Attachment>
+	 */
+	#[ORM\OneToMany(targetEntity: Attachment::class, mappedBy: 'comment', cascade: ['persist'])]
+	#[ORM\OrderBy([
+		'id' => 'ASC',
+	])]
+	private Collection $attachments;
+
+	/**
 	 * @throws ValidationException
 	 * @throws InvalidStateException
 	 */
-	public function __construct(AgendaItem $agendaItem, CommentAuthor $author, string $body, ?self $parent = null)
+	/**
+	 * @param bool $withFiles komentář nese soubory – text pak není povinný
+	 */
+	public function __construct(AgendaItem $agendaItem, CommentAuthor $author, string $body, ?self $parent = null, bool $withFiles = false)
 	{
 		if (!$agendaItem->getMeeting()->canEditAttachments()) {
 			throw new InvalidStateException('Zasedání je uzavřené, diskuse k bodům už není možná.');
@@ -86,7 +102,32 @@ final class Comment implements TenantOwned, Timestampable
 		$this->authorUser = $author->user;
 		$this->authorPerson = $author->person;
 		$this->authorName = $author->name();
-		$this->body = self::normalize($body);
+		$this->body = self::normalize($body, $withFiles);
+		$this->attachments = new ArrayCollection();
+	}
+
+	public function attach(StoredFile $file, ?User $uploadedBy): Attachment
+	{
+		$attachment = Attachment::forComment($this, $file, $uploadedBy);
+		$this->attachments->add($attachment);
+
+		return $attachment;
+	}
+
+	/**
+	 * @return list<Attachment>
+	 */
+	public function getAttachments(): array
+	{
+		return $this->deletedAt === null ? array_values($this->attachments->toArray()) : [];
+	}
+
+	/**
+	 * @return list<Attachment> včetně skrytých u smazaného komentáře (pro úklid souborů)
+	 */
+	public function getAllAttachments(): array
+	{
+		return array_values($this->attachments->toArray());
 	}
 
 	/**
@@ -151,10 +192,10 @@ final class Comment implements TenantOwned, Timestampable
 		return $this->deletedAt !== null;
 	}
 
-	private static function normalize(string $body): string
+	private static function normalize(string $body, bool $withFiles): string
 	{
 		$body = trim(str_replace(["\r\n", "\r"], "\n", $body));
-		if ($body === '') {
+		if ($body === '' && !$withFiles) {
 			throw new ValidationException('Napište text komentáře.', 'body');
 		}
 

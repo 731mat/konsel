@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Model\Attachment;
 
+use App\Model\Comment\Comment;
 use App\Model\Meeting\AgendaItem;
+use App\Model\Meeting\Meeting;
 use App\Model\Municipality\Municipality;
 use App\Model\Shared\Exception\ValidationException;
 use App\Model\Shared\IntegerId;
@@ -16,7 +18,8 @@ use App\Model\User\User;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Příloha (podklad) k bodu programu. Soubor leží ve FileStorage, servíruje se jen přes presenter s ACL.
+ * Příloha: podklad k bodu programu, nebo soubor v komentáři diskuse. Soubor leží ve FileStorage,
+ * servíruje se jen přes presenter s ACL.
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'attachment')]
@@ -30,8 +33,12 @@ final class Attachment implements TenantOwned, Timestampable
 	private Municipality $municipality;
 
 	#[ORM\ManyToOne(targetEntity: AgendaItem::class)]
-	#[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-	private AgendaItem $agendaItem;
+	#[ORM\JoinColumn(onDelete: 'CASCADE')]
+	private ?AgendaItem $agendaItem;
+
+	#[ORM\ManyToOne(targetEntity: Comment::class, inversedBy: 'attachments')]
+	#[ORM\JoinColumn(onDelete: 'CASCADE')]
+	private ?Comment $comment;
 
 	#[ORM\Column(type: 'stored_file')]
 	private StoredFile $file;
@@ -52,14 +59,30 @@ final class Attachment implements TenantOwned, Timestampable
 	#[ORM\Column]
 	private bool $publicForMembers;
 
-	public function __construct(AgendaItem $agendaItem, StoredFile $file, ?User $uploadedBy, bool $publicForMembers = true)
+	private function __construct(Municipality $municipality, ?AgendaItem $agendaItem, ?Comment $comment, StoredFile $file, ?User $uploadedBy, bool $publicForMembers)
 	{
-		$this->municipality = $agendaItem->getMunicipality();
+		$this->municipality = $municipality;
 		$this->agendaItem = $agendaItem;
+		$this->comment = $comment;
 		$this->file = $file;
 		$this->uploadedBy = $uploadedBy;
 		$this->publicForMembers = $publicForMembers;
 		$this->rename($file->originalName);
+	}
+
+	public static function forAgendaItem(AgendaItem $item, StoredFile $file, ?User $uploadedBy, bool $publicForMembers = true): self
+	{
+		return new self($item->getMunicipality(), $item, null, $file, $uploadedBy, $publicForMembers);
+	}
+
+	/**
+	 * Soubor v komentáři – vidí ho každý, kdo vidí komentář.
+	 *
+	 * @internal použijte Comment::attach()
+	 */
+	public static function forComment(Comment $comment, StoredFile $file, ?User $uploadedBy): self
+	{
+		return new self($comment->getMunicipality(), null, $comment, $file, $uploadedBy, true);
 	}
 
 	public function rename(string $title): void
@@ -82,9 +105,25 @@ final class Attachment implements TenantOwned, Timestampable
 		return $this->municipality;
 	}
 
-	public function getAgendaItem(): AgendaItem
+	/**
+	 * Bod, ke kterému je příloha přímo (null u souboru v komentáři).
+	 */
+	public function getAgendaItem(): ?AgendaItem
 	{
 		return $this->agendaItem;
+	}
+
+	public function getComment(): ?Comment
+	{
+		return $this->comment;
+	}
+
+	/**
+	 * Zasedání, ke kterému soubor patří (přímo přes bod, nebo přes komentář u bodu).
+	 */
+	public function getMeeting(): ?Meeting
+	{
+		return $this->agendaItem?->getMeeting() ?? $this->comment?->getAgendaItem()->getMeeting();
 	}
 
 	public function getFile(): StoredFile

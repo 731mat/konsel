@@ -84,8 +84,9 @@ final readonly class MeetingDocumentFacade
 	{
 		$grouped = [];
 		foreach ($this->attachments->findByMeeting($meeting) as $attachment) {
-			if ($attachment->isPublicForMembers()) {
-				$grouped[$attachment->getAgendaItem()->getId()][] = $attachment->getTitle();
+			$item = $attachment->getAgendaItem();
+			if ($item !== null && $attachment->isPublicForMembers()) {
+				$grouped[$item->getId()][] = $attachment->getTitle();
 			}
 		}
 

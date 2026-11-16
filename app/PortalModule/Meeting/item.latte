@@ -52,6 +52,7 @@
 			formName: 'commentForm',
 			canDelete: fn(App\Model\Comment\Comment $c): bool => $c->getAuthorPersonId() === $memberId,
 			deleteLink: fn(App\Model\Comment\Comment $c): string => $presenter->link('deleteComment!', ['commentId' => $c->getId()]),
+			attachmentLink: fn(App\Model\Attachment\Attachment $a): string => $presenter->link('attachment', ['id' => $a->getId()]),
 		}
 	{/snippet}
 

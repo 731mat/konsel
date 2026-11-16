@@ -55,7 +55,7 @@ final readonly class AttachmentFacade
 				$uploadedBy = $userId === null ? null : $this->users->get($userId);
 
 				return array_map(function (StoredFile $file) use ($item, $uploadedBy, $publicForMembers): Attachment {
-					$attachment = new Attachment($item, $file, $uploadedBy, $publicForMembers);
+					$attachment = Attachment::forAgendaItem($item, $file, $uploadedBy, $publicForMembers);
 					$this->attachments->add($attachment);
 
 					return $attachment;
@@ -72,7 +72,7 @@ final readonly class AttachmentFacade
 	{
 		$file = $this->transaction->run(function () use ($attachmentId): StoredFile {
 			$attachment = $this->attachments->get($attachmentId);
-			$this->assertEditable($attachment->getAgendaItem());
+			$this->assertMeetingOpen($attachment);
 			$this->attachments->remove($attachment);
 
 			return $attachment->getFile();
@@ -85,7 +85,7 @@ final readonly class AttachmentFacade
 	{
 		$this->transaction->run(function () use ($attachmentId, $publicForMembers): void {
 			$attachment = $this->attachments->get($attachmentId);
-			$this->assertEditable($attachment->getAgendaItem());
+			$this->assertMeetingOpen($attachment);
 			$attachment->changeVisibility($publicForMembers);
 		});
 	}
@@ -118,8 +118,9 @@ final readonly class AttachmentFacade
 	{
 		$counts = [];
 		foreach ($this->attachments->findByMeeting($meeting) as $attachment) {
-			if ($attachment->isPublicForMembers()) {
-				$itemId = $attachment->getAgendaItem()->getId();
+			$item = $attachment->getAgendaItem();
+			if ($item !== null && $attachment->isPublicForMembers()) {
+				$itemId = $item->getId();
 				$counts[$itemId] = ($counts[$itemId] ?? 0) + 1;
 			}
 		}
@@ -130,6 +131,13 @@ final readonly class AttachmentFacade
 	public function getLocalPath(Attachment $attachment): string
 	{
 		return $this->storage->getLocalPath($attachment->getFile());
+	}
+
+	private function assertMeetingOpen(Attachment $attachment): void
+	{
+		if ($attachment->getMeeting()?->canEditAttachments() === false) {
+			throw new InvalidStateException('Zasedání je uzavřené (zápis ověřen), přílohy už nelze měnit.');
+		}
 	}
 
 	private function assertEditable(AgendaItem $item): void

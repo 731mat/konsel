@@ -32,13 +32,84 @@ function initSortable(root) {
 	});
 }
 
+// Přetahování souborů: <div data-dropzone> s <input type=file multiple data-dropzone-input> a seznamem [data-dropzone-list].
+// Soubory se přidávají k výběru (přetažením, tlačítkem [data-dropzone-pick] i vložením ze schránky).
+function formatSize(bytes) {
+	return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} kB` : `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB`;
+}
+
+function initDropzones(root) {
+	root.querySelectorAll('[data-dropzone]').forEach((zone) => {
+		if (zone.dataset.dropzoneReady) {
+			return;
+		}
+		zone.dataset.dropzoneReady = '1';
+		const input = zone.querySelector('[data-dropzone-input]');
+		const list = zone.querySelector('[data-dropzone-list]');
+		const setFiles = (files) => {
+			const transfer = new DataTransfer();
+			files.forEach((file) => transfer.items.add(file));
+			input.files = transfer.files;
+			list.replaceChildren(...files.map((file, index) => {
+				const item = document.createElement('li');
+				item.className = 'd-flex align-items-center gap-2';
+				item.innerHTML = '<i class="bi bi-file-earmark" aria-hidden="true"></i><span class="text-truncate"></span><span class="text-body-secondary"></span><button type="button" class="btn btn-link btn-sm p-0 text-danger ms-auto" aria-label="Odebrat soubor"><i class="bi bi-x-lg"></i></button>';
+				item.querySelector('.text-truncate').textContent = file.name;
+				item.querySelector('.text-body-secondary').textContent = formatSize(file.size);
+				item.querySelector('button').addEventListener('click', () => setFiles(files.filter((_, i) => i !== index)));
+				return item;
+			}));
+			list.hidden = files.length === 0;
+		};
+		const addFiles = (files) => setFiles([...input.files, ...files]);
+
+		zone.addEventListener('dragover', (event) => {
+			if (event.dataTransfer?.types.includes('Files')) {
+				event.preventDefault();
+				zone.classList.add('dropzone-active');
+			}
+		});
+		zone.addEventListener('dragleave', (event) => {
+			if (!zone.contains(event.relatedTarget)) {
+				zone.classList.remove('dropzone-active');
+			}
+		});
+		zone.addEventListener('drop', (event) => {
+			zone.classList.remove('dropzone-active');
+			if (event.dataTransfer?.files.length) {
+				event.preventDefault();
+				addFiles([...event.dataTransfer.files]);
+			}
+		});
+		zone.addEventListener('paste', (event) => {
+			if (event.clipboardData?.files.length) {
+				event.preventDefault();
+				addFiles([...event.clipboardData.files]);
+			}
+		});
+		input.addEventListener('change', () => setFiles([...input.files]));
+		zone.closest('form')?.querySelector('[data-dropzone-pick]')?.addEventListener('click', () => {
+			const picker = document.createElement('input');
+			picker.type = 'file';
+			picker.multiple = true;
+			picker.accept = input.accept;
+			picker.addEventListener('change', () => addFiles([...picker.files]));
+			picker.click();
+		});
+	});
+}
+
 document.addEventListener('DOMContentLoaded', () => {
 	netteForms.initOnLoad();
 	naja.initialize();
 	initSortable(document);
+	initDropzones(document);
 });
 
-naja.snippetHandler.addEventListener('afterUpdate', (event) => initSortable(event.detail.snippet));
+naja.snippetHandler.addEventListener('afterUpdate', (event) => {
+	initSortable(event.detail.snippet);
+	initDropzones(event.detail.snippet);
+});
 
 // Potvrzení nevratných akcí: <button data-confirm="Opravdu smazat?">
 document.addEventListener('click', (event) => {

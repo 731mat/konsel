@@ -89,3 +89,30 @@ test('discussion is closed after minutes are approved', function (): void {
 
 	Assert::exception(fn() => $facade->addByUser($scenario->item->getId(), $user->getId(), 'Pozdě'), InvalidStateException::class);
 });
+
+test('comment carries files; file-only comment is allowed; deleting comment removes files', function (): void {
+	[$facade, $scenario, $fixtures, $container] = bootComments();
+	$user = $fixtures->user($scenario->municipality);
+	$file = static function (string $name, string $content): App\Model\Storage\UploadedFile {
+		$stream = fopen('php://memory', 'w+b');
+		assert($stream !== false);
+		fwrite($stream, $content);
+		rewind($stream);
+
+		return new App\Model\Storage\UploadedFile($stream, $name);
+	};
+	$storage = $container->getByType(App\Model\Storage\FileStorage::class);
+
+	$comment = $facade->addByUser($scenario->item->getId(), $user->getId(), '', null, [$file('foto.jpg', "\xFF\xD8\xFFjpeg"), $file('rozpocet.xlsx', 'PK')]);
+	Assert::same('', $comment->getBody());
+	Assert::same(['foto.jpg', 'rozpocet.xlsx'], array_map(static fn($a) => $a->getTitle(), $comment->getAttachments()));
+	Assert::same($scenario->meeting, $comment->getAttachments()[0]->getMeeting());
+	Assert::same([], $container->getByType(App\Model\Attachment\AttachmentFacade::class)->findByAgendaItem($scenario->item->getId()), 'soubory komentáře nejsou mezi přílohami bodu');
+
+	Assert::exception(fn() => $facade->addByUser($scenario->item->getId(), $user->getId(), 'Script', null, [$file('x.exe', 'MZ')]), ValidationException::class, '%A%.exe není povolený%A%');
+
+	$stored = $comment->getAttachments()[0]->getFile();
+	Assert::true($storage->exists($stored));
+	$facade->deleteByUser($comment->getId(), $user->getId());
+	Assert::false($storage->exists($stored));
+});

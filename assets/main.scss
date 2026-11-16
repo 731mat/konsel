@@ -338,6 +338,48 @@ h1, .h1, h2, .h2, h3, .h3 {
 	border-left: 2px solid var(--bs-border-color);
 }
 
+// --- Přetahování souborů --------------------------------------------------------------
+.dropzone {
+	position: relative;
+	border-radius: var(--bs-border-radius);
+}
+
+.dropzone-overlay {
+	display: none;
+	position: absolute;
+	inset: 0;
+	align-items: center;
+	justify-content: center;
+	gap: .5rem;
+	border: 2px dashed var(--bs-primary);
+	border-radius: var(--bs-border-radius);
+	background: rgba(var(--bs-primary-rgb), .08);
+	color: var(--bs-primary-text-emphasis);
+	font-weight: 600;
+	pointer-events: none;
+}
+
+.dropzone-active .dropzone-overlay {
+	display: flex;
+}
+
+.comment-file {
+	display: inline-flex;
+	align-items: center;
+	gap: .4rem;
+	max-width: 100%;
+	padding: .3rem .6rem;
+	border: 1px solid var(--bs-border-color);
+	border-radius: var(--bs-border-radius);
+	font-size: .8125rem;
+	color: var(--bs-body-color);
+
+	&:hover {
+		border-color: var(--bs-primary);
+		color: var(--bs-primary);
+	}
+}
+
 // --- Datum zasedání (dlaždice) ------------------------------------------------------
 .date-tile {
 	display: flex;

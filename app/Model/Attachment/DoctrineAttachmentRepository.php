@@ -64,6 +64,32 @@ final readonly class DoctrineAttachmentRepository implements AttachmentRepositor
 		return $counts;
 	}
 
+	public function findAllForMeeting(Meeting $meeting): array
+	{
+		return $this->entityManager->createQueryBuilder()
+			->select('a')
+			->from(Attachment::class, 'a')
+			->leftJoin('a.agendaItem', 'i')
+			->leftJoin('a.comment', 'c')
+			->leftJoin('c.agendaItem', 'ci')
+			->where('i.meeting = :meeting OR ci.meeting = :meeting')
+			->setParameter('meeting', $meeting)
+			->getQuery()
+			->getResult();
+	}
+
+	public function findAllForAgendaItem(AgendaItem $item): array
+	{
+		return $this->entityManager->createQueryBuilder()
+			->select('a')
+			->from(Attachment::class, 'a')
+			->leftJoin('a.comment', 'c')
+			->where('a.agendaItem = :item OR c.agendaItem = :item')
+			->setParameter('item', $item)
+			->getQuery()
+			->getResult();
+	}
+
 	public function add(Attachment $attachment): void
 	{
 		$this->entityManager->persist($attachment);

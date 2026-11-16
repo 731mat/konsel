@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Model\Comment;
 
+use App\Model\Attachment\AttachmentPolicy;
+use App\Model\Attachment\AttachmentRepository;
 use App\Model\Meeting\AgendaItemRepository;
 use App\Model\Meeting\Meeting;
 use App\Model\People\PersonRepository;
@@ -11,6 +13,9 @@ use App\Model\Shared\Exception\AccessDeniedException;
 use App\Model\Shared\Exception\InvalidStateException;
 use App\Model\Shared\Exception\ValidationException;
 use App\Model\Shared\TransactionManager;
+use App\Model\Shared\ValueObject\StoredFile;
+use App\Model\Storage\FileStorage;
+use App\Model\Storage\UploadedFile;
 use App\Model\User\UserRepository;
 use Psr\Clock\ClockInterface;
 
@@ -24,6 +29,9 @@ final readonly class CommentFacade
 		private AgendaItemRepository $items,
 		private UserRepository $users,
 		private PersonRepository $persons,
+		private AttachmentRepository $attachments,
+		private AttachmentPolicy $policy,
+		private FileStorage $storage,
 		private TransactionManager $transaction,
 		private ClockInterface $clock,
 	) {}
@@ -32,17 +40,23 @@ final readonly class CommentFacade
 	 * @throws ValidationException
 	 * @throws InvalidStateException
 	 */
-	public function addByUser(int $itemId, int $userId, string $body, ?int $parentId = null): Comment
+	/**
+	 * @param list<UploadedFile> $files soubory přiložené ke komentáři
+	 */
+	public function addByUser(int $itemId, int $userId, string $body, ?int $parentId = null, array $files = []): Comment
 	{
-		return $this->add($itemId, fn(): CommentAuthor => CommentAuthor::user($this->users->get($userId)), $body, $parentId);
+		return $this->add($itemId, fn(): CommentAuthor => CommentAuthor::user($this->users->get($userId)), $body, $parentId, $files);
 	}
 
 	/**
 	 * Komentář zastupitele z portálu.
 	 */
-	public function addByPerson(int $itemId, int $personId, string $body, ?int $parentId = null): Comment
+	/**
+	 * @param list<UploadedFile> $files
+	 */
+	public function addByPerson(int $itemId, int $personId, string $body, ?int $parentId = null, array $files = []): Comment
 	{
-		return $this->add($itemId, fn(): CommentAuthor => CommentAuthor::person($this->persons->get($personId)), $body, $parentId);
+		return $this->add($itemId, fn(): CommentAuthor => CommentAuthor::person($this->persons->get($personId)), $body, $parentId, $files);
 	}
 
 	/**
@@ -107,17 +121,40 @@ final readonly class CommentFacade
 
 	/**
 	 * @param callable(): CommentAuthor $author
+	 * @param list<UploadedFile> $files
 	 */
-	private function add(int $itemId, callable $author, string $body, ?int $parentId): Comment
+	private function add(int $itemId, callable $author, string $body, ?int $parentId, array $files): Comment
 	{
-		return $this->transaction->run(function () use ($itemId, $author, $body, $parentId): Comment {
-			$item = $this->items->get($itemId);
-			$parent = $parentId === null ? null : $this->comments->get($parentId);
-			$comment = new Comment($item, $author(), $body, $parent);
-			$this->comments->add($comment);
+		$item = $this->items->get($itemId);
+		foreach ($files as $file) {
+			$stat = fstat($file->stream);
+			$this->policy->assertAllowed($file->originalName, $stat === false ? 0 : $stat['size']);
+		}
 
-			return $comment;
-		});
+		$stored = [];
+		try {
+			foreach ($files as $file) {
+				$stored[] = $this->storage->store($file->stream, $file->originalName, "m{$item->getMunicipality()->getId()}/comments");
+			}
+
+			return $this->transaction->run(function () use ($itemId, $author, $body, $parentId, $stored): Comment {
+				$item = $this->items->get($itemId);
+				$parent = $parentId === null ? null : $this->comments->get($parentId);
+				$commentAuthor = $author();
+				$comment = new Comment($item, $commentAuthor, $body, $parent, withFiles: $stored !== []);
+				foreach ($stored as $file) {
+					$comment->attach($file, $commentAuthor->user);
+				}
+
+				$this->comments->add($comment);
+
+				return $comment;
+			});
+		} catch (\Throwable $e) {
+			array_walk($stored, fn(StoredFile $file) => $this->storage->delete($file));
+
+			throw $e;
+		}
 	}
 
 	/**
@@ -125,13 +162,22 @@ final readonly class CommentFacade
 	 */
 	private function delete(int $commentId, callable $author, bool $moderator): void
 	{
-		$this->transaction->run(function () use ($commentId, $author, $moderator): void {
+		$files = $this->transaction->run(function () use ($commentId, $author, $moderator): array {
 			$comment = $this->comments->get($commentId);
 			if (!$moderator && !$comment->isWrittenBy($author())) {
 				throw new AccessDeniedException('Smazat můžete jen vlastní komentář.');
 			}
 
 			$comment->delete($this->clock->now());
+			$files = [];
+			foreach ($comment->getAllAttachments() as $attachment) {
+				$files[] = $attachment->getFile();
+				$this->attachments->remove($attachment);
+			}
+
+			return $files;
 		});
+
+		array_walk($files, fn(StoredFile $file) => $this->storage->delete($file));
 	}
 }

@@ -71,15 +71,36 @@ test('member enters by link, reads program and attachments and comments', functi
 	]), BadRequestException::class);
 	Assert::same(404, $e?->getHttpCode());
 
+	$photo = tempnam(sys_get_temp_dir(), 'upl');
+	assert($photo !== false);
+	file_put_contents($photo, "\xFF\xD8\xFFjpeg");
 	PresenterTester::assertRedirect($tester->submitForm('Portal:Meeting', 'commentForm', [
 		'parentId' => '',
 		'body' => 'Mám dotaz k položce na odpady.',
-	], action: 'item', params: [
+	], action: 'item', files: [
+		'files' => [
+			new Nette\Http\FileUpload([
+				'name' => 'fotka.jpg',
+				'full_path' => 'fotka.jpg',
+				'type' => 'image/jpeg',
+				'size' => 7,
+				'tmp_name' => $photo,
+				'error' => UPLOAD_ERR_OK,
+			])],
+	], params: [
 		'id' => $scenario->item->getId(),
 	]));
 	$thread = $container->getByType(CommentFacade::class)->findThreads($scenario->item->getId())[0];
 	Assert::true($thread->comment->isFromMember());
 	Assert::same('Petr Novotný', $thread->comment->getAuthorName());
+	$commentFile = $thread->comment->getAttachments()[0];
+	Assert::same('fotka.jpg', $commentFile->getTitle());
+	Assert::contains('fotka.jpg', $tester->render('Portal:Meeting', 'item', [
+		'id' => $scenario->item->getId(),
+	]));
+	Assert::type(FileResponse::class, $tester->run('Portal:Meeting', 'attachment', [
+		'id' => $commentFile->getId(),
+	]));
 });
 
 test('invalid link shows explanation, revoked link logs out', function (): void {

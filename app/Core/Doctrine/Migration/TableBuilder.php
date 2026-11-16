@@ -252,9 +252,50 @@ final class TableBuilder
 	 */
 	private function identifier(string $prefix, array $columns): string
 	{
+		return self::generateIdentifier($this->name, $prefix, $columns);
+	}
+
+	/**
+	 * Index a cizí klíč pro nový sloupec v existující tabulce (pro alterTable), pojmenované jako v ORM.
+	 *
+	 * @param non-empty-string $table
+	 * @param non-empty-string $column
+	 * @param non-empty-string $referencedTable
+	 * @return array{Index, ForeignKeyConstraint}
+	 */
+	public static function foreignKeyFor(
+		string $table,
+		string $column,
+		string $referencedTable,
+		ReferentialAction $onDelete = ReferentialAction::NO_ACTION,
+	): array {
+		$editor = ForeignKeyConstraint::editor()
+			->setUnquotedName(self::generateIdentifier($table, 'fk', [$column]))
+			->setUnquotedReferencingColumnNames($column)
+			->setUnquotedReferencedTableName($referencedTable)
+			->setUnquotedReferencedColumnNames('id');
+		if ($onDelete !== ReferentialAction::NO_ACTION) {
+			$editor->setOnDeleteAction($onDelete);
+		}
+
+		$index = Index::editor()
+			->setUnquotedName(self::generateIdentifier($table, 'idx', [$column]))
+			->setType(IndexType::REGULAR)
+			->setUnquotedColumnNames($column)
+			->create();
+
+		return [$index, $editor->create()];
+	}
+
+	/**
+	 * @param list<non-empty-string> $columns
+	 * @return non-empty-string
+	 */
+	private static function generateIdentifier(string $table, string $prefix, array $columns): string
+	{
 		$hash = implode('', array_map(
 			static fn(string $part): string => dechex(crc32($part)),
-			[$this->name, ...$columns],
+			[$table, ...$columns],
 		));
 
 		return strtoupper(substr($prefix . '_' . $hash, 0, self::MaxIdentifierLength));

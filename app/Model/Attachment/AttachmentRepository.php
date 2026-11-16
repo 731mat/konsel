@@ -30,6 +30,20 @@ interface AttachmentRepository
 	 */
 	public function countByMeeting(Meeting $meeting): array;
 
+	/**
+	 * Všechny soubory zasedání včetně souborů v komentářích (pro úklid při mazání).
+	 *
+	 * @return list<Attachment>
+	 */
+	public function findAllForMeeting(Meeting $meeting): array;
+
+	/**
+	 * Všechny soubory bodu včetně souborů v komentářích (pro úklid při mazání).
+	 *
+	 * @return list<Attachment>
+	 */
+	public function findAllForAgendaItem(AgendaItem $item): array;
+
 	public function add(Attachment $attachment): void;
 
 	public function remove(Attachment $attachment): void;

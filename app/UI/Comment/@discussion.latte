@@ -5,6 +5,7 @@
 	string $formName,
 	Closure $canDelete,
 	Closure $deleteLink,
+	Closure $attachmentLink,
 }
 <div class="card" id="diskuse">
 	<div class="card-header d-flex align-items-center">
@@ -33,9 +34,16 @@
 				</div>
 				<div n:foreach="$form->getOwnErrors() as $error" class="alert alert-danger py-2">{$error}</div>
 				{input parentId}
-				<textarea n:name="body" n:class="form-control, $form['body']->hasErrors() ? is-invalid"></textarea>
-				<div n:ifcontent class="invalid-feedback d-block">{inputError body}</div>
-				<div class="d-flex justify-content-end mt-2">
+				<div class="dropzone" data-dropzone>
+					<textarea n:name="body" n:class="form-control, $form['body']->hasErrors() ? is-invalid"></textarea>
+					<input n:name="files" class="d-none" data-dropzone-input>
+					<ul class="dropzone-list list-unstyled small mb-0 mt-2" data-dropzone-list hidden></ul>
+					<div class="dropzone-overlay" aria-hidden="true"><i class="bi bi-cloud-arrow-up"></i> Pusťte soubory sem</div>
+				</div>
+				<div n:ifcontent class="invalid-feedback d-block">{inputError body}{inputError files}</div>
+				<div class="d-flex align-items-center gap-2 mt-2">
+					<button type="button" class="btn btn-link btn-sm text-decoration-none px-0 me-auto" data-dropzone-pick><i class="bi bi-paperclip" aria-hidden="true"></i> Přiložit soubor</button>
+					<span class="small text-body-secondary d-none d-md-inline">nebo přetáhněte soubory do pole</span>
 					<button n:name="send" class="btn btn-primary btn-sm"><i class="bi bi-send" aria-hidden="true"></i> Odeslat</button>
 				</div>
 			{/form}
@@ -58,6 +66,13 @@
 				<p class="fst-italic text-body-secondary small mb-0">Komentář byl smazán.</p>
 			{else}
 				<div class="comment-body text-break">{$comment->getBody()|nl2p}</div>
+				<div n:if="$comment->getAttachments()" class="comment-files d-flex flex-wrap gap-2 mb-2">
+					<a n:foreach="$comment->getAttachments() as $attachment" href="{$attachmentLink($attachment)}" class="comment-file" target="_blank" rel="noopener">
+						<i class="bi {$attachment->getFile()|fileIcon}" aria-hidden="true"></i>
+						<span class="text-truncate">{$attachment->getTitle()}</span>
+						<span class="text-body-secondary">{$attachment->getFile()->size|bytes}</span>
+					</a>
+				</div>
 				<div class="d-flex gap-3 small">
 					<button n:if="!$reply && $canComment" type="button" class="btn btn-link btn-sm p-0 text-decoration-none" data-reply-to="{$comment->getId()}" data-reply-name="{$comment->getAuthorName()}">Odpovědět</button>
 					<form n:if="$canDelete($comment)" method="post" action="{$deleteLink($comment)}" class="ajax">

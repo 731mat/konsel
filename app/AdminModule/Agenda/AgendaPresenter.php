@@ -20,13 +20,12 @@ use App\Model\People\PeopleFacade;
 use App\Model\Shared\Exception\DomainException;
 use App\Model\Shared\Exception\NotFoundException;
 use App\Model\Shared\Exception\ValidationException;
-use App\Model\Storage\UploadedFile;
 use App\Model\Template\TemplateFacade;
 use App\UI\Form\FormErrors;
 use App\UI\Form\FormFactory;
+use App\UI\Form\FormUploads;
 use Nette\Application\Attributes\Requires;
 use Nette\Application\UI\Form;
-use Nette\Http\FileUpload;
 
 /**
  * Bod programu: založení, úprava, detail (text, návrh usnesení, přílohy, komentáře).
@@ -175,14 +174,16 @@ final class AgendaPresenter extends SecuredPresenter
 		$form->getElementPrototype()->addClass('ajax');
 		$form->addHidden('parentId')->setNullable();
 		$form->addTextArea('body', 'Komentář', null, 3)
-			->setRequired('Napište text komentáře.')
 			->setMaxLength(5000)
 			->setHtmlAttribute('placeholder', 'Připomínka, dotaz nebo doplnění k bodu…');
+		$form->addMultiUpload('files', 'Soubory')
+			->addRule(Form::MaxFileSize, 'Soubor je příliš velký.', $this->attachmentPolicy->maxSize);
 		$form->addSubmit('send', 'Odeslat');
 		$form->onSuccess[] = function (Form $form) use ($item): void {
 			$data = $form->getValues(CommentFormData::class);
+			$files = FormUploads::toUploadedFiles($data->files);
 			try {
-				$this->commentFacade->addByUser($item->getId(), $this->currentUserId(), $data->body, is_numeric($data->parentId) ? (int) $data->parentId : null);
+				$this->commentFacade->addByUser($item->getId(), $this->currentUserId(), (string) $data->body, is_numeric($data->parentId) ? (int) $data->parentId : null, $files);
 			} catch (ValidationException $e) {
 				FormErrors::apply($form, $e);
 
@@ -222,10 +223,7 @@ final class AgendaPresenter extends SecuredPresenter
 		$form->addSubmit('upload', 'Nahrát');
 		$form->onSuccess[] = function (Form $form) use ($item): void {
 			$data = $form->getValues(AttachmentFormData::class);
-			$files = array_values(array_map(
-				static fn(FileUpload $upload): UploadedFile => UploadedFile::fromPath($upload->getTemporaryFile(), $upload->getUntrustedName()),
-				array_filter($data->files, static fn(FileUpload $upload): bool => $upload->isOk()),
-			));
+			$files = FormUploads::toUploadedFiles($data->files);
 			if ($files === []) {
 				$form->addError('Soubor se nepodařilo nahrát.');
 
