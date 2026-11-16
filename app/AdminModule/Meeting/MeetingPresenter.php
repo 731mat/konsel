@@ -9,6 +9,7 @@ use App\Core\Security\Allowed;
 use App\Core\Security\Privilege;
 use App\Core\Security\Resource;
 use App\Model\Attachment\AttachmentFacade;
+use App\Model\Comment\CommentFacade;
 use App\Model\Meeting\AgendaFacade;
 use App\Model\Meeting\Command\AssignOfficials;
 use App\Model\Meeting\Command\SaveMeeting;
@@ -49,6 +50,7 @@ final class MeetingPresenter extends SecuredPresenter
 		private readonly MeetingFacade $meetingFacade,
 		private readonly AgendaFacade $agendaFacade,
 		private readonly AttachmentFacade $attachmentFacade,
+		private readonly CommentFacade $commentFacade,
 		private readonly PeopleFacade $peopleFacade,
 		private readonly FormFactory $formFactory,
 	) {
@@ -146,6 +148,7 @@ final class MeetingPresenter extends SecuredPresenter
 		]);
 		$this->template->canEdit = $canEdit;
 		$this->template->attachmentCounts = $this->attachmentFacade->countByMeeting($meeting);
+		$this->template->commentCounts = $this->commentFacade->countByMeeting($meeting);
 		$this->template->canEditProgram = $meeting->canEditProgram() && $this->isAllowed(Resource::Agenda, Privilege::Edit);
 		$this->template->canDelete = $this->isAllowed(Resource::Meeting, Privilege::Delete) && $meeting->getStatus() === MeetingStatus::Draft;
 	}

@@ -16,6 +16,10 @@
 {varType App\Model\Attachment\Attachment[] $attachments}
 {varType bool $canUpload}
 {varType bool $canDeleteAttachment}
+{varType App\Model\Comment\CommentThread[] $threads}
+{varType bool $canComment}
+{varType bool $canModerate}
+{varType int $currentUserId}
 
 <div class="d-flex flex-wrap align-items-start gap-3 mb-4">
 	<div class="me-auto">
@@ -80,14 +84,40 @@
 				<i class="bi bi-paperclip" aria-hidden="true"></i>
 				K bodu zatím nejsou přiložené podklady.
 			</div>
-			<div n:if="$canUpload" class="card-footer bg-transparent pt-3">
-				{control attachmentForm}
+			<div n:if="$canUpload" class="card-footer bg-transparent">
+				{form attachmentForm, class: 'row g-2 align-items-center'}
+					<div n:foreach="$form->getOwnErrors() as $error" class="col-12"><div class="alert alert-danger py-2 mb-0">{$error}</div></div>
+					<div class="col-md">
+						<label n:name="files" class="visually-hidden">Soubory</label>
+						<input n:name="files" n:class="form-control, form-control-sm, $form['files']->hasErrors() ? is-invalid">
+						<div n:ifcontent class="invalid-feedback d-block">{inputError files}</div>
+					</div>
+					<div class="col-auto">
+						<div class="form-check mb-0">
+							<input n:name="publicForMembers" class="form-check-input">
+							<label n:name="publicForMembers" class="form-check-label small">{$form['publicForMembers']->getCaption()}</label>
+						</div>
+					</div>
+					<div class="col-auto">
+						<button n:name="upload" class="btn btn-primary btn-sm"><i class="bi bi-upload" aria-hidden="true"></i> Nahrát</button>
+					</div>
+					<div class="col-12 form-text mt-1">{$form['files']->getOption('description')}</div>
+				{/form}
 			</div>
 		</div>
+
+		{snippet comments}
+			{include '../../UI/Comment/@discussion.latte',
+				threads: $threads,
+				canComment: $canComment,
+				formName: 'commentForm',
+				canDelete: fn(App\Model\Comment\Comment $c): bool => $canModerate || $c->getAuthorUserId() === $currentUserId,
+				deleteLink: fn(App\Model\Comment\Comment $c): string => $presenter->link('deleteComment!', ['commentId' => $c->getId()]),
+			}
+		{/snippet}
 	</div>
 
 	<div class="col-xl-4 d-flex flex-column gap-4">
-		{block itemSidebar}{/block}
 		<div class="card">
 			<div class="card-header">Program</div>
 			<div class="list-group list-group-flush small">

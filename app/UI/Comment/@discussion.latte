@@ -1,0 +1,70 @@
+{* Diskuse k bodu – sdílí administrace i portál zastupitele. *}
+{parameters
+	App\Model\Comment\CommentThread[] $threads,
+	bool $canComment,
+	string $formName,
+	Closure $canDelete,
+	Closure $deleteLink,
+}
+<div class="card" id="diskuse">
+	<div class="card-header d-flex align-items-center">
+		<span class="me-auto"><i class="bi bi-chat-left-text" aria-hidden="true"></i> Diskuse</span>
+		<span n:if="$threads" class="badge text-bg-light">{count($threads)}</span>
+	</div>
+	<div class="card-body">
+		{if !$threads}
+			<p class="text-body-secondary small mb-3">Zatím bez komentářů. Připomínky a dotazy k bodu uvidí úřad i zastupitelé.</p>
+		{/if}
+
+		<div n:foreach="$threads as $thread" class="comment-thread mb-3">
+			{include comment, comment: $thread->comment, reply: false}
+			<div n:if="$thread->replies" class="comment-replies">
+				{foreach $thread->replies as $reply}
+					{include comment, comment: $reply, reply: true}
+				{/foreach}
+			</div>
+		</div>
+
+		{if $canComment}
+			{form $formName, class: 'ajax comment-form'}
+				<div class="alert alert-light border py-2 px-3 small d-flex align-items-center mb-2" data-reply-info hidden>
+					<span>Odpověď pro <strong data-reply-name></strong></span>
+					<button type="button" class="btn-close ms-auto" data-reply-cancel aria-label="Zrušit odpověď"></button>
+				</div>
+				<div n:foreach="$form->getOwnErrors() as $error" class="alert alert-danger py-2">{$error}</div>
+				{input parentId}
+				<textarea n:name="body" n:class="form-control, $form['body']->hasErrors() ? is-invalid"></textarea>
+				<div n:ifcontent class="invalid-feedback d-block">{inputError body}</div>
+				<div class="d-flex justify-content-end mt-2">
+					<button n:name="send" class="btn btn-primary btn-sm"><i class="bi bi-send" aria-hidden="true"></i> Odeslat</button>
+				</div>
+			{/form}
+		{else}
+			<p class="small text-body-secondary mb-0"><i class="bi bi-lock" aria-hidden="true"></i> Diskuse je uzavřená.</p>
+		{/if}
+	</div>
+</div>
+
+{define comment, App\Model\Comment\Comment $comment, bool $reply}
+	<div n:class="comment, d-flex, gap-2, $reply ? mt-2" id="komentar-{$comment->getId()}">
+		<span n:class="comment-avatar, $comment->isFromMember() ? comment-avatar-member" aria-hidden="true">{$comment->getAuthorName()|initials}</span>
+		<div class="flex-grow-1 min-w-0">
+			<div class="small">
+				<strong>{$comment->getAuthorName()}</strong>
+				<span n:if="$comment->isFromMember()" class="badge bg-primary-subtle text-primary-emphasis ms-1">zastupitel</span>
+				<span class="text-body-secondary ms-1">{$comment->getCreatedAt()|czDateTime}</span>
+			</div>
+			{if $comment->isDeleted()}
+				<p class="fst-italic text-body-secondary small mb-0">Komentář byl smazán.</p>
+			{else}
+				<div class="comment-body text-break">{$comment->getBody()|nl2p}</div>
+				<div class="d-flex gap-3 small">
+					<button n:if="!$reply && $canComment" type="button" class="btn btn-link btn-sm p-0 text-decoration-none" data-reply-to="{$comment->getId()}" data-reply-name="{$comment->getAuthorName()}">Odpovědět</button>
+					<form n:if="$canDelete($comment)" method="post" action="{$deleteLink($comment)}" class="ajax">
+						<button type="submit" class="btn btn-link btn-sm p-0 text-danger text-decoration-none" data-confirm="Smazat komentář?">Smazat</button>
+					</form>
+				</div>
+			{/if}
+		</div>
+	</div>
+{/define}

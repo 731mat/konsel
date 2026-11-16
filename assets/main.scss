@@ -54,6 +54,11 @@ $breadcrumb-divider: quote("›");
 	--konsel-shadow: 0 4px 16px rgba(0, 0, 0, .35);
 }
 
+// Atribut hidden má přednost i před utilitami .d-flex apod.
+[hidden] {
+	display: none !important;
+}
+
 body {
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
@@ -297,6 +302,35 @@ h1, .h1, h2, .h2, h3, .h3 {
 
 .min-w-0 {
 	min-width: 0;
+}
+
+// --- Diskuse --------------------------------------------------------------------
+.comment-avatar {
+	display: grid;
+	place-items: center;
+	flex-shrink: 0;
+	width: 2.1rem;
+	height: 2.1rem;
+	border-radius: 50%;
+	background: var(--bs-secondary-bg);
+	color: var(--bs-secondary-color);
+	font-size: .75rem;
+	font-weight: 700;
+}
+
+.comment-avatar-member {
+	background: var(--bs-primary-bg-subtle);
+	color: var(--bs-primary-text-emphasis);
+}
+
+.comment-body p {
+	margin-bottom: .35rem;
+}
+
+.comment-replies {
+	margin-left: 2.6rem;
+	padding-left: .9rem;
+	border-left: 2px solid var(--bs-border-color);
 }
 
 // --- Datum zasedání (dlaždice) ------------------------------------------------------

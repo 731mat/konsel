@@ -15,7 +15,7 @@ use Nette\Utils\Html;
 /**
  * Filtry a funkce Latte pro celou aplikaci.
  *
- * Filtry:  |czDate  |czDateTime  |czMonth  |nl2p  |fileIcon
+ * Filtry:  |czDate  |czDateTime  |czMonth  |nl2p  |fileIcon  |initials
  * Funkce:  vite('assets/main.js'), allowed(Resource::Meeting, Privilege::Edit)
  */
 final class LatteExtension extends Extension
@@ -35,6 +35,7 @@ final class LatteExtension extends Extension
 			'czDateTime' => self::czDateTime(...),
 			'czMonth' => self::czMonth(...),
 			'fileIcon' => self::fileIcon(...),
+			'initials' => self::initials(...),
 			'nl2p' => self::nl2p(...),
 		];
 	}
@@ -66,6 +67,21 @@ final class LatteExtension extends Extension
 	public static function czMonth(?\DateTimeInterface $date): string
 	{
 		return $date === null ? '' : ['led', 'úno', 'bře', 'dub', 'kvě', 'čvn', 'čvc', 'srp', 'zář', 'říj', 'lis', 'pro'][(int) $date->format('n') - 1];
+	}
+
+	/**
+	 * Iniciály pro avatar („Ing. Jan Dvořák“ → „JD“), tituly s tečkou se přeskočí.
+	 */
+	public static function initials(string $name): string
+	{
+		$parts = preg_split('~[\s,]+~u', $name);
+		$words = array_values(array_filter(
+			$parts === false ? [] : $parts,
+			static fn(string $word): bool => $word !== '' && !str_ends_with($word, '.'),
+		));
+		$initials = mb_substr($words[0] ?? '?', 0, 1) . (count($words) > 1 ? mb_substr($words[count($words) - 1], 0, 1) : '');
+
+		return mb_strtoupper($initials);
 	}
 
 	/**

@@ -10,6 +10,7 @@ use App\Core\Security\Privilege;
 use App\Core\Security\Resource;
 use App\Model\Attachment\AttachmentFacade;
 use App\Model\Attachment\AttachmentPolicy;
+use App\Model\Comment\CommentFacade;
 use App\Model\Meeting\AgendaFacade;
 use App\Model\Meeting\AgendaItem;
 use App\Model\Meeting\Command\SaveAgendaItem;
@@ -42,6 +43,7 @@ final class AgendaPresenter extends SecuredPresenter
 		private readonly PeopleFacade $peopleFacade,
 		private readonly AttachmentFacade $attachmentFacade,
 		private readonly AttachmentPolicy $attachmentPolicy,
+		private readonly CommentFacade $commentFacade,
 		private readonly FormFactory $formFactory,
 	) {
 		parent::__construct();
@@ -95,6 +97,10 @@ final class AgendaPresenter extends SecuredPresenter
 		$this->template->attachments = $this->attachmentFacade->findByAgendaItem(($this->item ?? $this->error())->getId());
 		$this->template->canUpload = $meeting->canEditAttachments() && $this->isAllowed(Resource::Attachment, Privilege::Edit);
 		$this->template->canDeleteAttachment = $meeting->canEditAttachments() && $this->isAllowed(Resource::Attachment, Privilege::Delete);
+		$this->template->threads = $this->commentFacade->findThreads(($this->item ?? $this->error())->getId());
+		$this->template->canComment = $meeting->canEditAttachments();
+		$this->template->canModerate = $this->isAllowed(Resource::Agenda, Privilege::Manage);
+		$this->template->currentUserId = $this->currentUserId();
 		$items = $meeting->getAgendaItems();
 		$index = array_search($this->item, $items, true);
 		$this->template->previous = is_int($index) ? ($items[$index - 1] ?? null) : null;
@@ -137,6 +143,62 @@ final class AgendaPresenter extends SecuredPresenter
 		}
 
 		$this->redirect('this');
+	}
+
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleDeleteComment(int $commentId): void
+	{
+		$item = $this->item ?? $this->error();
+		try {
+			$comment = $this->assertOwned($this->commentFacade->get($commentId));
+			if ($comment->getAgendaItem() !== $item) {
+				$this->error('Komentář nepatří k tomuto bodu.');
+			}
+
+			$this->commentFacade->deleteByUser($comment->getId(), $this->currentUserId(), $this->isAllowed(Resource::Agenda, Privilege::Manage));
+			$this->flashMessage('Komentář byl smazán.', 'success');
+		} catch (DomainException $e) {
+			$this->flashMessage($e->getMessage(), 'danger');
+		}
+
+		$this->redrawOrRedirect();
+	}
+
+	protected function createComponentCommentForm(): Form
+	{
+		$item = $this->item ?? $this->error();
+		$form = $this->formFactory->create();
+		$form->getElementPrototype()->addClass('ajax');
+		$form->addHidden('parentId')->setNullable();
+		$form->addTextArea('body', 'Komentář', null, 3)
+			->setRequired('Napište text komentáře.')
+			->setMaxLength(5000)
+			->setHtmlAttribute('placeholder', 'Připomínka, dotaz nebo doplnění k bodu…');
+		$form->addSubmit('send', 'Odeslat');
+		$form->onSuccess[] = function (Form $form) use ($item): void {
+			$data = $form->getValues(CommentFormData::class);
+			try {
+				$this->commentFacade->addByUser($item->getId(), $this->currentUserId(), $data->body, is_numeric($data->parentId) ? (int) $data->parentId : null);
+			} catch (ValidationException $e) {
+				FormErrors::apply($form, $e);
+
+				return;
+			} catch (DomainException $e) {
+				$form->addError($e->getMessage());
+
+				return;
+			}
+
+			$form->reset();
+			$this->redrawOrRedirect();
+		};
+		$form->onError[] = function (): void {
+			if ($this->isAjax()) {
+				$this->redrawControl('comments');
+			}
+		};
+
+		return $form;
 	}
 
 	protected function createComponentAttachmentForm(): Form
@@ -238,6 +300,25 @@ final class AgendaPresenter extends SecuredPresenter
 		};
 
 		return $form;
+	}
+
+	private function currentUserId(): int
+	{
+		$id = $this->getUser()->getId();
+
+		return is_int($id) ? $id : $this->error('Nepřihlášený uživatel.', 403);
+	}
+
+	private function redrawOrRedirect(): void
+	{
+		if ($this->isAjax()) {
+			$this->redrawControl('comments');
+			$this->redrawControl('flashes');
+
+			return;
+		}
+
+		$this->redirect('this');
 	}
 
 	private function assertProgramEditable(Meeting $meeting): void

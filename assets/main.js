@@ -48,3 +48,22 @@ document.addEventListener('click', (event) => {
 		event.stopImmediatePropagation();
 	}
 }, true);
+
+// Odpověď v diskusi: <button data-reply-to="ID" data-reply-name="Jméno"> nastaví parentId ve formuláři diskuse.
+document.addEventListener('click', (event) => {
+	const target = event.target instanceof Element ? event.target : null;
+	const replyButton = target?.closest('[data-reply-to]');
+	const cancelButton = target?.closest('[data-reply-cancel]');
+	const form = (replyButton ?? cancelButton)?.closest('.card')?.querySelector('form.comment-form');
+	if (!form) {
+		return;
+	}
+
+	const info = form.querySelector('[data-reply-info]');
+	form.querySelector('input[name=parentId]').value = replyButton ? replyButton.dataset.replyTo : '';
+	info.hidden = !replyButton;
+	if (replyButton) {
+		info.querySelector('[data-reply-name]').textContent = replyButton.dataset.replyName;
+		form.querySelector('textarea').focus();
+	}
+});

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Demo;
 
 use App\Model\Attachment\AttachmentFacade;
+use App\Model\Comment\CommentFacade;
 use App\Model\Meeting\AgendaFacade;
 use App\Model\Meeting\Command\AssignOfficials;
 use App\Model\Meeting\Command\SaveAgendaItem;
@@ -54,6 +55,7 @@ final readonly class DemoSeeder
 		private MeetingFacade $meetings,
 		private AgendaFacade $agenda,
 		private AttachmentFacade $attachments,
+		private CommentFacade $comments,
 		private ClockInterface $clock,
 	) {}
 
@@ -76,7 +78,7 @@ final readonly class DemoSeeder
 		));
 
 		$this->users->create(new CreateUser('superadmin@demo.konsel.test', 'Správce systému', Role::SuperAdmin, self::Password));
-		$this->users->create(new CreateUser('spravce@demo.konsel.test', 'Jana Správcová', Role::Admin, self::Password, $municipalityId));
+		$admin = $this->users->create(new CreateUser('spravce@demo.konsel.test', 'Jana Správcová', Role::Admin, self::Password, $municipalityId));
 		$this->users->create(new CreateUser('editor@demo.konsel.test', 'Pavla Úřednice', Role::Editor, self::Password, $municipalityId));
 		$this->users->create(new CreateUser('ctenar@demo.konsel.test', 'Karel Čtenář', Role::Reader, self::Password, $municipalityId));
 
@@ -143,6 +145,9 @@ final readonly class DemoSeeder
 			self::file('Návrh rozpočtu 2027.pdf', self::pdf(['Navrh rozpoctu obce Neplachovice na rok 2027', 'Prijmy: 14 200 000 Kc', 'Vydaje: 14 200 000 Kc'])),
 			self::file('Rozpočet 2027 – položky.csv', "Paragraf;Položka;Částka\n2212;Silnice;2 400 000\n3113;Základní škola;1 850 000\n3722;Odpady;1 100 000\n"),
 		], null);
+		$question = $this->comments->addByPerson($sharedItems[3]->getId(), $persons[2]->getId(), 'Proč se proti letošku zvyšují výdaje na odpady o 180 tisíc? Je to jen novým ceníkem svozové firmy?');
+		$this->comments->addByUser($sharedItems[3]->getId(), $admin->getId(), 'Ano, svozová firma zdražila od ledna o 12 %. Ceník je v příloze rozpočtu, řádek 3722.', $question->getId());
+		$this->comments->addByPerson($sharedItems[3]->getId(), $persons[6]->getId(), 'Navrhuji do rozpočtu doplnit rezervu na opravu hřiště u školy.');
 		$this->attachments->upload($sharedItems[6]->getId(), [
 			self::file('Záměr prodeje pozemku 456-7.pdf', self::pdf(['Zamer prodeje pozemku p. c. 456/7', 'Vymera 312 m2, k. u. Neplachovice'])),
 		], null);
