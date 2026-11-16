@@ -9,6 +9,7 @@ services:
 	- App\Core\Doctrine\TimestampableSubscriber
 	- App\Infrastructure\Persistence\DoctrineTransactionManager
 	- App\Core\Security\Authenticator
+	- App\Core\Security\AuthorizatorFactory::create
 	- App\Application\Security\LoginThrottle
 	- App\Presentation\Accessory\FormFactory
 

@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Presentation\Accessory;
 
 use App\Application\Municipality\MunicipalityFacade;
+use App\Core\Security\Allowed;
 use App\Core\Tenancy\CurrentMunicipality;
 use Nette\DI\Attributes\Inject;
 use Nette\Security\User;
 
 /**
- * Předek presenterů pro přihlášené uživatele úřadu. Nastaví kontext obce (TenantFilter).
+ * Předek presenterů pro přihlášené uživatele úřadu.
+ * Ověří přihlášení, nastaví kontext obce (TenantFilter) a vynutí #[Allowed] oprávnění.
  */
 abstract class SecuredPresenter extends BasePresenter
 {
@@ -38,6 +40,13 @@ abstract class SecuredPresenter extends BasePresenter
 		$municipalityId = $user->getIdentity()?->getData()['municipalityId'] ?? null;
 		if (is_int($municipalityId) && !$this->currentMunicipality->isSet()) {
 			$this->currentMunicipality->set($this->municipalityFacade->get($municipalityId));
+		}
+
+		foreach ($element->getAttributes(Allowed::class) as $attribute) {
+			$allowed = $attribute->newInstance();
+			if (!$user->isAllowed($allowed->resource->value, $allowed->privilege->value)) {
+				$this->error('K této stránce nemáte oprávnění.', 403);
+			}
 		}
 	}
 }

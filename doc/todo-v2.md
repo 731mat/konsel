@@ -170,7 +170,7 @@ konsel/
 - příkaz `user:create`
 **Hotovo když:** login/logout funguje, špatné heslo hlásí chybu, test pokrývá authenticator i throttling.
 
-### [ ] T06 – Role a oprávnění (ACL)
+### [x] T06 – Role a oprávnění (ACL)
 **Cíl:** Princip nejmenšího privilegia.
 - enum `Role`: `SuperAdmin` (správce systému), `Admin` (správce obce), `Editor` (úředník/zapisovatel), `Reader` (náhled)
 - `Authorizator` (Nette Permission): zdroje `meeting`, `agenda`, `minutes`, `resolution`, `member`, `user`, `settings`, `template`, `document`; privilegia `view`, `edit`, `delete`, `manage`
@@ -502,3 +502,4 @@ Vše od T32 je rozšíření, pořadí se dá upravit podle potřeby.
 - 2026-11-16 T03 – nettrine/cache je opuštěný → metadata cache přes symfony/cache (PhpFilesAdapter). ORM s `lazyNativeObjects: true` (PHP 8.4), entity tedy mohou být `final`. Integrační testy: SQLite in-memory + migrace + SchemaValidator (nahrazuje orm:validate-schema v qa). Každé vlákno Testeru má vlastní temp/tests/N. Šablona migrací resources/migration.tpl.
 - 2026-11-16 T04 – Clock = symfony/clock (NativeClock/MockClock) místo vlastních tříd. DBAL 4.6 deprekoval `$schema->createTable()/addColumn()` → vlastní `SchemaMigration` + `TableBuilder` (app/Infrastructure/Persistence/Migration), názvy indexů/FK generuje stejně jako ORM. Transakce přes `Application\Shared\TransactionManager`. Služby se registrují přes `search:` v services.neon (*Facade, *Repository, *Command). Integrační test TenantFilteru na reálné entitě doplnit v T10 (zatím jen unit test SQL podmínky).
 - 2026-11-16 T05 – Tabulka uživatelů `app_user` ("user" je v některých DB rezervované). Pokusy o přihlášení v DB (`login_attempt`), limit 5/e-mail a 20/IP za 15 min, úspěch nuluje počítadlo e-mailu. Identita se obnovuje z DB při každém requestu (IdentityHandler). CSRF řeší Nette Forms 3.3 samo (`addProtection` je deprecated). Admin modul na /admin, přihlášení /prihlaseni. Superadmin bez obce zatím nemá výběr obce – doplnit v T10/T11. Testovací helper `Tests\Support\Fixtures`.
+- 2026-11-16 T06 – Zdroje a privilegia jako enumy `Core\Security\Resource` / `Privilege` (+ `dashboard`, `audit`, `system` navíc proti plánu). `#[Allowed]` na třídě i metodě, test `AllowedCoverageTest` hlídá, že žádný vstupní bod Admin modulu nezůstane bez oprávnění.
