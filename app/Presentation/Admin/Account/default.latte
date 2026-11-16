@@ -1,0 +1,17 @@
+{block title}Můj účet{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item active" aria-current="page">Můj účet</li>
+{/block}
+
+{block content}
+<h1 class="h3 mb-4">Můj účet</h1>
+
+<div n:if="$mustChangePassword" class="alert alert-warning" style="max-width: 30rem">
+	Přihlásili jste se dočasným heslem. Před pokračováním si prosím nastavte vlastní heslo.
+</div>
+
+<div class="card" style="max-width: 30rem">
+	<div class="card-header fw-semibold">Změna hesla</div>
+	<div class="card-body">{control passwordForm}</div>
+</div>

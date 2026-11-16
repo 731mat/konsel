@@ -1,0 +1,11 @@
+{block title}Nový uživatel{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href="default">Uživatelé</a></li>
+	<li class="breadcrumb-item active" aria-current="page">Nový uživatel</li>
+{/block}
+
+{block content}
+<h1 class="h3 mb-1">Nový uživatel</h1>
+<p class="text-body-secondary mb-4">Po založení se zobrazí dočasné heslo. Uživatel si ho při prvním přihlášení změní.</p>
+<div class="card" style="max-width: 40rem"><div class="card-body">{control userForm}</div></div>

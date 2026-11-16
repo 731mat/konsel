@@ -1,0 +1,11 @@
+{block title}{$editedUser->getName()}{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href="default">Uživatelé</a></li>
+	<li class="breadcrumb-item active" aria-current="page">{$editedUser->getName()}</li>
+{/block}
+
+{block content}
+{varType App\Domain\User\User $editedUser}
+<h1 class="h3 mb-4">{$editedUser->getName()}</h1>
+<div class="card" style="max-width: 40rem"><div class="card-body">{control userForm}</div></div>

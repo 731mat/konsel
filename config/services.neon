@@ -13,6 +13,8 @@ services:
 	- App\Core\Security\Authenticator
 	- App\Core\Security\AuthorizatorFactory::create
 	- App\Application\Security\LoginThrottle
+	- App\Console\Demo\DemoSeeder
+	- App\Console\Demo\SeedDemoCommand(productionMode: %productionMode%)
 	- App\Presentation\Accessory\FormFactory
 	- App\Presentation\Accessory\Menu\AdminMenuFactory
 	viteAssets: App\Core\Latte\ViteAssets(%rootDir%/www/assets/.vite/manifest.json)
@@ -31,3 +33,5 @@ search:
 	commands:
 		in: %appDir%/Console
 		classes: [*Command]
+		exclude:
+			classes: [App\Console\Demo\SeedDemoCommand]

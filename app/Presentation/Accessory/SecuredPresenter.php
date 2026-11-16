@@ -52,7 +52,12 @@ abstract class SecuredPresenter extends BasePresenter
 			]);
 		}
 
-		$municipalityId = $user->getIdentity()?->getData()['municipalityId'] ?? null;
+		$identityData = $user->getIdentity()?->getData() ?? [];
+		if (($identityData['mustChangePassword'] ?? false) === true && !$this->isLinkCurrent(':Admin:Account:*')) {
+			$this->redirect(':Admin:Account:');
+		}
+
+		$municipalityId = $identityData['municipalityId'] ?? null;
 		if (is_int($municipalityId) && !$this->currentMunicipality->isSet()) {
 			$this->currentMunicipality->set($this->municipalityFacade->get($municipalityId));
 		}

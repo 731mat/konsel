@@ -24,5 +24,7 @@ interface UserRepository
 	 */
 	public function findByMunicipality(Municipality $municipality): array;
 
+	public function countActiveAdmins(Municipality $municipality): int;
+
 	public function add(User $user): void;
 }

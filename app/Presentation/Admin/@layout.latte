@@ -15,6 +15,8 @@
 				<span class="d-none d-sm-inline">{$user->getIdentity()?->getData()['name'] ?? ''}</span>
 			</button>
 			<ul class="dropdown-menu dropdown-menu-end">
+				<li><a class="dropdown-item" n:href=":Admin:Account:"><i class="bi bi-person-gear" aria-hidden="true"></i> Můj účet</a></li>
+				<li><hr class="dropdown-divider"></li>
 				<li><a class="dropdown-item" n:href=":Sign:out"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Odhlásit se</a></li>
 			</ul>
 		</div>

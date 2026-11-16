@@ -66,7 +66,8 @@
         ],
         "db:reset": [
             "@php -r \"array_map('unlink', glob('var/database.sqlite*') ?: []);\"",
-            "@php bin/console migrations:migrate --no-interaction --allow-no-migration"
+            "@php bin/console migrations:migrate --no-interaction --allow-no-migration",
+            "@php bin/console app:seed-demo"
         ]
     },
     "scripts-descriptions": {

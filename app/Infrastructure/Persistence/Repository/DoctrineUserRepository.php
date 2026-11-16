@@ -7,6 +7,7 @@ namespace App\Infrastructure\Persistence\Repository;
 use App\Domain\Municipality\Municipality;
 use App\Domain\Shared\Exception\NotFoundException;
 use App\Domain\Shared\ValueObject\Email;
+use App\Domain\User\Role;
 use App\Domain\User\User;
 use App\Domain\User\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -48,6 +49,15 @@ final readonly class DoctrineUserRepository implements UserRepository
 			'municipality' => $municipality,
 		], [
 			'name' => 'ASC',
+		]);
+	}
+
+	public function countActiveAdmins(Municipality $municipality): int
+	{
+		return $this->repository->count([
+			'municipality' => $municipality,
+			'role' => Role::Admin,
+			'active' => true,
 		]);
 	}
 
