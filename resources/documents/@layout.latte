@@ -1,0 +1,54 @@
+{* Společný vzhled PDF dokumentů (mPDF podporuje jen část CSS – držet jednoduché). *}
+{parameters
+	App\Model\Meeting\Meeting $meeting,
+	App\Model\Municipality\Municipality $municipality,
+	App\Model\Municipality\MunicipalityProfile $profile,
+	?string $logoPath,
+	?App\Model\People\Person $mayor,
+	array $attachments,
+	DateTimeImmutable $generatedAt,
+}
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<style>
+	body { font-family: dejavusans; font-size: 10.5pt; color: #1f2937; line-height: 1.45; }
+	.header { border-bottom: 1.5pt solid #1b5e8c; padding-bottom: 6pt; margin-bottom: 18pt; }
+	.header td { vertical-align: middle; }
+	.municipality { font-size: 15pt; font-weight: bold; color: #1b5e8c; text-transform: uppercase; letter-spacing: 0.5pt; }
+	.contact { font-size: 8.5pt; color: #6b7280; }
+	h1 { font-size: 15pt; text-align: center; margin: 4pt 0 2pt; text-transform: uppercase; letter-spacing: 0.5pt; }
+	h2 { font-size: 13pt; text-align: center; margin: 0 0 14pt; color: #1b5e8c; }
+	h3 { font-size: 11.5pt; margin: 16pt 0 4pt; color: #1b5e8c; }
+	.lead { text-align: justify; margin-bottom: 12pt; }
+	table.facts { margin: 0 0 14pt; }
+	table.facts td { padding: 2pt 10pt 2pt 0; vertical-align: top; }
+	table.facts td.label { color: #6b7280; width: 95pt; }
+	ol.program { margin: 4pt 0 14pt 0; padding-left: 18pt; }
+	ol.program li { margin-bottom: 3pt; }
+	.resolution { border-left: 3pt solid #1b5e8c; background: #eef4f9; padding: 6pt 9pt; margin: 6pt 0; }
+	.muted { color: #6b7280; }
+	.small { font-size: 8.5pt; }
+	.signature { margin-top: 34pt; }
+	.signature td { vertical-align: bottom; }
+	.board { margin-top: 30pt; border-top: 0.5pt solid #9ca3af; padding-top: 6pt; font-size: 9pt; color: #374151; }
+	.item { page-break-inside: avoid; }
+</style>
+</head>
+<body>
+	<table class="header" width="100%">
+		<tr>
+			<td n:if="$logoPath" width="52"><img src="{$logoPath}" height="46"></td>
+			<td>
+				<div class="municipality">{$profile->officialName}</div>
+				<div class="contact">
+					{$profile->getAddressLine()}{if $municipality->getIco()} · IČO {$municipality->getIco()->value}{/if}{if $profile->email} · {$profile->email->value}{/if}{if $profile->phone} · tel. {$profile->phone}{/if}
+				</div>
+			</td>
+		</tr>
+	</table>
+
+	{include content}
+</body>
+</html>

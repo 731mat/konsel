@@ -15,7 +15,7 @@ use Nette\Utils\Html;
 /**
  * Filtry a funkce Latte pro celou aplikaci.
  *
- * Filtry:  |czDate  |czDateTime  |czMonth  |nl2p  |fileIcon  |initials
+ * Filtry:  |czDate  |czDateLong  |czDateTime  |czMonth  |nl2p  |fileIcon  |initials  |genitiveBody
  * Funkce:  vite('assets/main.js'), allowed(Resource::Meeting, Privilege::Edit)
  */
 final class LatteExtension extends Extension
@@ -32,7 +32,9 @@ final class LatteExtension extends Extension
 	{
 		return [
 			'czDate' => self::czDate(...),
+			'czDateLong' => self::czDateLong(...),
 			'czDateTime' => self::czDateTime(...),
+			'genitiveBody' => self::genitiveBody(...),
 			'czMonth' => self::czMonth(...),
 			'fileIcon' => self::fileIcon(...),
 			'initials' => self::initials(...),
@@ -62,6 +64,33 @@ final class LatteExtension extends Extension
 	}
 
 	/**
+	 * „pondělí 7. prosince 2026“
+	 */
+	public static function czDateLong(?\DateTimeInterface $date): string
+	{
+		if ($date === null) {
+			return '';
+		}
+
+		$days = ['neděle', 'pondělí', 'úterý', 'středa', 'čtvrtek', 'pátek', 'sobota'];
+		$months = ['ledna', 'února', 'března', 'dubna', 'května', 'června', 'července', 'srpna', 'září', 'října', 'listopadu', 'prosince'];
+
+		return $days[(int) $date->format('w')] . ' ' . $date->format('j') . '. ' . $months[(int) $date->format('n') - 1] . ' ' . $date->format('Y');
+	}
+
+	/**
+	 * Druhý pád názvu orgánu: „Zastupitelstvo obce X“ → „Zastupitelstva obce X“, „Rada obce“ → „Rady obce“.
+	 */
+	public static function genitiveBody(string $name): string
+	{
+		return (string) preg_replace(
+			['~^Zastupitelstvo\b~u', '~^Rada\b~u', '~^Finanční výbor\b~u', '~^Kontrolní výbor\b~u', '~^Výbor\b~u'],
+			['Zastupitelstva', 'Rady', 'Finančního výboru', 'Kontrolního výboru', 'Výboru'],
+			$name,
+		);
+	}
+
+	/**
 	 * Zkratka měsíce pro dlaždice s datem (led, úno, …).
 	 */
 	public static function czMonth(?\DateTimeInterface $date): string
@@ -77,7 +106,7 @@ final class LatteExtension extends Extension
 		$parts = preg_split('~[\s,]+~u', $name);
 		$words = array_values(array_filter(
 			$parts === false ? [] : $parts,
-			static fn(string $word): bool => $word !== '' && !str_ends_with($word, '.'),
+			static fn(string $word): bool => $word !== '' && substr($word, -1) !== '.',
 		));
 		$initials = mb_substr($words[0] ?? '?', 0, 1) . (count($words) > 1 ? mb_substr($words[count($words) - 1], 0, 1) : '');
 

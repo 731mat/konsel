@@ -1,0 +1,54 @@
+{layout '@layout.latte'}
+{varType App\Model\Meeting\Meeting $meeting}
+{varType App\Model\Municipality\MunicipalityProfile $profile}
+{varType App\Model\Municipality\Municipality $municipality}
+{varType App\Model\People\Person|null $mayor}
+{varType DateTimeImmutable $generatedAt}
+
+{block content}
+{var $council = $meeting->getBody()->getType() === App\Model\People\BodyType::Council}
+
+{if $council}
+	<h1>Informace o konání zasedání</h1>
+	<h2>{$meeting->getTitle()|firstUpper} {$meeting->getBody()->getName()|genitiveBody}</h2>
+	<p class="lead">
+		{$profile->officialName} v souladu s § 93 odst. 1 zákona č. 128/2000 Sb., o obcích (obecní zřízení), ve znění pozdějších předpisů,
+		informuje o konání {$meeting->getTitle()} {$meeting->getBody()->getName()|genitiveBody}.
+	</p>
+{else}
+	<h1>Pozvánka</h1>
+	<h2>na {$meeting->getTitle()} – {$meeting->getBody()->getName()}</h2>
+{/if}
+
+<table class="facts">
+	<tr><td class="label">Datum a čas</td><td><strong>{$meeting->getScheduledAt()|czDateLong} v {$meeting->getScheduledAt()->format('H:i')} hodin</strong></td></tr>
+	<tr><td class="label">Místo konání</td><td><strong>{$meeting->getPlace()}</strong></td></tr>
+</table>
+
+<h3>Navržený program</h3>
+{var $items = $meeting->getAgendaItems()}
+{if $items}
+	<ol class="program">
+		<li n:foreach="$items as $item">{$item->getTitle()}</li>
+	</ol>
+{else}
+	<p class="muted">Program bude doplněn.</p>
+{/if}
+
+<p>{if $council}Zasedání zastupitelstva obce je veřejné.{else}{$meeting->getKindNoun()|firstUpper} je neveřejné.{/if}</p>
+
+<table class="signature" width="100%">
+	<tr>
+		<td width="50%" class="muted">Dne {$generatedAt|czDate}</td>
+		<td width="50%" align="center">
+			<br><br>…………………………………………<br>
+			{if $mayor}{$mayor->getFullName()}<br><span class="muted">starosta obce</span>{else}<span class="muted">starosta obce</span>{/if}
+		</td>
+	</tr>
+</table>
+
+<div n:if="$council" class="board">
+	Vyvěšeno na úřední desce dne: …………………………&nbsp;&nbsp;&nbsp;&nbsp;Sejmuto dne: …………………………<br>
+	<span class="small muted">Zveřejněno též způsobem umožňujícím dálkový přístup.</span>
+</div>
+{/block}

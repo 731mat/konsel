@@ -113,7 +113,7 @@ test('admin creates a meeting through the form and walks it through the whole li
 	]);
 	Assert::contains('Zápis ověřen', $html);
 	Assert::notContains('Upravit</a>', $html);
-	Assert::contains('Pozvánka, zápis', $html);
+	Assert::contains('Podklady k zasedání', $html);
 });
 
 test('officials form validates domain rules and saves', function (): void {
@@ -248,6 +248,31 @@ test('meeting of another municipality returns 404', function (): void {
 
 	$e = Assert::exception(fn() => $scene->tester->run('Admin:Meeting', 'add', [
 		'body' => $body->getId(),
+	]), BadRequestException::class);
+	Assert::same(404, $e?->getHttpCode());
+});
+
+test('documents tab offers PDFs and document action streams PDF', function (): void {
+	$scene = MeetingScene::boot(Role::Reader);
+	$meetingId = $scene->meeting();
+
+	Assert::contains('Stáhnout PDF', $scene->tester->render('Admin:Meeting', 'detail', [
+		'id' => $meetingId,
+		'tab' => 'documents',
+	]));
+
+	$response = $scene->tester->run('Admin:Meeting', 'document', [
+		'id' => $meetingId,
+		'type' => 'invitation',
+	]);
+	Assert::type(Nette\Application\Responses\CallbackResponse::class, $response);
+	ob_start();
+	$response->send(new Nette\Http\Request(new Nette\Http\UrlScript('http://konsel.test/')), new Nette\Http\Response());
+	Assert::same('%PDF-', substr((string) ob_get_clean(), 0, 5));
+
+	$e = Assert::exception(fn() => $scene->tester->run('Admin:Meeting', 'document', [
+		'id' => $meetingId,
+		'type' => 'nesmysl',
 	]), BadRequestException::class);
 	Assert::same(404, $e?->getHttpCode());
 });

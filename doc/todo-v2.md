@@ -37,7 +37,7 @@
 | A8 | Testy **Nette Tester**, statická analýza **PHPStan level max** (+ nette, doctrine, strict rules), coding standard **ECS** | Vstupní brána kvality pro každý task. |
 | A9 | Frontend: server-side Latte + **Naja** (AJAX snippety) + **Bootstrap 5.3**, build přes **Vite**. Žádné SPA. | Jednoduché, robustní, nativní pro Nette. |
 | A10 | Texty bodů a usnesení jako **prostý text s odstavci** (ne rich text) | Bezbolestný převod do DOCX. Rich text se dá přidat později. |
-| A11 | DOCX přes **PhpWord TemplateProcessor** (šablony s `${placeholder}`), PDF přes **Gotenberg** (LibreOffice v samostatném kontejneru, HTTP API), obojí za rozhraním | Šablony obce 1:1, LibreOffice nezatěžuje PHP image. |
+| A11 | **PDF přes mPDF** z Latte/HTML šablon v `resources/documents` (čisté PHP, písmo DejaVu Sans pro češtinu) za rozhraním `PdfRenderer`. DOCX (PhpWord) jen pokud ho obce budou chtít upravovat ve Wordu. | Změněno na přání vlastníka (dříve PhpWord + Gotenberg): žádný další kontejner, šablony se píšou jako HTML. |
 | A12 | Externí služby (AI, přepis audia, ARES, mail, storage) vždy za **rozhraním v `Model/<Doména>`**, implementace vedle něj s prefixem technologie (`OpenAi…`, `Local…`) | Testovatelnost a možnost vyměnit dodavatele. |
 | A13 | Zastupitelé se přihlašují přes **osobní token v odkazu** (per osoba × zasedání, v DB jen hash, expirace, revokace) | Pohodlí jako u konkurence, ale dohledatelné a odvolatelné. |
 | A14 | Souběžná editace = **zámek bodu s TTL + heartbeat** a k tomu Doctrine `#[Version]` jako pojistka. Synchronizace přes polling snippetů (bez websocketů). | Jednoduché a spolehlivé. Mercure/SSE se dá doplnit později. |
@@ -360,7 +360,7 @@ konsel/
 
 ## Fáze 6 – Dokumenty DOCX/PDF
 
-### [ ] T27 – Dokumentový engine
+### [~] T27 – Dokumentový engine
 **Cíl:** Jedna infrastruktura pro všechny výstupy.
 - `DocumentRenderer` rozhraní (DocumentType + data → DOCX stream), `PhpWordTemplateRenderer` (`phpoffice/phpword`: proměnné, `cloneBlock`/`cloneRow` pro body, členy a hlasy, vložení loga)
 - `PdfConverter` rozhraní + `GotenbergPdfConverter` (služba `gotenberg` v compose.yaml, endpoint `/forms/libreoffice/convert`, timeout)
@@ -370,7 +370,7 @@ konsel/
 - specifikace proměnných v doc/docx-placeholders.md
 **Hotovo když:** test vyrenderuje testovací šablonu, rozbalí DOCX (zip → document.xml) a ověří hodnoty. PDF konverze má integrační test (přeskočí se, když Gotenberg neběží).
 
-### [ ] T28 – Pozvánka a program
+### [x] T28 – Pozvánka a program
 - výchozí DOCX šablona (hlavička s logem a údaji obce, termín, místo, program, podpis starosty, poznámka o úřední desce)
 - tlačítka na zasedání: Stáhnout pozvánku DOCX / PDF
 **Hotovo když:** pozvánka demo zasedání se otevře ve Wordu a vypadá jako úřední dokument.
@@ -514,3 +514,4 @@ Vše od T32 je rozšíření, pořadí se dá upravit podle potřeby.
 - 2026-11-16 T13 – `AgendaItem` je součást agregátu `Meeting` (add/update/remove/move/reorder hlídají pořadí 1..n a zámek programu po zahájení). Bez unikátního indexu (meeting, position) – přečíslování by kolidovalo uvnitř flush. Vlastní presenter `Admin:Agenda` (přidání, úprava, detail bodu – na detail navážou přílohy a komentáře). Program v detailu zasedání: přetažení myší (SortableJS → AJAX `reorder!`, překreslí snippet), šipky nahoru/dolů, „Vložit standardní body“ (`StandardAgenda`: zahájení s § 93, ověřovatelé a zapisovatel s doplněnými jmény, schválení programu, diskuse, závěr; duplicity přeskočí). Demo zasedání mají realistický program. **Opraveno:** `session.cookieSecure: auto` Nette bralo jako true (cookie jen přes HTTPS) → řízeno `http.cookieSecure` (výchozí auto).
 - 2026-11-16 T16 (část) – `Model/Attachment`: `Attachment` k bodu programu (StoredFile, kdo nahrál, `publicForMembers` pro portál T18), `AttachmentPolicy` (whitelist přípon – žádné skripty/HTML/SVG/spustitelné, max. velikost parametr `attachmentMaxSize` = 64 MB jako php.ini). Nahrání více souborů najednou (MultiUpload), soubory se ukládají před transakcí a při chybě se uklidí; smazání přílohy, bodu i návrhu zasedání maže soubory až po commitu. Po ověření zápisu jsou přílohy zamčené. `Admin:Attachment` download/preview (náhled jen PDF a rastrové obrázky, `nosniff` + sandbox CSP). Počty příloh v programu. **Dluh (T16b):** nahrávání po částech s progress barem pro soubory > 64 MB (kritérium „> 500 MB bez úpravy upload_max_filesize“ zatím nesplněno).
 - 2026-11-16 T19 (část, mimo pořadí na přání vlastníka) – `Model/Comment`: komentář k bodu s autorem uživatel úřadu **nebo** zastupitel (`Person`, pro portál T18), jméno autora jako snapshot, vlákna o jedné úrovni (komentář → odpovědi), měkké mazání (smazaný komentář s odpověďmi zůstane jako „Komentář byl smazán“). Mazat smí autor, cizí komentáře správce (`Agenda` + `Manage`). Komentovat smí každý uživatel s náhledem na bod (i čtenář). Po ověření zápisu je diskuse zavřená. Sdílená šablona `app/UI/Comment/@discussion.latte` (použije i portál), AJAX formulář a mazání (snippet), odpověď přes `data-reply-to`. Počty komentářů v programu. Zbývá: komentáře zastupitelů v portálu (T17/T18) a e-mailová upozornění.
+- 2026-11-16 T27/T28 (mimo pořadí na přání vlastníka) – PDF přes **mPDF** místo PhpWord + Gotenberg (ADR A11 upravené). `Model/Document`: `PdfRenderer` → `MpdfRenderer` (temp/mpdf), `MeetingDocumentFacade` renderuje Latte šablony `resources/documents/*.latte` (společný `@layout.latte` s hlavičkou obce a logem). Hotové: **pozvánka / informace o zasedání** (§ 93 odst. 1, datum dlouze česky, místo, navržený program, podpis starosty k datu zasedání, řádek vyvěšeno/sejmuto; u rady neveřejná pozvánka) a **podklady k zasedání** (důvodové zprávy, návrhy usnesení, veřejné přílohy). Záložka Dokumenty v detailu zasedání: náhled a stažení. Dokumenty se zatím negenerují do úložiště (GeneratedDocument jen v paměti) – ukládání a verze v T27. Filtry `czDateLong`, `genitiveBody`.

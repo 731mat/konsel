@@ -17,6 +17,8 @@
 {varType bool $canEditProgram}
 {varType array<int, int> $attachmentCounts}
 {varType array<int, int> $commentCounts}
+{varType App\Model\Document\MeetingDocumentType[] $documentTypes}
+{varType bool $canViewDocuments}
 
 <div class="d-flex flex-wrap align-items-start gap-3 mb-4">
 	<div class="me-auto">
@@ -103,6 +105,21 @@
 						</form>
 					</div>
 				{/snippet}
+			{elseif $tab === 'documents' && $canViewDocuments}
+				<div class="list-group list-group-flush">
+					<div n:foreach="$documentTypes as $documentType" class="list-group-item d-flex flex-wrap align-items-center gap-3 py-3">
+						<i class="bi bi-file-earmark-pdf fs-3 text-danger" aria-hidden="true"></i>
+						<div class="me-auto min-w-0">
+							<div class="fw-semibold">{$documentType->label()}</div>
+							<div class="small text-body-secondary">{$documentType->description()}</div>
+						</div>
+						<a n:href="document, id: $meeting->getId(), type: $documentType->value" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye" aria-hidden="true"></i> Zobrazit</a>
+						<a n:href="document, id: $meeting->getId(), type: $documentType->value, download: true" class="btn btn-sm btn-primary"><i class="bi bi-download" aria-hidden="true"></i> Stáhnout PDF</a>
+					</div>
+				</div>
+				<div class="card-footer bg-transparent small text-body-secondary">
+					Dokumenty se vytvářejí vždy z aktuálního stavu zasedání. Zápis a výpisy z usnesení přibudou s průběhem zasedání.
+				</div>
 			{else}
 				<div class="card-body empty-state">
 					{switch $tab}
@@ -114,7 +131,7 @@
 							Usnesení vzniknou z hlasování o bodech programu.
 						{case 'documents'}
 							<i class="bi bi-file-earmark-text" aria-hidden="true"></i>
-							Pozvánka, zápis, výpisy z usnesení a prezenční listina se budou generovat zde.
+							Dokumenty jsou dostupné jen s oprávněním k dokumentům.
 					{/switch}
 				</div>
 			{/if}

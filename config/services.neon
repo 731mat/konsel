@@ -16,6 +16,7 @@ services:
 	- App\Core\Security\AuthorizatorFactory::create
 	- App\Model\User\LoginThrottle
 	- App\Model\Attachment\AttachmentPolicy(%attachmentMaxSize%)
+	- App\Model\Document\MpdfRenderer(%tempDir%/mpdf)
 	- App\Console\Demo\DemoSeeder
 	- App\Console\Demo\SeedDemoCommand(productionMode: %productionMode%)
 	- App\UI\Form\FormFactory

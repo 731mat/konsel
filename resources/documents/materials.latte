@@ -1,0 +1,36 @@
+{layout '@layout.latte'}
+{varType App\Model\Meeting\Meeting $meeting}
+{varType array<int, list<string>> $attachments}
+{varType DateTimeImmutable $generatedAt}
+
+{block content}
+<h1>Podklady</h1>
+<h2>{$meeting->getTitle()} – {$meeting->getBody()->getName()}</h2>
+
+<table class="facts">
+	<tr><td class="label">Datum a čas</td><td>{$meeting->getScheduledAt()|czDateLong} v {$meeting->getScheduledAt()->format('H:i')} hodin</td></tr>
+	<tr><td class="label">Místo konání</td><td>{$meeting->getPlace()}</td></tr>
+	<tr n:if="$meeting->getChairperson()"><td class="label">Předsedající</td><td>{$meeting->getChairperson()->getFullName()}</td></tr>
+</table>
+
+{foreach $meeting->getAgendaItems() as $item}
+	<div class="item">
+		<h3>{$item->getPosition()}. {$item->getTitle()}</h3>
+		<div n:if="$item->getRapporteur()" class="muted small">Předkládá: {$item->getRapporteur()->getFullName()}</div>
+		{if $item->getDescription()}
+			{$item->getDescription()|nl2p}
+		{/if}
+		<div n:if="$item->getProposedResolution()" class="resolution">
+			<strong>Návrh usnesení:</strong><br>
+			{$item->getProposedResolution()|breakLines}
+		</div>
+		<div n:if="$attachments[$item->getId()] ?? []" class="small">
+			<strong>Přílohy:</strong> {implode(', ', $attachments[$item->getId()])}
+		</div>
+	</div>
+{else}
+	<p class="muted">Program zatím není sestavený.</p>
+{/foreach}
+
+<p class="small muted" style="margin-top: 24pt">Vygenerováno {$generatedAt|czDateTime} systémem Konšel.</p>
+{/block}

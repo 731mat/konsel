@@ -10,6 +10,8 @@ use App\Core\Security\Privilege;
 use App\Core\Security\Resource;
 use App\Model\Attachment\AttachmentFacade;
 use App\Model\Comment\CommentFacade;
+use App\Model\Document\MeetingDocumentFacade;
+use App\Model\Document\MeetingDocumentType;
 use App\Model\Meeting\AgendaFacade;
 use App\Model\Meeting\Command\AssignOfficials;
 use App\Model\Meeting\Command\SaveMeeting;
@@ -26,6 +28,7 @@ use App\Model\Shared\Exception\ValidationException;
 use App\UI\Form\FormErrors;
 use App\UI\Form\FormFactory;
 use Nette\Application\Attributes\Requires;
+use Nette\Application\Responses\CallbackResponse;
 use Nette\Application\UI\Form;
 
 /**
@@ -51,6 +54,7 @@ final class MeetingPresenter extends SecuredPresenter
 		private readonly AgendaFacade $agendaFacade,
 		private readonly AttachmentFacade $attachmentFacade,
 		private readonly CommentFacade $commentFacade,
+		private readonly MeetingDocumentFacade $documentFacade,
 		private readonly PeopleFacade $peopleFacade,
 		private readonly FormFactory $formFactory,
 	) {
@@ -149,8 +153,34 @@ final class MeetingPresenter extends SecuredPresenter
 		$this->template->canEdit = $canEdit;
 		$this->template->attachmentCounts = $this->attachmentFacade->countByMeeting($meeting);
 		$this->template->commentCounts = $this->commentFacade->countByMeeting($meeting);
+		$this->template->documentTypes = MeetingDocumentType::cases();
+		$this->template->canViewDocuments = $this->isAllowed(Resource::Document);
 		$this->template->canEditProgram = $meeting->canEditProgram() && $this->isAllowed(Resource::Agenda, Privilege::Edit);
 		$this->template->canDelete = $this->isAllowed(Resource::Meeting, Privilege::Delete) && $meeting->getStatus() === MeetingStatus::Draft;
+	}
+
+	/**
+	 * PDF dokument zasedání (generuje se na požádání). download=1 vynutí stažení místo náhledu.
+	 */
+	#[Allowed(Resource::Document)]
+	public function actionDocument(int $id, string $type, bool $download = false): void
+	{
+		$meeting = $this->loadMeeting($id);
+		$documentType = MeetingDocumentType::tryFrom($type) ?? $this->error('Neznámý typ dokumentu.');
+		$document = $this->documentFacade->generate($meeting->getId(), $documentType);
+
+		$response = $this->getHttpResponse();
+		$response->setContentType($document->mimeType);
+		$response->setHeader('Content-Disposition', sprintf(
+			'%s; filename="%s"; filename*=UTF-8\'\'%s',
+			$download ? 'attachment' : 'inline',
+			$document->fileName,
+			rawurlencode($document->fileName),
+		));
+		$response->setHeader('Content-Length', (string) strlen($document->content));
+		$this->sendResponse(new CallbackResponse(static function () use ($document): void {
+			echo $document->content;
+		}));
 	}
 
 	#[Allowed(Resource::Meeting, Privilege::Edit)]
