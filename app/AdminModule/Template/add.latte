@@ -1,0 +1,12 @@
+{block title}Nová šablona usnesení{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href="default">Šablony</a></li>
+	<li class="breadcrumb-item active" aria-current="page">Nová šablona</li>
+{/block}
+
+{block content}
+{varType array<string, string> $variables}
+{varType string[] $categories}
+<h1 class="h3 mb-4">Nová šablona usnesení</h1>
+{include '@form.latte', variables: $variables, categories: $categories}

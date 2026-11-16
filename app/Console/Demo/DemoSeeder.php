@@ -24,6 +24,7 @@ use App\Model\People\Command\SavePerson;
 use App\Model\People\MemberFunction;
 use App\Model\People\PeopleFacade;
 use App\Model\Storage\UploadedFile;
+use App\Model\Template\TemplateFacade;
 use App\Model\User\Command\CreateUser;
 use App\Model\User\Role;
 use App\Model\User\UserFacade;
@@ -58,6 +59,7 @@ final readonly class DemoSeeder
 		private AttachmentFacade $attachments,
 		private CommentFacade $comments,
 		private AccessFacade $access,
+		private TemplateFacade $templates,
 		private ClockInterface $clock,
 	) {}
 
@@ -109,6 +111,9 @@ final readonly class DemoSeeder
 		$this->people->addMember($control->getId(), new AddMember($persons[3]->getId(), MemberFunction::Chair, $constituentDay));
 		$this->people->addMember($control->getId(), new AddMember($persons[7]->getId(), MemberFunction::Member, $constituentDay));
 		$this->people->addMember($control->getId(), new AddMember($persons[8]->getId(), MemberFunction::Member, $constituentDay));
+
+		$this->templates->installDefaultResolutionTemplates($municipalityId);
+		$this->templates->installDefaultMeetingTemplates($municipalityId);
 
 		$officeRoom = 'Zasedací místnost obecního úřadu, Hlavní 1';
 		$constituent = $this->meetings->create($council->getId(), new SaveMeeting(MeetingType::Constituent, $constituentDay->setTime(18, 0), 'Kulturní dům Neplachovice'));
@@ -163,6 +168,7 @@ final readonly class DemoSeeder
 			'Obec Neplachovice (650 obyvatel)',
 			'Uživatelé (heslo ' . self::Password . '): spravce@, editor@, ctenar@, superadmin@demo.konsel.test',
 			'Volební období 2026–2030, zastupitelstvo 9 členů, finanční a kontrolní výbor',
+			'Knihovna šablon usnesení a programu (řádné a ustavující zasedání)',
 			'Zasedání zastupitelstva s programem: ustavující (zápis ověřen), proběhlé, sdílené a v přípravě',
 			"Portál zastupitele (Petr Novotný, sdílené zasedání): /odkaz/{$portalLink->token}",
 		];

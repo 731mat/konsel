@@ -21,6 +21,7 @@ use App\Model\Shared\Exception\DomainException;
 use App\Model\Shared\Exception\NotFoundException;
 use App\Model\Shared\Exception\ValidationException;
 use App\Model\Storage\UploadedFile;
+use App\Model\Template\TemplateFacade;
 use App\UI\Form\FormErrors;
 use App\UI\Form\FormFactory;
 use Nette\Application\Attributes\Requires;
@@ -44,6 +45,7 @@ final class AgendaPresenter extends SecuredPresenter
 		private readonly AttachmentFacade $attachmentFacade,
 		private readonly AttachmentPolicy $attachmentPolicy,
 		private readonly CommentFacade $commentFacade,
+		private readonly TemplateFacade $templateFacade,
 		private readonly FormFactory $formFactory,
 	) {
 		parent::__construct();
@@ -59,6 +61,7 @@ final class AgendaPresenter extends SecuredPresenter
 	public function renderAdd(): void
 	{
 		$this->template->meeting = $this->meeting;
+		$this->template->resolutionTemplates = $this->templateFacade->renderResolutionTemplates(($this->meeting ?? $this->error())->getId());
 	}
 
 	#[Allowed(Resource::Agenda, Privilege::Edit)]
@@ -79,6 +82,7 @@ final class AgendaPresenter extends SecuredPresenter
 	{
 		$this->template->item = $this->item;
 		$this->template->meeting = $this->meeting;
+		$this->template->resolutionTemplates = $this->templateFacade->renderResolutionTemplates(($this->meeting ?? $this->error())->getId());
 	}
 
 	public function actionDetail(int $id): void

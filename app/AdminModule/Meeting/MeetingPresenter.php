@@ -27,6 +27,7 @@ use App\Model\People\PeopleFacade;
 use App\Model\Shared\Exception\DomainException;
 use App\Model\Shared\Exception\NotFoundException;
 use App\Model\Shared\Exception\ValidationException;
+use App\Model\Template\TemplateFacade;
 use App\UI\Form\FormErrors;
 use App\UI\Form\FormFactory;
 use Nette\Application\Attributes\Requires;
@@ -66,6 +67,7 @@ final class MeetingPresenter extends SecuredPresenter
 		private readonly CommentFacade $commentFacade,
 		private readonly MeetingDocumentFacade $documentFacade,
 		private readonly AccessFacade $accessFacade,
+		private readonly TemplateFacade $templateFacade,
 		private readonly PeopleFacade $peopleFacade,
 		private readonly FormFactory $formFactory,
 		private readonly ClockInterface $clock,
@@ -166,6 +168,8 @@ final class MeetingPresenter extends SecuredPresenter
 		$this->template->attachmentCounts = $this->attachmentFacade->countByMeeting($meeting);
 		$this->template->commentCounts = $this->commentFacade->countByMeeting($meeting);
 		$this->template->documentTypes = MeetingDocumentType::cases();
+		$this->template->meetingTemplates = $this->templateFacade->findMeetingTemplates($meeting->getMunicipality()->getId());
+		$this->template->canSaveTemplate = $this->isAllowed(Resource::Template, Privilege::Edit) && $meeting->getAgendaItems() !== [];
 		$this->template->canViewDocuments = $this->isAllowed(Resource::Document);
 		$this->template->canEditProgram = $meeting->canEditProgram() && $this->isAllowed(Resource::Agenda, Privilege::Edit);
 		$this->template->canDelete = $this->isAllowed(Resource::Meeting, Privilege::Delete) && $meeting->getStatus() === MeetingStatus::Draft;
@@ -304,6 +308,40 @@ final class MeetingPresenter extends SecuredPresenter
 			$added = $this->agendaFacade->insertStandardItems($meeting->getId());
 			$this->flashMessage($added === 0 ? 'Standardní body už v programu jsou.' : "Do programu bylo vloženo {$added} standardních bodů.", 'success');
 		});
+	}
+
+	#[Allowed(Resource::Agenda, Privilege::Edit)]
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleApplyTemplate(): void
+	{
+		$meeting = $this->meeting ?? $this->error();
+		$templateId = $this->getRequest()->getPost('templateId');
+		if (!is_numeric($templateId)) {
+			$this->flashMessage('Vyberte šablonu programu.', 'warning');
+			$this->redirect('this');
+		}
+
+		$this->runProgramChange(function () use ($meeting, $templateId): void {
+			$template = $this->assertOwned($this->templateFacade->getMeetingTemplate((int) $templateId));
+			$added = $this->templateFacade->applyToMeeting($template->getId(), $meeting->getId());
+			$this->flashMessage("Do programu bylo vloženo {$added} bodů ze šablony „{$template->getName()}“.", 'success');
+		});
+	}
+
+	#[Allowed(Resource::Template, Privilege::Edit)]
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleSaveAsTemplate(): void
+	{
+		$meeting = $this->meeting ?? $this->error();
+		$name = $this->getRequest()->getPost('name');
+		try {
+			$template = $this->templateFacade->saveProgramAsTemplate($meeting->getId(), is_string($name) ? $name : '');
+			$this->flashMessage("Program byl uložen jako šablona „{$template->getName()}“.", 'success');
+		} catch (DomainException $e) {
+			$this->flashMessage($e->getMessage(), 'danger');
+		}
+
+		$this->redirect('this');
 	}
 
 	#[Allowed(Resource::Agenda, Privilege::Edit)]

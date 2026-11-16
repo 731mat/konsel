@@ -19,6 +19,8 @@
 {varType array<int, int> $commentCounts}
 {varType App\Model\Document\MeetingDocumentType[] $documentTypes}
 {varType bool $canViewDocuments}
+{varType App\Model\Template\MeetingTemplate[] $meetingTemplates}
+{varType bool $canSaveTemplate}
 
 <div class="d-flex flex-wrap align-items-start gap-3 mb-4">
 	<div class="me-auto">
@@ -103,8 +105,22 @@
 						<form method="post" action="{link insertStandard!}" class="ajax">
 							<button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-magic" aria-hidden="true"></i> Vložit standardní body</button>
 						</form>
+						<form n:if="$meetingTemplates" method="post" action="{link applyTemplate!}" class="ajax d-flex gap-1">
+							<select name="templateId" class="form-select form-select-sm" aria-label="Šablona programu" required>
+								<option value="">Program ze šablony…</option>
+								<option n:foreach="$meetingTemplates as $meetingTemplate" value="{$meetingTemplate->getId()}">{$meetingTemplate->getName()}</option>
+							</select>
+							<button type="submit" class="btn btn-outline-secondary btn-sm text-nowrap">Vložit</button>
+						</form>
 					</div>
 				{/snippet}
+				{if $canSaveTemplate}
+					<form method="post" action="{link saveAsTemplate!}" class="card-footer bg-transparent d-flex flex-wrap gap-2 align-items-center border-top">
+						<span class="small text-body-secondary me-auto"><i class="bi bi-files" aria-hidden="true"></i> Opakujete podobný program?</span>
+						<input type="text" name="name" class="form-control form-control-sm w-auto" placeholder="Název šablony" required maxlength="200" value="{$meeting->getTitle()|firstUpper} – program">
+						<button type="submit" class="btn btn-sm btn-outline-secondary">Uložit jako šablonu</button>
+					</form>
+				{/if}
 			{elseif $tab === 'documents' && $canViewDocuments}
 				<div class="list-group list-group-flush">
 					<div n:foreach="$documentTypes as $documentType" class="list-group-item d-flex flex-wrap align-items-center gap-3 py-3">

@@ -10,5 +10,6 @@
 {block content}
 {varType App\Model\Meeting\AgendaItem $item}
 {varType App\Model\Meeting\Meeting $meeting}
+{varType array $resolutionTemplates}
 <h1 class="h3 mb-4">Upravit bod {$item->getPosition()}</h1>
-{include '@form.latte', meeting: $meeting}
+{include '@form.latte', meeting: $meeting, resolutionTemplates: $resolutionTemplates}

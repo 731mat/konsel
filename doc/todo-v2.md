@@ -242,14 +242,14 @@ konsel/
 - program je editovatelný jen ve stavech `Draft`/`Shared` (`InvalidState` jinak)
 **Hotovo když:** program jde sestavit a přeskládat a testy hlídají pozice a stavová omezení.
 
-### [ ] T14 – Knihovna šablon usnesení
+### [x] T14 – Knihovna šablon usnesení
 **Cíl:** Opakující se usnesení na jedno kliknutí.
 - `ResolutionTemplate` (title, category, text s proměnnými `{obec}`, `{datum}`, `{cislo_zasedani}`, …, municipality nullable = globální šablona)
 - správa v Nastavení, vložení do bodu programu (modal s hledáním)
 - seed ~15 běžných šablon: schválení programu, určení ověřovatelů, rozpočtové opatření, smlouva o dílo, kupní smlouva, darovací smlouva, inventarizace, rozpočet, závěrečný účet, …
 **Hotovo když:** šablona se vloží do bodu a proměnné se nahradí. Test pokrývá substituci.
 
-### [ ] T15 – Šablony zasedání (vč. ustavujícího)
+### [x] T15 – Šablony zasedání (vč. ustavujícího)
 **Cíl:** Zasedání předvyplněné jedním klikem.
 - `MeetingTemplate` (název, typ zasedání, typ orgánu, položky: title, description, proposedResolution)
 - „Nové zasedání ze šablony“
@@ -485,6 +485,31 @@ konsel/
 
 ---
 
+## Fáze 10 – Úkolníček a občané (zadání vlastníka 2026-11-16)
+
+### [ ] T44 – Soubory v diskusi (drag & drop)
+**Cíl:** K jakémukoli komentáři jde přiložit soubory přetažením myší.
+- přílohy komentáře (stejná `AttachmentPolicy`, `FileStorage`, stahování přes ACL), drag & drop zóna ve formuláři diskuse + klasický výběr
+- funguje v administraci, v portálu zastupitele i v úkolníčku
+**Hotovo když:** soubor přetažený do diskuse se uloží ke komentáři a jde stáhnout jen oprávněným.
+
+### [ ] T45 – Úkolníček (dlouhodobé úkoly a záměry)
+**Cíl:** Témata jako „Postavit školu“ v jednom vlákně přes více zasedání.
+- `Project` (název, popis, fáze: námět → příprava → projekt → schváleno → realizace → hotovo / odloženo / zamítnuto, priorita, odpovědná osoba, odhad nákladů, veřejný ano/ne)
+- diskuse a soubory u úkolu (sdílená diskuse z T19/T44)
+- bod programu jde propojit s úkolem; stránka úkolu ukazuje **jedno vlákno**: komentáře, soubory a všechny body ze všech zasedání (s návrhy usnesení / usneseními) chronologicky
+- úkolníček v administraci i v portálu zastupitele
+**Hotovo když:** úkol propojený se dvěma body různých zasedání ukazuje oba v časové ose spolu s diskusí.
+
+### [ ] T46 – Veřejné podněty občanů
+**Cíl:** Občané přidávají podněty a vidí, v jaké fázi jsou.
+- veřejná stránka obce `/obec/<slug>/podnety`: seznam veřejných úkolů (fáze, priorita, veřejné komentáře), formulář podnětu (jméno, e-mail, text; honeypot + limit počtu odeslání; souhlas se zpracováním osobních údajů)
+- podnět vznikne jako úkol ve fázi „nový podnět“, zveřejní se až po schválení úřadem
+- u komentáře přepínač „viditelné pro občany“
+**Hotovo když:** občan odešle podnět, úřad ho schválí, zastupitel okomentuje veřejně a občan vidí fázi, prioritu a komentář.
+
+---
+
 ## MVP pro vlastní obec
 
 **T00–T30 + T34** = použitelný systém pro zastupitelstvo i radu bez AI (program, sdílení, průběh, usnesení, Word/PDF).
@@ -516,3 +541,5 @@ Vše od T32 je rozšíření, pořadí se dá upravit podle potřeby.
 - 2026-11-16 T19 (část, mimo pořadí na přání vlastníka) – `Model/Comment`: komentář k bodu s autorem uživatel úřadu **nebo** zastupitel (`Person`, pro portál T18), jméno autora jako snapshot, vlákna o jedné úrovni (komentář → odpovědi), měkké mazání (smazaný komentář s odpověďmi zůstane jako „Komentář byl smazán“). Mazat smí autor, cizí komentáře správce (`Agenda` + `Manage`). Komentovat smí každý uživatel s náhledem na bod (i čtenář). Po ověření zápisu je diskuse zavřená. Sdílená šablona `app/UI/Comment/@discussion.latte` (použije i portál), AJAX formulář a mazání (snippet), odpověď přes `data-reply-to`. Počty komentářů v programu. Zbývá: komentáře zastupitelů v portálu (T17/T18) a e-mailová upozornění.
 - 2026-11-16 T27/T28 (mimo pořadí na přání vlastníka) – PDF přes **mPDF** místo PhpWord + Gotenberg (ADR A11 upravené). `Model/Document`: `PdfRenderer` → `MpdfRenderer` (temp/mpdf), `MeetingDocumentFacade` renderuje Latte šablony `resources/documents/*.latte` (společný `@layout.latte` s hlavičkou obce a logem). Hotové: **pozvánka / informace o zasedání** (§ 93 odst. 1, datum dlouze česky, místo, navržený program, podpis starosty k datu zasedání, řádek vyvěšeno/sejmuto; u rady neveřejná pozvánka) a **podklady k zasedání** (důvodové zprávy, návrhy usnesení, veřejné přílohy). Záložka Dokumenty v detailu zasedání: náhled a stažení. Dokumenty se zatím negenerují do úložiště (GeneratedDocument jen v paměti) – ukládání a verze v T27. Filtry `czDateLong`, `genitiveBody`.
 - 2026-11-16 T17/T18 (mimo pořadí na přání vlastníka) – `Model/Access`: `MeetingAccessToken` (osoba × zasedání, v DB jen SHA-256, 43 znaků base64url = 256 bitů, platnost do zasedání + 60 dní, odvolání, počítadlo použití). Nový odkaz odvolá předchozí. `AccessFacade::issueForMembers/issueFor/revoke/authenticate/getValid`, vyhledání tokenu bez TenantFilteru (obec se zjistí až z tokenu). `PortalModule`: vstup `/odkaz/<token>` → session s ID odkazu (regenerace ID session, `Referrer-Policy: no-referrer`) → přesměrování na `/portal` (token nezůstává v URL); každý požadavek znovu ověří platnost a nastaví obec. Portál: přehled zasedání s programem a PDF, detail bodu (důvodová zpráva, návrh usnesení, **jen veřejné přílohy**, diskuse – komentuje jako `Person`, maže jen své). Admin `Meeting:links`: vytvoření odkazů pro členy / jednotlivce, odkaz se ukáže **jen jednou** (kopírování, `mailto:` s předvyplněným textem – do T20), přehled s odvoláním. Demo seeder vypíše odkaz pro Petra Novotného.
+- 2026-11-16 T14/T15 – `Model/Template`: `ResolutionTemplate` (per obec, bez globálních šablon – TenantFilter by je skryl; výchozí knihovna 19 šablon se doplní tlačítkem / v demu), proměnné `{organ} {obec} {cislo_zasedani} {datum_zasedani} {rok}` (`TemplateVariables`). Vložení do bodu přes modal s hledáním (doplní název a návrh usnesení). `MeetingTemplate` (body v JSON), výchozí: řádné zasedání, ustavující bez rady, ustavující s radou – **texty ustavujících šablon musí zkontrolovat člověk proti aktuální metodice MV** (`// TODO ověřit proti metodice MV`, poznámka u šablony). Program ze šablony a „Uložit program jako šablonu“ v detailu zasedání. Menu Šablony. Úprava položek šablony programu v UI zatím jen přes uložení z programu.
+- 2026-11-16 Plán – na přání vlastníka přidána Fáze 10: T44 soubory v diskusi (drag & drop), T45 úkolníček (projekty v jednom vlákně přes zasedání), T46 veřejné podněty občanů.

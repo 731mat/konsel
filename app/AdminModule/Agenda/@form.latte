@@ -1,14 +1,42 @@
-{parameters App\Model\Meeting\Meeting $meeting}
+{parameters App\Model\Meeting\Meeting $meeting, array $resolutionTemplates}
 <div class="row g-4">
 	<div class="col-xl-8">
 		<div class="card"><div class="card-body">{control itemForm}</div></div>
 	</div>
-	<div class="col-xl-4">
+	<div class="col-xl-4 d-flex flex-column gap-4">
+		<div class="card">
+			<div class="card-body">
+				<button type="button" class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#templateModal"><i class="bi bi-journal-text" aria-hidden="true"></i> Vložit šablonu usnesení</button>
+				<p class="small text-body-secondary mt-2 mb-0">Šablona doplní název bodu a návrh usnesení. Místa s tečkami pak doplňte.</p>
+			</div>
+		</div>
 		<div class="card">
 			<div class="card-header">Tipy</div>
 			<div class="card-body small text-body-secondary">
 				<p>Návrh usnesení pište celou větou, jak se bude číst při hlasování: <em>„{$meeting->getBody()->getName()} schvaluje rozpočtové opatření č. 5/2026 dle přílohy.“</em></p>
 				<p class="mb-0">Podklady (smlouvy, rozpočty, mapy) nahrajete k bodu po jeho uložení.</p>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="modal fade" id="templateModal" tabindex="-1" aria-labelledby="templateModalTitle" aria-hidden="true">
+	<div class="modal-dialog modal-lg modal-dialog-scrollable">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h2 class="modal-title h5" id="templateModalTitle">Šablony usnesení</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zavřít"></button>
+			</div>
+			<div class="modal-body">
+				<input type="search" class="form-control mb-3" placeholder="Hledat šablonu…" data-template-search aria-label="Hledat šablonu">
+				<div class="list-group" data-template-list>
+					<button n:foreach="$resolutionTemplates as $template" type="button" class="list-group-item list-group-item-action"
+						data-template-insert data-title="{$template['title']}" data-text="{$template['text']}" data-search="{$template['category']} {$template['title']} {$template['text']}">
+						<div class="d-flex gap-2"><span class="fw-semibold me-auto">{$template['title']}</span><span class="badge text-bg-light">{$template['category']}</span></div>
+						<div class="small text-body-secondary">{$template['text']|truncate: 160}</div>
+					</button>
+				</div>
+				<p n:if="!$resolutionTemplates" class="text-body-secondary mb-0">Knihovna šablon je prázdná. Doplňte ji v menu Šablony.</p>
 			</div>
 		</div>
 	</div>

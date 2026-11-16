@@ -86,3 +86,37 @@ document.addEventListener('click', async (event) => {
 	button.innerHTML = '<i class="bi bi-check2" aria-hidden="true"></i> Zkopírováno';
 	setTimeout(() => { button.innerHTML = label; }, 2000);
 });
+
+// Šablony usnesení v modálním okně: hledání a vložení do formuláře bodu
+document.addEventListener('input', (event) => {
+	const search = event.target instanceof Element ? event.target.closest('[data-template-search]') : null;
+	if (!search) {
+		return;
+	}
+	const query = search.value.trim().toLocaleLowerCase('cs');
+	search.closest('.modal').querySelectorAll('[data-template-insert]').forEach((item) => {
+		item.hidden = query !== '' && !item.dataset.search.toLocaleLowerCase('cs').includes(query);
+	});
+});
+
+document.addEventListener('click', (event) => {
+	const item = event.target instanceof Element ? event.target.closest('[data-template-insert]') : null;
+	if (!item) {
+		return;
+	}
+	const form = document.querySelector('form[id^="frm-itemForm"]');
+	const resolution = form?.querySelector('textarea[name=proposedResolution]');
+	const title = form?.querySelector('input[name=title]');
+	if (!resolution) {
+		return;
+	}
+	if (resolution.value.trim() !== '' && !window.confirm('Nahradit dosavadní návrh usnesení textem ze šablony?')) {
+		return;
+	}
+	resolution.value = item.dataset.text;
+	if (title && title.value.trim() === '') {
+		title.value = item.dataset.title;
+	}
+	window.bootstrap.Modal.getInstance(item.closest('.modal'))?.hide();
+	resolution.focus();
+});

@@ -1,0 +1,60 @@
+{block title}Šablony{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item active" aria-current="page">Šablony</li>
+{/block}
+
+{block content}
+{varType array<string, App\Model\Template\ResolutionTemplate[]> $resolutionTemplates}
+{varType App\Model\Template\MeetingTemplate[] $meetingTemplates}
+{varType bool $canEdit}
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+	<h1 class="h3 mb-0 me-auto">Šablony</h1>
+	<form n:if="$canEdit" method="post" action="{link installDefaults!}">
+		<button type="submit" class="btn btn-outline-secondary"><i class="bi bi-magic" aria-hidden="true"></i> Doplnit výchozí šablony</button>
+	</form>
+	<a n:if="$canEdit" n:href="add" class="btn btn-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nová šablona usnesení</a>
+</div>
+
+<div class="row g-4">
+	<div class="col-xl-8">
+		<div class="card">
+			<div class="card-header"><i class="bi bi-journal-text text-primary me-1" aria-hidden="true"></i> Šablony usnesení</div>
+			{if $resolutionTemplates}
+				{foreach $resolutionTemplates as $category => $templates}
+					<div class="px-3 pt-3 pb-1 small fw-semibold text-uppercase text-body-secondary" style="letter-spacing: .05em">{$category}</div>
+					<ul class="list-group list-group-flush">
+						<li n:foreach="$templates as $template" class="list-group-item d-flex gap-3">
+							<div class="me-auto min-w-0">
+								<div class="fw-semibold">{$template->getTitle()}</div>
+								<div class="small text-body-secondary text-break">{$template->getText()|truncate: 180}</div>
+							</div>
+							<div n:if="$canEdit" class="d-flex gap-1 flex-shrink-0 align-items-start">
+								<a n:href="edit, id: $template->getId()" class="btn btn-sm btn-light" title="Upravit"><i class="bi bi-pencil" aria-hidden="true"></i><span class="visually-hidden">Upravit</span></a>
+								<form method="post" action="{link deleteResolution!, templateId: $template->getId()}">
+									<button type="submit" class="btn btn-sm btn-light text-danger" title="Smazat" data-confirm="Smazat šablonu „{$template->getTitle()}“?"><i class="bi bi-trash" aria-hidden="true"></i><span class="visually-hidden">Smazat</span></button>
+								</form>
+							</div>
+						</li>
+					</ul>
+				{/foreach}
+			{else}
+				<div class="card-body empty-state"><i class="bi bi-journal-text" aria-hidden="true"></i>Knihovna je prázdná.{if $canEdit} Začněte tlačítkem „Doplnit výchozí šablony“.{/if}</div>
+			{/if}
+		</div>
+	</div>
+	<div class="col-xl-4">
+		<div class="card">
+			<div class="card-header"><i class="bi bi-list-ol text-primary me-1" aria-hidden="true"></i> Šablony programu</div>
+			<div class="list-group list-group-flush">
+				<a n:foreach="$meetingTemplates as $meetingTemplate" n:href="meeting, id: $meetingTemplate->getId()" class="list-group-item list-group-item-action">
+					<div class="fw-semibold">{$meetingTemplate->getName()}</div>
+					<div class="small text-body-secondary">{$meetingTemplate->getMeetingType()->label()} · {count($meetingTemplate->getItems())} bodů</div>
+				</a>
+				<div n:if="!$meetingTemplates" class="list-group-item empty-state border-0"><i class="bi bi-list-ol" aria-hidden="true"></i>Zatím žádné šablony programu.</div>
+			</div>
+			<div class="card-footer bg-transparent small text-body-secondary">Vlastní šablonu vytvoříte z hotového programu tlačítkem „Uložit jako šablonu“ v detailu zasedání.</div>
+		</div>
+	</div>
+</div>

@@ -1,0 +1,29 @@
+{block title}{$meetingTemplate->getName()}{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href="default">Šablony</a></li>
+	<li class="breadcrumb-item active" aria-current="page">{$meetingTemplate->getName()}</li>
+{/block}
+
+{block content}
+{varType App\Model\Template\MeetingTemplate $meetingTemplate}
+{varType bool $canEdit}
+<div class="d-flex flex-wrap align-items-start gap-3 mb-3">
+	<div class="me-auto">
+		<h1 class="h3 mb-1">{$meetingTemplate->getName()}</h1>
+		<p class="text-body-secondary mb-0">{$meetingTemplate->getMeetingType()->label()} zasedání · {count($meetingTemplate->getItems())} bodů</p>
+	</div>
+	<form n:if="$canEdit" method="post" action="{link deleteMeetingTemplate!, templateId: $meetingTemplate->getId()}">
+		<button type="submit" class="btn btn-outline-danger" data-confirm="Smazat šablonu „{$meetingTemplate->getName()}“?"><i class="bi bi-trash" aria-hidden="true"></i> Smazat</button>
+	</form>
+</div>
+<div n:if="$meetingTemplate->getNote()" class="alert alert-warning"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {$meetingTemplate->getNote()}</div>
+<div class="card">
+	<ol class="list-group list-group-flush list-group-numbered">
+		<li n:foreach="$meetingTemplate->getItems() as $item" class="list-group-item">
+			<span class="fw-semibold">{$item->title}</span>
+			<div n:if="$item->description" class="small text-body-secondary mt-1">{$item->description}</div>
+			<div n:if="$item->proposedResolution" class="small mt-1"><i class="bi bi-journal-check text-primary" aria-hidden="true"></i> {$item->proposedResolution}</div>
+		</li>
+	</ol>
+</div>

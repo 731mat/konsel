@@ -8,6 +8,7 @@
 
 {block content}
 {varType App\Model\Meeting\Meeting $meeting}
+{varType array $resolutionTemplates}
 <h1 class="h3 mb-1">Nový bod programu</h1>
 <p class="text-body-secondary mb-4">{$meeting->getTitle()} · {$meeting->getBody()->getName()} · {$meeting->getScheduledAt()|czDateTime}</p>
-{include '@form.latte', meeting: $meeting}
+{include '@form.latte', meeting: $meeting, resolutionTemplates: $resolutionTemplates}

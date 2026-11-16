@@ -35,6 +35,7 @@ final class AdminMenu extends Control
 			new MenuItem('Úkoly', 'Task', 'check2-square', Resource::Resolution),
 			new MenuItem('Hledat', 'Search', 'search', Resource::Meeting),
 			new MenuItem('Osoby a orgány', 'Member', 'people', Resource::Member, 'Správa obce'),
+			new MenuItem('Šablony', 'Template', 'files', Resource::Template, 'Správa obce'),
 			new MenuItem('Uživatelé', 'User', 'person-gear', Resource::User, 'Správa obce'),
 			new MenuItem('Nastavení', 'Settings', 'gear', Resource::Settings, 'Správa obce'),
 		];
