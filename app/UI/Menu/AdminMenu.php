@@ -34,9 +34,9 @@ final class AdminMenu extends Control
 			new MenuItem('Usnesení', 'Resolution', 'journal-check', Resource::Resolution),
 			new MenuItem('Úkoly', 'Task', 'check2-square', Resource::Resolution),
 			new MenuItem('Hledat', 'Search', 'search', Resource::Meeting),
-			new MenuItem('Osoby a orgány', 'Member', 'people', Resource::Member),
-			new MenuItem('Uživatelé', 'User', 'person-gear', Resource::User),
-			new MenuItem('Nastavení', 'Settings', 'gear', Resource::Settings),
+			new MenuItem('Osoby a orgány', 'Member', 'people', Resource::Member, 'Správa obce'),
+			new MenuItem('Uživatelé', 'User', 'person-gear', Resource::User, 'Správa obce'),
+			new MenuItem('Nastavení', 'Settings', 'gear', Resource::Settings, 'Správa obce'),
 		];
 	}
 
@@ -44,7 +44,12 @@ final class AdminMenu extends Control
 	{
 		$template = $this->getTemplate();
 		assert($template instanceof Template);
-		$template->items = array_values(array_filter(self::items(), $this->isVisible(...)));
+		$sections = [];
+		foreach (array_filter(self::items(), $this->isVisible(...)) as $item) {
+			$sections[$item->section][] = $item;
+		}
+
+		$template->sections = $sections;
 		$template->render(__DIR__ . '/AdminMenu.latte');
 	}
 

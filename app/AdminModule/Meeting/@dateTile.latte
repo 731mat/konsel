@@ -1,0 +1,5 @@
+{parameters DateTimeImmutable $date, bool $muted = false}
+<span n:class="date-tile, $muted ? date-tile-muted" title="{$date|czDate}">
+	<span class="date-tile-day">{$date->format('j')}</span>
+	<span class="date-tile-month">{$date|czMonth}</span>
+</span>

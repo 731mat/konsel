@@ -59,7 +59,12 @@
 			</thead>
 			<tbody>
 				<tr n:foreach="$meetings as $meeting">
-					<td><a n:href="detail, id: $meeting->getId()" class="fw-semibold">{$meeting->getTitle()}</a></td>
+					<td>
+						<div class="d-flex align-items-center gap-3">
+							{include '@dateTile.latte', date: $meeting->getScheduledAt(), muted: $meeting->getStatus()->isFinished()}
+							<a n:href="detail, id: $meeting->getId()" class="fw-semibold">{$meeting->getTitle()}</a>
+						</div>
+					</td>
 					<td>{$meeting->getBody()->getName()}</td>
 					<td class="text-nowrap">{$meeting->getScheduledAt()|czDateTime}</td>
 					<td>{$meeting->getPlace()}</td>
@@ -69,7 +74,7 @@
 		</table>
 	</div>
 	{elseif $filtered}
-	<div class="card-body text-body-secondary">Filtru neodpovídá žádné zasedání.</div>
+	<div class="card-body empty-state"><i class="bi bi-funnel" aria-hidden="true"></i>Filtru neodpovídá žádné zasedání.</div>
 	{elseif !$bodies}
 	<div class="card-body">
 		<h2 class="h5">Nejdřív založte orgán</h2>
@@ -77,6 +82,6 @@
 		<a n:href="Member:" class="btn btn-primary">Osoby a orgány</a>
 	</div>
 	{else}
-	<div class="card-body text-body-secondary">Zatím nejsou založená žádná zasedání.</div>
+	<div class="card-body empty-state"><i class="bi bi-calendar-plus" aria-hidden="true"></i>Zatím nejsou založená žádná zasedání.</div>
 	{/if}
 </div>

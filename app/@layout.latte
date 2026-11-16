@@ -4,6 +4,8 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="robots" content="noindex, nofollow">
+	<meta name="theme-color" content="#1b5e8c">
+	<link rel="icon" href="{$basePath}/favicon.svg" type="image/svg+xml">
 	<title>{ifset title}{include title|stripHtml} · {/ifset}Konšel</title>
 	<script>
 		document.documentElement.dataset.bsTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -13,9 +15,14 @@
 
 <body class="bg-body-tertiary">
 	{block body}
-	<div class="container py-5">
-		{include flashes}
-		{include content}
+	<div class="public-page d-flex flex-column">
+		<div class="container py-4 py-lg-5 flex-grow-1 d-flex flex-column">
+			{include flashes}
+			{include content}
+		</div>
+		<footer class="container pb-4 small text-body-secondary text-center">
+			Konšel · systém pro zasedání zastupitelstva a rady obce
+		</footer>
 	</div>
 	{/block}
 </body>

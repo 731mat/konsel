@@ -1,15 +1,19 @@
 {block title}Přihlášení{/block}
 
 {block content}
-<main class="sign-in-card mx-auto mt-lg-5">
+<main class="sign-in-card m-auto py-4">
 	<div class="text-center mb-4">
-		<h1 class="h3 brand-mark mb-1">Konšel</h1>
-		<p class="text-body-secondary">Přihlášení pro pracovníky úřadu</p>
+		<a n:href=":Public:Homepage:" class="brand fs-3 mb-2">{include '../../UI/@logo.latte'} Konšel</a>
+		<p class="text-body-secondary mb-0">Přihlášení pro pracovníky úřadu</p>
 	</div>
 
-	<div class="card shadow-sm">
-		<div class="card-body p-4">
+	<div class="card shadow">
+		<div class="card-body p-4 p-sm-5">
 			{control signInForm}
 		</div>
 	</div>
+
+	<p class="small text-body-secondary text-center mt-4 mb-0">
+		Zastupitelé se přihlašují odkazem z pozvánky na zasedání.
+	</p>
 </main>

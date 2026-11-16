@@ -1,8 +1,43 @@
 {block title}Úvod{/block}
 
 {block content}
-<main class="text-center mt-lg-5">
-	<h1 class="display-5 brand-mark">Konšel</h1>
-	<p class="lead text-body-secondary">Systém pro přípravu a vedení zasedání zastupitelstva a rady obce.</p>
-	<a class="btn btn-primary" n:href=":Public:Sign:in">Přihlásit se</a>
+<main class="my-auto py-4">
+	<div class="text-center mx-auto" style="max-width: 44rem">
+		<div class="brand fs-4 mb-4">{include '../../UI/@logo.latte'} Konšel</div>
+		<h1 class="hero-title mb-3">Zasedání zastupitelstva bez papírování</h1>
+		<p class="lead text-body-secondary mb-4">
+			Program, podklady pro zastupitele, pozvánka, průběh hlasování, zápis i usnesení – na jednom místě, přehledně a v souladu se zákonem o obcích.
+		</p>
+		<a class="btn btn-primary btn-lg px-4" n:href=":Public:Sign:in"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Přihlásit se</a>
+	</div>
+
+	<div class="row g-4 mt-5 mx-auto" style="max-width: 64rem">
+		<div class="col-md-4">
+			<div class="card h-100 border-0">
+				<div class="card-body p-4">
+					<div class="feature-icon mb-3"><i class="bi bi-list-ol" aria-hidden="true"></i></div>
+					<h2 class="h6">Program a podklady</h2>
+					<p class="small text-body-secondary mb-0">Body programu, návrhy usnesení a přílohy sdílené se zastupiteli v předstihu.</p>
+				</div>
+			</div>
+		</div>
+		<div class="col-md-4">
+			<div class="card h-100 border-0">
+				<div class="card-body p-4">
+					<div class="feature-icon mb-3"><i class="bi bi-hand-index-thumb" aria-hidden="true"></i></div>
+					<h2 class="h6">Průběh a hlasování</h2>
+					<p class="small text-body-secondary mb-0">Docházka, usnášeníschopnost, hlasování a diskuse zaznamenané přímo při jednání.</p>
+				</div>
+			</div>
+		</div>
+		<div class="col-md-4">
+			<div class="card h-100 border-0">
+				<div class="card-body p-4">
+					<div class="feature-icon mb-3"><i class="bi bi-journal-check" aria-hidden="true"></i></div>
+					<h2 class="h6">Zápis a usnesení</h2>
+					<p class="small text-body-secondary mb-0">Číslovaná usnesení, výpisy a zápis ve Wordu i PDF, archiv s vyhledáváním.</p>
+				</div>
+			</div>
+		</div>
+	</div>
 </main>

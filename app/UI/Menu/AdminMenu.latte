@@ -1,6 +1,11 @@
-{varType App\UI\Menu\MenuItem[] $items}
-<nav class="nav nav-pills flex-column gap-1">
-	<a n:foreach="$items as $item" href="{$presenter->link($item->destination())}" n:class="nav-link, $presenter->isLinkCurrent($item->linkMask()) ? active">
-		<i class="bi bi-{$item->icon}" aria-hidden="true"></i> {$item->label}
-	</a>
+{varType array<string, App\UI\Menu\MenuItem[]> $sections}
+<nav aria-label="Hlavní menu">
+	{foreach $sections as $section => $items}
+		<div n:class="nav-section, !$iterator->first ? mt-4">{$section}</div>
+		<div class="nav nav-pills flex-column gap-1">
+			<a n:foreach="$items as $item" href="{$presenter->link($item->destination())}" n:class="nav-link, $presenter->isLinkCurrent($item->linkMask()) ? active" aria-current={$presenter->isLinkCurrent($item->linkMask()) ? 'page' : null}>
+				<i class="bi bi-{$item->icon}" aria-hidden="true"></i> {$item->label}
+			</a>
+		</div>
+	{/foreach}
 </nav>

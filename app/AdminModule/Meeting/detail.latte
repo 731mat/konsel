@@ -63,19 +63,19 @@
 			</li>
 		</ul>
 		<div class="card border-top-0 rounded-top-0">
-			<div class="card-body py-5 text-center text-body-secondary">
+			<div class="card-body empty-state">
 				{switch $tab}
 					{case 'program'}
-						<i class="bi bi-list-ol fs-2 d-block mb-2" aria-hidden="true"></i>
+						<i class="bi bi-list-ol" aria-hidden="true"></i>
 						Program zasedání zatím není sestavený.
 					{case 'proceedings'}
-						<i class="bi bi-people fs-2 d-block mb-2" aria-hidden="true"></i>
+						<i class="bi bi-people" aria-hidden="true"></i>
 						Docházka, hlasování a diskuse k bodům se zaznamenávají po zahájení zasedání.
 					{case 'resolutions'}
-						<i class="bi bi-journal-check fs-2 d-block mb-2" aria-hidden="true"></i>
+						<i class="bi bi-journal-check" aria-hidden="true"></i>
 						Usnesení vzniknou z hlasování o bodech programu.
 					{case 'documents'}
-						<i class="bi bi-file-earmark-text fs-2 d-block mb-2" aria-hidden="true"></i>
+						<i class="bi bi-file-earmark-text" aria-hidden="true"></i>
 						Pozvánka, zápis, výpisy z usnesení a prezenční listina se budou generovat zde.
 				{/switch}
 			</div>

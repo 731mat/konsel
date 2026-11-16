@@ -19,6 +19,10 @@ final readonly class MenuItem
 		 */
 		public string $icon,
 		public Resource $resource,
+		/**
+		 * Nadpis skupiny v menu
+		 */
+		public string $section = 'Jednání',
 	) {}
 
 	public function destination(): string

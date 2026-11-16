@@ -1,20 +1,20 @@
 {layout '../@layout.latte'}
 
 {block body}
-<nav class="navbar bg-body border-bottom sticky-top">
-	<div class="container-fluid gap-2">
-		<button class="navbar-toggler d-lg-none border-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#appSidebar" aria-controls="appSidebar" aria-label="Otevřít menu">
+<nav class="navbar app-navbar border-bottom sticky-top">
+	<div class="container-fluid gap-2 px-3">
+		<button class="navbar-toggler d-lg-none border-0 px-1" type="button" data-bs-toggle="offcanvas" data-bs-target="#appSidebar" aria-controls="appSidebar" aria-label="Otevřít menu">
 			<span class="navbar-toggler-icon"></span>
 		</button>
-		<a class="navbar-brand brand-mark" n:href=":Admin:Dashboard:">Konšel</a>
-		<span class="navbar-text me-auto text-truncate" n:ifcontent>{$currentMunicipality?->getName()}</span>
+		<a class="navbar-brand brand me-auto" n:href=":Admin:Dashboard:">{include '../UI/@logo.latte'} Konšel</a>
 
 		<div class="dropdown">
-			<button class="btn btn-link text-body text-decoration-none dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-				<i class="bi bi-person-circle" aria-hidden="true"></i>
+			<button class="btn btn-link text-body text-decoration-none dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+				<i class="bi bi-person-circle fs-5" aria-hidden="true"></i>
 				<span class="d-none d-sm-inline">{$user->getIdentity()?->getData()['name'] ?? ''}</span>
 			</button>
-			<ul class="dropdown-menu dropdown-menu-end">
+			<ul class="dropdown-menu dropdown-menu-end shadow-sm">
+				<li n:ifcontent><span class="dropdown-item-text small text-body-secondary">{$currentMunicipality?->getName()}</span></li>
 				<li><a class="dropdown-item" n:href=":Admin:Account:"><i class="bi bi-person-gear" aria-hidden="true"></i> Můj účet</a></li>
 				<li><hr class="dropdown-divider"></li>
 				<li><a class="dropdown-item" n:href=":Public:Sign:out"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Odhlásit se</a></li>
@@ -25,23 +25,36 @@
 
 <div class="d-lg-flex">
 	<aside class="app-sidebar offcanvas-lg offcanvas-start bg-body" id="appSidebar" tabindex="-1" aria-label="Hlavní menu">
-		<div class="offcanvas-header">
-			<span class="offcanvas-title brand-mark">Konšel</span>
+		<div class="offcanvas-header border-bottom">
+			<span class="offcanvas-title brand">{include '../UI/@logo.latte'} Konšel</span>
 			<button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#appSidebar" aria-label="Zavřít menu"></button>
 		</div>
-		<div class="offcanvas-body p-3">
+		<div class="offcanvas-body d-block p-3">
+			<div n:if="$currentMunicipality" class="sidebar-municipality">
+				{if $currentMunicipality->getLogo()}
+					<img src="{plink :Admin:Dashboard:logo}" alt="">
+				{else}
+					<span class="sidebar-municipality-icon"><i class="bi bi-bank" aria-hidden="true"></i></span>
+				{/if}
+				<span>
+					{$currentMunicipality->getName()}
+					<span class="d-block small fw-normal text-body-secondary">{$currentMunicipality->getProfile()->officialName}</span>
+				</span>
+			</div>
 			{control adminMenu}
 		</div>
 	</aside>
 
 	<main class="app-main flex-grow-1 p-3 p-lg-4">
-		<nav aria-label="Drobečková navigace" n:ifcontent>
-			<ol class="breadcrumb" n:ifcontent>{ifset breadcrumbs}{include breadcrumbs}{/ifset}</ol>
-		</nav>
+		<div class="app-content mx-auto">
+			<nav aria-label="Drobečková navigace" n:ifcontent>
+				<ol class="breadcrumb mb-3" n:ifcontent>{ifset breadcrumbs}{include breadcrumbs}{/ifset}</ol>
+			</nav>
 
-		{snippet flashes}{include flashes}{/snippet}
+			{snippet flashes}{include flashes}{/snippet}
 
-		{include content}
+			{include content}
+		</div>
 	</main>
 </div>
 {/block}

@@ -27,3 +27,18 @@ services:
       npm_config_cache: /tmp/.npm
     command: sh -c "npm install --no-audit --no-fund && npm run watch"
     restart: unless-stopped
+
+  # Nástroj pro kontrolu vzhledu (spouští se jen přes `make screenshots`)
+  screenshots:
+    image: mcr.microsoft.com/playwright:v1.49.1-noble
+    profiles: [tools]
+    depends_on: [app]
+    working_dir: /work
+    volumes:
+      - ./docker/screenshots:/work:ro
+      - ./temp/screenshots:/out
+    environment:
+      HOME: /tmp
+      npm_config_cache: /tmp/.npm
+      NODE_PATH: /tmp/pw/node_modules
+    command: sh -c "npm install --silent --no-audit --no-fund --prefix /tmp/pw playwright@1.49.1 && node shoot.cjs"

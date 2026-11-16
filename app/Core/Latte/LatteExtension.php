@@ -14,7 +14,7 @@ use Nette\Utils\Html;
 /**
  * Filtry a funkce Latte pro celou aplikaci.
  *
- * Filtry:  |czDate  |czDateTime  |nl2p
+ * Filtry:  |czDate  |czDateTime  |czMonth  |nl2p
  * Funkce:  vite('assets/main.js'), allowed(Resource::Meeting, Privilege::Edit)
  */
 final class LatteExtension extends Extension
@@ -32,6 +32,7 @@ final class LatteExtension extends Extension
 		return [
 			'czDate' => self::czDate(...),
 			'czDateTime' => self::czDateTime(...),
+			'czMonth' => self::czMonth(...),
 			'nl2p' => self::nl2p(...),
 		];
 	}
@@ -55,6 +56,14 @@ final class LatteExtension extends Extension
 	public static function czDateTime(?\DateTimeInterface $date): string
 	{
 		return $date?->format('j. n. Y H:i') ?? '';
+	}
+
+	/**
+	 * Zkratka měsíce pro dlaždice s datem (led, úno, …).
+	 */
+	public static function czMonth(?\DateTimeInterface $date): string
+	{
+		return $date === null ? '' : ['led', 'úno', 'bře', 'dub', 'kvě', 'čvn', 'čvc', 'srp', 'zář', 'říj', 'lis', 'pro'][(int) $date->format('n') - 1];
 	}
 
 	/**

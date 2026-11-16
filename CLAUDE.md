@@ -20,6 +20,7 @@ make qa                   # cs + phpstan (max) + testy + validace schématu – 
 make test                 # Nette Tester
 make cs-fix
 make db-reset             # smazat DB → migrace → demo data
+make screenshots          # screenshoty stránek (desktop + mobil) do temp/screenshots – kontrola vzhledu, PAGES="/admin,…"
 ```
 
 ## Pravidla kódu
@@ -53,6 +54,7 @@ make db-reset             # smazat DB → migrace → demo data
 - Migrace s daty: nový NOT NULL sloupec = (1) přidat s výchozí hodnotou + UPDATE, (2) v další migraci výchozí hodnotu odebrat. `alterTable()` nekombinuj s jinou změnou téže tabulky v jedné migraci.
 - Doménové `ValidationException` nesou `field` = název pole formuláře. V presenteru je převede `FormErrors::apply()`.
 - UI texty česky, vykání. Kód, DB a komentáře anglicky.
+- Vzhled: Bootstrap 5.3 + téma v assets/main.scss (písmo Inter a ikony jsou v buildu, žádné CDN). Stav zasedání přes `@status.latte`, datum přes `@dateTile.latte`, prázdné stavy třídou `empty-state`. Musí fungovat i tmavý režim (barvy přes `var(--bs-…)`). Po změně vzhledu zkontroluj `make screenshots`.
 
 ## Slovníček (UI ↔ kód)
 
