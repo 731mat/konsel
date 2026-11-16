@@ -111,6 +111,22 @@ final readonly class AttachmentFacade
 		return $this->attachments->countByMeeting($meeting);
 	}
 
+	/**
+	 * @return array<int, int> ID bodu → počet příloh viditelných zastupitelům
+	 */
+	public function countPublicByMeeting(Meeting $meeting): array
+	{
+		$counts = [];
+		foreach ($this->attachments->findByMeeting($meeting) as $attachment) {
+			if ($attachment->isPublicForMembers()) {
+				$itemId = $attachment->getAgendaItem()->getId();
+				$counts[$itemId] = ($counts[$itemId] ?? 0) + 1;
+			}
+		}
+
+		return $counts;
+	}
+
 	public function getLocalPath(Attachment $attachment): string
 	{
 		return $this->storage->getLocalPath($attachment->getFile());

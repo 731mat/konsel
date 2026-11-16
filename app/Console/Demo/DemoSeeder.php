@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Demo;
 
+use App\Model\Access\AccessFacade;
 use App\Model\Attachment\AttachmentFacade;
 use App\Model\Comment\CommentFacade;
 use App\Model\Meeting\AgendaFacade;
@@ -56,6 +57,7 @@ final readonly class DemoSeeder
 		private AgendaFacade $agenda,
 		private AttachmentFacade $attachments,
 		private CommentFacade $comments,
+		private AccessFacade $access,
 		private ClockInterface $clock,
 	) {}
 
@@ -152,6 +154,8 @@ final readonly class DemoSeeder
 			self::file('Záměr prodeje pozemku 456-7.pdf', self::pdf(['Zamer prodeje pozemku p. c. 456/7', 'Vymera 312 m2, k. u. Neplachovice'])),
 		], null);
 
+		$portalLink = $this->access->issueFor($shared->getId(), $persons[2]->getId());
+
 		$draft = $this->meetings->create($council->getId(), new SaveMeeting(MeetingType::Regular, $today->modify('+9 weeks'), $officeRoom));
 		$this->agenda->addItem($draft->getId(), new SaveAgendaItem('Zpráva o činnosti finančního výboru', rapporteurId: $persons[2]->getId()));
 
@@ -160,6 +164,7 @@ final readonly class DemoSeeder
 			'Uživatelé (heslo ' . self::Password . '): spravce@, editor@, ctenar@, superadmin@demo.konsel.test',
 			'Volební období 2026–2030, zastupitelstvo 9 členů, finanční a kontrolní výbor',
 			'Zasedání zastupitelstva s programem: ustavující (zápis ověřen), proběhlé, sdílené a v přípravě',
+			"Portál zastupitele (Petr Novotný, sdílené zasedání): /odkaz/{$portalLink->token}",
 		];
 	}
 

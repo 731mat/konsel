@@ -268,7 +268,7 @@ konsel/
 
 ## Fáze 3 – Sdílení se zastupiteli
 
-### [ ] T17 – Přístupové tokeny
+### [x] T17 – Přístupové tokeny
 **Cíl:** Bezpečný odkaz bez hesla.
 - `MeetingAccessToken` (meeting, person, tokenHash = sha256, createdAt, expiresAt, revokedAt, lastUsedAt, useCount)
 - generování: 32 bajtů z `random_bytes`, base64url, plaintext se ukáže jen jednou (v e-mailu)
@@ -276,7 +276,7 @@ konsel/
 - omezení počtu pokusů na IP
 **Hotovo když:** testy pokrývají expiraci, revokaci, neplatný token a FrozenClock.
 
-### [ ] T18 – Portál zastupitele
+### [x] T18 – Portál zastupitele
 **Cíl:** Zastupitel vidí program a podklady z mobilu.
 - modul `Portal`, routa `/z/<token>` → ověření → session (pak čisté URL bez tokenu, ochrana proti úniku přes Referer)
 - vlastní jednoduchý layout (bez admin menu), mobile-first
@@ -284,7 +284,7 @@ konsel/
 - `Referrer-Policy: no-referrer`, `noindex`
 **Hotovo když:** zastupitel s platným odkazem vidí jen svoje zasedání. Neplatný nebo odvolaný odkaz vrátí srozumitelnou chybu.
 
-### [~] T19 – Komentáře a připomínky
+### [x] T19 – Komentáře a připomínky
 **Cíl:** Zpětná vazba od zastupitelů přímo u bodu.
 - `Comment` (agendaItem, authorPerson | authorUser, text, createdAt, resolvedAt, resolvedBy)
 - portál: přidání komentáře k bodu, zastupitel vidí i komentáře ostatních zastupitelů
@@ -515,3 +515,4 @@ Vše od T32 je rozšíření, pořadí se dá upravit podle potřeby.
 - 2026-11-16 T16 (část) – `Model/Attachment`: `Attachment` k bodu programu (StoredFile, kdo nahrál, `publicForMembers` pro portál T18), `AttachmentPolicy` (whitelist přípon – žádné skripty/HTML/SVG/spustitelné, max. velikost parametr `attachmentMaxSize` = 64 MB jako php.ini). Nahrání více souborů najednou (MultiUpload), soubory se ukládají před transakcí a při chybě se uklidí; smazání přílohy, bodu i návrhu zasedání maže soubory až po commitu. Po ověření zápisu jsou přílohy zamčené. `Admin:Attachment` download/preview (náhled jen PDF a rastrové obrázky, `nosniff` + sandbox CSP). Počty příloh v programu. **Dluh (T16b):** nahrávání po částech s progress barem pro soubory > 64 MB (kritérium „> 500 MB bez úpravy upload_max_filesize“ zatím nesplněno).
 - 2026-11-16 T19 (část, mimo pořadí na přání vlastníka) – `Model/Comment`: komentář k bodu s autorem uživatel úřadu **nebo** zastupitel (`Person`, pro portál T18), jméno autora jako snapshot, vlákna o jedné úrovni (komentář → odpovědi), měkké mazání (smazaný komentář s odpověďmi zůstane jako „Komentář byl smazán“). Mazat smí autor, cizí komentáře správce (`Agenda` + `Manage`). Komentovat smí každý uživatel s náhledem na bod (i čtenář). Po ověření zápisu je diskuse zavřená. Sdílená šablona `app/UI/Comment/@discussion.latte` (použije i portál), AJAX formulář a mazání (snippet), odpověď přes `data-reply-to`. Počty komentářů v programu. Zbývá: komentáře zastupitelů v portálu (T17/T18) a e-mailová upozornění.
 - 2026-11-16 T27/T28 (mimo pořadí na přání vlastníka) – PDF přes **mPDF** místo PhpWord + Gotenberg (ADR A11 upravené). `Model/Document`: `PdfRenderer` → `MpdfRenderer` (temp/mpdf), `MeetingDocumentFacade` renderuje Latte šablony `resources/documents/*.latte` (společný `@layout.latte` s hlavičkou obce a logem). Hotové: **pozvánka / informace o zasedání** (§ 93 odst. 1, datum dlouze česky, místo, navržený program, podpis starosty k datu zasedání, řádek vyvěšeno/sejmuto; u rady neveřejná pozvánka) a **podklady k zasedání** (důvodové zprávy, návrhy usnesení, veřejné přílohy). Záložka Dokumenty v detailu zasedání: náhled a stažení. Dokumenty se zatím negenerují do úložiště (GeneratedDocument jen v paměti) – ukládání a verze v T27. Filtry `czDateLong`, `genitiveBody`.
+- 2026-11-16 T17/T18 (mimo pořadí na přání vlastníka) – `Model/Access`: `MeetingAccessToken` (osoba × zasedání, v DB jen SHA-256, 43 znaků base64url = 256 bitů, platnost do zasedání + 60 dní, odvolání, počítadlo použití). Nový odkaz odvolá předchozí. `AccessFacade::issueForMembers/issueFor/revoke/authenticate/getValid`, vyhledání tokenu bez TenantFilteru (obec se zjistí až z tokenu). `PortalModule`: vstup `/odkaz/<token>` → session s ID odkazu (regenerace ID session, `Referrer-Policy: no-referrer`) → přesměrování na `/portal` (token nezůstává v URL); každý požadavek znovu ověří platnost a nastaví obec. Portál: přehled zasedání s programem a PDF, detail bodu (důvodová zpráva, návrh usnesení, **jen veřejné přílohy**, diskuse – komentuje jako `Person`, maže jen své). Admin `Meeting:links`: vytvoření odkazů pro členy / jednotlivce, odkaz se ukáže **jen jednou** (kopírování, `mailto:` s předvyplněným textem – do T20), přehled s odvoláním. Demo seeder vypíše odkaz pro Petra Novotného.

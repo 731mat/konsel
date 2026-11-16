@@ -8,6 +8,8 @@ use App\AdminModule\SecuredPresenter;
 use App\Core\Security\Allowed;
 use App\Core\Security\Privilege;
 use App\Core\Security\Resource;
+use App\Model\Access\AccessFacade;
+use App\Model\Access\IssuedToken;
 use App\Model\Attachment\AttachmentFacade;
 use App\Model\Comment\CommentFacade;
 use App\Model\Document\MeetingDocumentFacade;
@@ -30,6 +32,7 @@ use App\UI\Form\FormFactory;
 use Nette\Application\Attributes\Requires;
 use Nette\Application\Responses\CallbackResponse;
 use Nette\Application\UI\Form;
+use Psr\Clock\ClockInterface;
 
 /**
  * Zasedání: seznam, založení, detail se záložkami a přechody životního cyklu.
@@ -49,14 +52,23 @@ final class MeetingPresenter extends SecuredPresenter
 
 	private ?Meeting $meeting = null;
 
+	/**
+	 * Právě vydané odkazy – zobrazí se jen v odpovědi na jejich vytvoření.
+	 *
+	 * @var list<IssuedToken>
+	 */
+	private array $issuedTokens = [];
+
 	public function __construct(
 		private readonly MeetingFacade $meetingFacade,
 		private readonly AgendaFacade $agendaFacade,
 		private readonly AttachmentFacade $attachmentFacade,
 		private readonly CommentFacade $commentFacade,
 		private readonly MeetingDocumentFacade $documentFacade,
+		private readonly AccessFacade $accessFacade,
 		private readonly PeopleFacade $peopleFacade,
 		private readonly FormFactory $formFactory,
+		private readonly ClockInterface $clock,
 	) {
 		parent::__construct();
 	}
@@ -181,6 +193,59 @@ final class MeetingPresenter extends SecuredPresenter
 		$this->sendResponse(new CallbackResponse(static function () use ($document): void {
 			echo $document->content;
 		}));
+	}
+
+	#[Allowed(Resource::Meeting, Privilege::Edit)]
+	public function actionLinks(int $id): void
+	{
+		$this->meeting = $this->loadMeeting($id);
+	}
+
+	public function renderLinks(): void
+	{
+		$meeting = $this->meeting ?? $this->error();
+		$this->template->meeting = $meeting;
+		$this->template->tokens = $this->accessFacade->findByMeeting($meeting->getId());
+		$this->template->members = $meeting->getBody()->getMembersAt($meeting->getScheduledAt());
+		$this->template->issuedTokens = $this->issuedTokens;
+		$this->template->portalLink = fn(IssuedToken $issued): string => $this->link('//:Portal:Entry:', [
+			'token' => $issued->token,
+		]);
+		$this->template->now = $this->clock->now();
+	}
+
+	#[Allowed(Resource::Meeting, Privilege::Edit)]
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleIssueLinks(?int $personId = null): void
+	{
+		$meeting = $this->meeting ?? $this->error();
+		try {
+			$this->issuedTokens = $personId === null
+				? $this->accessFacade->issueForMembers($meeting->getId())
+				: [$this->accessFacade->issueFor($meeting->getId(), $personId)];
+		} catch (DomainException $e) {
+			$this->flashMessage($e->getMessage(), 'danger');
+			$this->redirect('this');
+		}
+
+		// odkazy se ukážou jen teď (v DB je jen hash) – stránka se proto nepřesměruje
+		$this->getHttpResponse()->setHeader('Cache-Control', 'no-store');
+	}
+
+	#[Allowed(Resource::Meeting, Privilege::Edit)]
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleRevokeLink(int $tokenId): void
+	{
+		$meeting = $this->meeting ?? $this->error();
+		foreach ($this->accessFacade->findByMeeting($meeting->getId()) as $token) {
+			if ($token->getId() === $tokenId) {
+				$this->accessFacade->revoke($tokenId);
+				$this->flashMessage("Odkaz pro {$token->getPerson()->getFullName()} byl odvolán.", 'success');
+				$this->redirect('this');
+			}
+		}
+
+		$this->error('Odkaz neexistuje.');
 	}
 
 	#[Allowed(Resource::Meeting, Privilege::Edit)]

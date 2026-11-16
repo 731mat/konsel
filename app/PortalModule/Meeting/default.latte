@@ -1,0 +1,63 @@
+{block title}{$meeting->getTitle()} – {$meeting->getBody()->getName()}{/block}
+
+{block content}
+{varType App\Model\Meeting\Meeting $meeting}
+{varType App\Model\People\Person $member}
+{varType array<int, int> $attachmentCounts}
+{varType array<int, int> $commentCounts}
+{varType App\Model\Document\MeetingDocumentType[] $documentTypes}
+
+<div class="card next-meeting mb-4">
+	<div class="card-body p-4 d-flex flex-wrap align-items-center gap-4">
+		{include '../../AdminModule/Meeting/@dateTile.latte', date: $meeting->getScheduledAt()}
+		<div class="me-auto">
+			<div class="small text-uppercase fw-semibold text-white-75 mb-1" style="letter-spacing: .06em">{$meeting->getBody()->getName()}</div>
+			<h1 class="h3 mb-1">{$meeting->getTitle()|firstUpper}</h1>
+			<div class="text-white-75">
+				{$meeting->getScheduledAt()|czDateLong} v {$meeting->getScheduledAt()->format('H:i')}
+				· <i class="bi bi-geo-alt" aria-hidden="true"></i> {$meeting->getPlace()}
+			</div>
+		</div>
+		<span class="badge rounded-pill text-bg-light fs-6 fw-semibold">{$meeting->getStatus()->label()}</span>
+	</div>
+</div>
+
+<p class="text-body-secondary">Dobrý den, {$member->getFullName()}. Níže najdete program a podklady. U každého bodu můžete napsat dotaz nebo připomínku.</p>
+
+<div class="row g-4">
+	<div class="col-lg-8">
+		<div class="card">
+			<div class="card-header"><i class="bi bi-list-ol text-primary me-1" aria-hidden="true"></i> Program</div>
+			<div class="list-group list-group-flush">
+				<a n:foreach="$meeting->getAgendaItems() as $item" n:href="item, id: $item->getId()" class="list-group-item list-group-item-action d-flex gap-3 py-3">
+					<span class="agenda-number">{$item->getPosition()}.</span>
+					<div class="me-auto min-w-0">
+						<div class="fw-semibold">{$item->getTitle()}</div>
+						<div class="small text-body-secondary d-flex flex-wrap gap-3 mt-1">
+							<span n:if="$item->getRapporteur()"><i class="bi bi-person" aria-hidden="true"></i> {$item->getRapporteur()->getFullName()}</span>
+							<span n:if="$item->getProposedResolution()"><i class="bi bi-journal-check" aria-hidden="true"></i> návrh usnesení</span>
+							<span n:if="$attachmentCounts[$item->getId()] ?? 0"><i class="bi bi-paperclip" aria-hidden="true"></i> {$attachmentCounts[$item->getId()]}</span>
+							<span n:if="$commentCounts[$item->getId()] ?? 0"><i class="bi bi-chat-left-text" aria-hidden="true"></i> {$commentCounts[$item->getId()]}</span>
+						</div>
+					</div>
+					<i class="bi bi-chevron-right text-body-tertiary align-self-center" aria-hidden="true"></i>
+				</a>
+				<div n:if="!$meeting->getAgendaItems()" class="list-group-item empty-state border-0">
+					<i class="bi bi-list-ol" aria-hidden="true"></i>
+					Program zatím není zveřejněný.
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="col-lg-4">
+		<div class="card">
+			<div class="card-header"><i class="bi bi-file-earmark-pdf text-danger me-1" aria-hidden="true"></i> Dokumenty</div>
+			<div class="list-group list-group-flush">
+				<a n:foreach="$documentTypes as $documentType" n:href="document, type: $documentType->value" target="_blank" rel="noopener" class="list-group-item list-group-item-action">
+					<div class="fw-semibold">{$documentType->label()}</div>
+					<div class="small text-body-secondary">PDF</div>
+				</a>
+			</div>
+		</div>
+	</div>
+</div>

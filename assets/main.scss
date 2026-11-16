@@ -277,6 +277,11 @@ h1, .h1, h2, .h2, h3, .h3 {
 	}
 }
 
+// Odkazové položky seznamu: nadpis v plné barvě textu
+.list-group-item-action .fw-semibold {
+	color: var(--bs-emphasis-color);
+}
+
 // --- Program zasedání ---------------------------------------------------------------
 .agenda-number {
 	min-width: 1.75rem;

@@ -67,3 +67,22 @@ document.addEventListener('click', (event) => {
 		form.querySelector('textarea').focus();
 	}
 });
+
+// Kopírování do schránky: <button data-copy="#idPole">
+document.addEventListener('click', async (event) => {
+	const button = event.target instanceof Element ? event.target.closest('[data-copy]') : null;
+	const input = button ? document.querySelector(button.dataset.copy) : null;
+	if (!input) {
+		return;
+	}
+
+	input.select();
+	try {
+		await navigator.clipboard.writeText(input.value);
+	} catch {
+		document.execCommand('copy');
+	}
+	const label = button.innerHTML;
+	button.innerHTML = '<i class="bi bi-check2" aria-hidden="true"></i> Zkopírováno';
+	setTimeout(() => { button.innerHTML = label; }, 2000);
+});

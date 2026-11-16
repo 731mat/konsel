@@ -1,0 +1,63 @@
+{block title}{$item->getPosition()}. {$item->getTitle()}{/block}
+
+{block content}
+{varType App\Model\Meeting\Meeting $meeting}
+{varType App\Model\Meeting\AgendaItem $item}
+{varType App\Model\Attachment\Attachment[] $attachments}
+{varType App\Model\Comment\CommentThread[] $threads}
+{varType bool $canComment}
+{varType int $memberId}
+{varType App\Model\Meeting\AgendaItem|null $previous}
+{varType App\Model\Meeting\AgendaItem|null $next}
+
+<nav aria-label="Drobečková navigace">
+	<ol class="breadcrumb mb-3">
+		<li class="breadcrumb-item"><a n:href="default">{$meeting->getTitle()|firstUpper}</a></li>
+		<li class="breadcrumb-item active" aria-current="page">Bod {$item->getPosition()}</li>
+	</ol>
+</nav>
+
+<h1 class="h3 mb-1">{$item->getPosition()}. {$item->getTitle()}</h1>
+<p class="text-body-secondary" n:if="$item->getRapporteur()"><i class="bi bi-person" aria-hidden="true"></i> Předkládá {$item->getRapporteur()->getFullName()}</p>
+
+<div class="d-flex flex-column gap-4 mt-3">
+	<div class="card" n:if="$item->getDescription()">
+		<div class="card-header">Důvodová zpráva</div>
+		<div class="card-body text-break">{$item->getDescription()|nl2p}</div>
+	</div>
+
+	<div class="card border-primary-subtle" n:if="$item->getProposedResolution()">
+		<div class="card-header bg-primary-subtle text-primary-emphasis"><i class="bi bi-journal-check" aria-hidden="true"></i> Návrh usnesení</div>
+		<div class="card-body text-break">{$item->getProposedResolution()|nl2p}</div>
+	</div>
+
+	<div class="card" n:if="$attachments">
+		<div class="card-header"><i class="bi bi-paperclip" aria-hidden="true"></i> Přílohy</div>
+		<ul class="list-group list-group-flush">
+			<li n:foreach="$attachments as $attachment" class="list-group-item d-flex align-items-center gap-3 py-3">
+				<i class="bi {$attachment->getFile()|fileIcon} fs-3 text-primary" aria-hidden="true"></i>
+				<div class="me-auto min-w-0">
+					<a n:href="attachment, id: $attachment->getId()" target="_blank" rel="noopener" class="fw-semibold text-break">{$attachment->getTitle()}</a>
+					<div class="small text-body-secondary">{$attachment->getFile()->size|bytes}</div>
+				</div>
+				<a n:href="attachment, id: $attachment->getId(), download: true" class="btn btn-sm btn-light" title="Stáhnout"><i class="bi bi-download" aria-hidden="true"></i><span class="visually-hidden">Stáhnout</span></a>
+			</li>
+		</ul>
+	</div>
+
+	{snippet comments}
+		{include '../../UI/Comment/@discussion.latte',
+			threads: $threads,
+			canComment: $canComment,
+			formName: 'commentForm',
+			canDelete: fn(App\Model\Comment\Comment $c): bool => $c->getAuthorPersonId() === $memberId,
+			deleteLink: fn(App\Model\Comment\Comment $c): string => $presenter->link('deleteComment!', ['commentId' => $c->getId()]),
+		}
+	{/snippet}
+
+	<div class="d-flex justify-content-between">
+		<a n:if="$previous" n:href="item, id: $previous->getId()" class="btn btn-outline-secondary"><i class="bi bi-chevron-left" aria-hidden="true"></i> {$previous->getPosition()}. {$previous->getTitle()|truncate: 30}</a>
+		<span n:if="!$previous"></span>
+		<a n:if="$next" n:href="item, id: $next->getId()" class="btn btn-outline-secondary">{$next->getPosition()}. {$next->getTitle()|truncate: 30} <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+	</div>
+</div>

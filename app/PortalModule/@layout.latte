@@ -1,0 +1,17 @@
+{layout '../@layout.latte'}
+
+{block body}
+{varType App\Model\People\Person $member}
+{varType App\Model\Municipality\Municipality $municipality}
+<nav class="navbar app-navbar border-bottom sticky-top">
+	<div class="container gap-2" style="max-width: 1000px">
+		<a class="navbar-brand brand me-auto" n:href=":Portal:Meeting:">{include '../UI/@logo.latte'} <span>Konšel <span class="fw-normal text-body-secondary d-none d-sm-inline">· {$municipality->getName()}</span></span></a>
+		<span class="small text-body-secondary d-none d-md-inline"><i class="bi bi-person" aria-hidden="true"></i> {$member->getFullName()}</span>
+		<a n:href=":Portal:Entry:out" class="btn btn-sm btn-outline-secondary">Odhlásit</a>
+	</div>
+</nav>
+<main class="container py-4" style="max-width: 1000px">
+	{snippet flashes}{include flashes}{/snippet}
+	{include content}
+</main>
+{/block}

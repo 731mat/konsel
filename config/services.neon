@@ -21,6 +21,7 @@ services:
 	- App\Console\Demo\SeedDemoCommand(productionMode: %productionMode%)
 	- App\UI\Form\FormFactory
 	- App\UI\Menu\AdminMenuFactory
+	- App\PortalModule\PortalSession
 
 	httpClient:
 		type: Symfony\Contracts\HttpClient\HttpClientInterface

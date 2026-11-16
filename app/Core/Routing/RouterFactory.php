@@ -21,6 +21,10 @@ final class RouterFactory
 		$router->withModule('Admin')
 			->addRoute('admin[/<presenter>[/<action>[/<id \d+>]]]', 'Dashboard:default');
 
+		$router->withModule('Portal')
+			->addRoute('odkaz/<token [A-Za-z0-9_-]{43}>', 'Entry:default')
+			->addRoute('portal[/<presenter>[/<action>[/<id \d+>]]]', 'Meeting:default');
+
 		$router->withModule('Public')
 			->addRoute('prihlaseni', 'Sign:in')
 			->addRoute('odhlaseni', 'Sign:out')
