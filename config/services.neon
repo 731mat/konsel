@@ -8,6 +8,7 @@ services:
 	- App\Core\Tenancy\CurrentMunicipality
 	- App\Core\Doctrine\TimestampableSubscriber
 	- App\Infrastructure\Persistence\DoctrineTransactionManager
+	- App\Infrastructure\Storage\LocalFileStorage(%varDir%/storage)
 	- App\Core\Security\Authenticator
 	- App\Core\Security\AuthorizatorFactory::create
 	- App\Application\Security\LoginThrottle

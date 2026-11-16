@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Presentation\Accessory;
 
 use App\Application\Municipality\MunicipalityFacade;
+use App\Application\Shared\Storage\FileStorage;
 use App\Core\Security\Allowed;
 use App\Core\Tenancy\CurrentMunicipality;
+use App\Domain\Shared\ValueObject\StoredFile;
 use App\Presentation\Accessory\Menu\AdminMenu;
 use App\Presentation\Accessory\Menu\AdminMenuFactory;
+use Nette\Application\Responses\FileResponse;
 use Nette\DI\Attributes\Inject;
 use Nette\Security\User;
 
@@ -26,6 +29,9 @@ abstract class SecuredPresenter extends BasePresenter
 
 	#[Inject]
 	public AdminMenuFactory $adminMenuFactory;
+
+	#[Inject]
+	public FileStorage $fileStorage;
 
 	public function checkRequirements(mixed $element): void
 	{
@@ -64,5 +70,18 @@ abstract class SecuredPresenter extends BasePresenter
 	protected function createComponentAdminMenu(): AdminMenu
 	{
 		return $this->adminMenuFactory->create();
+	}
+
+	/**
+	 * Odešle soubor z úložiště. Oprávnění musí ověřit volající akce (#[Allowed] + kontrola vlastnictví).
+	 */
+	protected function sendStoredFile(StoredFile $file, bool $forceDownload = true): never
+	{
+		$this->sendResponse(new FileResponse(
+			$this->fileStorage->getLocalPath($file),
+			$file->originalName,
+			$file->mimeType,
+			$forceDownload,
+		));
 	}
 }
