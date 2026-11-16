@@ -132,7 +132,10 @@
 					<dt class="col-5 fw-normal text-body-secondary">Priorita</dt><dd class="col-7">{$project->getPriority()->label()}</dd>
 					<dt class="col-5 fw-normal text-body-secondary">Odpovídá</dt><dd class="col-7">{$project->getResponsible()?->getFullName() ?? '—'}</dd>
 					<dt class="col-5 fw-normal text-body-secondary">Odhad nákladů</dt><dd class="col-7">{if $project->getEstimatedCost() !== null}{$project->getEstimatedCost()|number: 0, ',', ' '} Kč{else}—{/if}</dd>
-					<dt class="col-5 fw-normal text-body-secondary">Pro občany</dt><dd class="col-7 mb-0">{$project->isPublic() ? 'zveřejněno' : 'neveřejné'}</dd>
+					<dt class="col-5 fw-normal text-body-secondary">Pro občany</dt><dd n:class="col-7, !$project->isCitizenProposal() ? mb-0">{$project->isPublic() ? 'zveřejněno' : 'neveřejné'}</dd>
+					{if $project->isCitizenProposal()}
+						<dt class="col-5 fw-normal text-body-secondary">Kontakt na občana</dt><dd class="col-7 mb-0"><a href="mailto:{$project->getSubmitterEmail()?->value}">{$project->getSubmitterEmail()?->value}</a></dd>
+					{/if}
 				</dl>
 			</div>
 		</div>

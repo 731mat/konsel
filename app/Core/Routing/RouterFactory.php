@@ -26,6 +26,9 @@ final class RouterFactory
 			->addRoute('portal[/<presenter>[/<action>[/<id \d+>]]]', 'Meeting:default');
 
 		$router->withModule('Public')
+			->addRoute('obec/<municipality [a-z0-9-]+>/podnety', 'Ideas:default')
+			->addRoute('obec/<municipality [a-z0-9-]+>/podnety/<id \d+>', 'Ideas:detail')
+			->addRoute('obec/<municipality [a-z0-9-]+>/podnety/soubor/<id \d+>', 'Ideas:file')
 			->addRoute('prihlaseni', 'Sign:in')
 			->addRoute('odhlaseni', 'Sign:out')
 			->addRoute('<presenter>/<action>[/<id>]', 'Homepage:default');

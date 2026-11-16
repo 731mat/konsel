@@ -186,6 +186,7 @@ final readonly class DemoSeeder
 			'Úkolníček: mateřská škola (propojená se 2 zasedáními), oprava komunikace, LED osvětlení, podnět občana',
 			'Zasedání zastupitelstva s programem: ustavující (zápis ověřen), proběhlé, sdílené a v přípravě',
 			"Portál zastupitele (Petr Novotný, sdílené zasedání): /odkaz/{$portalLink->token}",
+			'Stránka pro občany: /obec/neplachovice/podnety',
 		];
 	}
 
@@ -246,7 +247,7 @@ final readonly class DemoSeeder
 		$lights = $this->projects->create($municipalityId, new SaveProject('Výměna veřejného osvětlení za LED', 'Úspora asi 60 % energie, možnost dotace z programu EFEKT.', ProjectPriority::Low), 'Jana Správcová');
 		$this->projects->setPublic($lights->getId(), true);
 
-		$this->projects->create($municipalityId, new SaveProject('Lavičky a odpadkové koše v parku u kostela', 'V parku chybí místo k sezení pro starší občany a koše se rychle zaplní.'), 'Marie Občanová (podnět občana)', ProjectStatus::Submitted);
+		$this->projects->submitProposal($municipalityId, 'Marie Občanová', 'marie.obcanova@demo.konsel.test', 'Lavičky a odpadkové koše v parku u kostela', 'V parku chybí místo k sezení pro starší občany a koše se rychle zaplní.', null);
 	}
 
 	private static function file(string $name, string $content): UploadedFile

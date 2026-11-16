@@ -1,0 +1,65 @@
+{block title}{$project->getTitle()} – {$municipality->getProfile()->officialName}{/block}
+
+{block content}
+{varType App\Model\Municipality\Municipality $municipality}
+{varType App\Model\Project\Project $project}
+{varType App\Model\Project\TimelineEntry[] $timeline}
+{varType App\Model\Project\ProjectStatus[] $path}
+{varType Closure $fileLink}
+<main class="mx-auto w-100" style="max-width: 52rem">
+	{include '@header.latte', municipality: $municipality}
+	<nav aria-label="Drobečková navigace"><ol class="breadcrumb mb-3"><li class="breadcrumb-item"><a n:href="default, municipality: $municipality->getSlug()">Podněty a úkoly</a></li><li class="breadcrumb-item active" aria-current="page">{$project->getTitle()|truncate: 40}</li></ol></nav>
+
+	<div class="d-flex flex-wrap gap-1 mb-2">
+		<span class="badge status-badge bg-{$project->getStatus()->tone()}-subtle text-{$project->getStatus()->tone()}-emphasis">{$project->getStatus()->label()}</span>
+		<span class="badge text-bg-light">priorita: {$project->getPriority()->label()}</span>
+	</div>
+	<h1 class="h3 mb-3">{$project->getTitle()}</h1>
+	{var $step = $project->getStatus()->step()}
+	<ol class="project-steps mb-4" aria-label="Fáze">
+		<li n:foreach="$path as $phase" n:class="$step !== null && $phase->step() < $step ? done, $phase === $project->getStatus() ? current"><span>{$phase->label()}</span></li>
+	</ol>
+	<div class="card mb-4" n:if="$project->getDescription()"><div class="card-body text-break">{$project->getDescription()|nl2p}</div></div>
+
+	<div class="card">
+		<div class="card-header"><i class="bi bi-signpost-split text-primary me-1" aria-hidden="true"></i> Průběh</div>
+		<div class="card-body">
+			<div class="timeline">
+				{foreach $timeline as $entry}
+					{switch $entry->kind}
+						{case 'created'}
+							<div class="timeline-item"><span class="timeline-icon"><i class="bi bi-flag" aria-hidden="true"></i></span><div class="small"><strong>Zapsáno</strong> <span class="text-body-secondary">· {$entry->at|czDate}</span></div></div>
+						{case 'status'}
+							<div n:if="$entry->statusChange" class="timeline-item">
+								<span class="timeline-icon"><i class="bi bi-arrow-right-circle" aria-hidden="true"></i></span>
+								<div class="small">Fáze <strong>{$entry->statusChange->getToStatus()->label()}</strong> <span class="text-body-secondary">· {$entry->at|czDate}</span>
+									<div n:if="$entry->statusChange->getNote()" class="text-body-secondary">{$entry->statusChange->getNote()}</div>
+								</div>
+							</div>
+						{case 'agenda'}
+							<div n:if="$entry->agendaItem" class="timeline-item">
+								<span class="timeline-icon timeline-icon-primary"><i class="bi bi-calendar-event" aria-hidden="true"></i></span>
+								<div class="timeline-card flex-grow-1 min-w-0">
+									<div class="small text-body-secondary">Projednání: {$entry->agendaItem->getMeeting()->getTitle()} · {$entry->agendaItem->getMeeting()->getBody()->getName()} · {$entry->at|czDate}</div>
+									<div class="fw-semibold">{$entry->agendaItem->getTitle()}</div>
+									<div n:if="$entry->agendaItem->getProposedResolution()" class="small mt-1">{$entry->agendaItem->getProposedResolution()}</div>
+								</div>
+							</div>
+						{case 'thread'}
+							{var $comment = $entry->thread?->comment}
+							<div n:if="$comment" class="timeline-item">
+								<span class="timeline-icon"><i class="bi bi-chat-left-text" aria-hidden="true"></i></span>
+								<div class="flex-grow-1 min-w-0">
+									<div class="small"><strong>{$comment->isFromMember() ? $comment->getAuthorName() . ' (zastupitel)' : 'Obecní úřad'}</strong> <span class="text-body-secondary">· {$comment->getCreatedAt()|czDate}</span></div>
+									<div class="comment-body text-break">{$comment->getBody()|nl2p}</div>
+									<div n:if="$comment->getAttachments()" class="d-flex flex-wrap gap-2">
+										<a n:foreach="$comment->getAttachments() as $file" href="{$fileLink($file)}" class="comment-file" target="_blank" rel="noopener"><i class="bi {$file->getFile()|fileIcon}" aria-hidden="true"></i> <span class="text-truncate">{$file->getTitle()}</span></a>
+									</div>
+								</div>
+							</div>
+					{/switch}
+				{/foreach}
+			</div>
+		</div>
+	</div>
+</main>

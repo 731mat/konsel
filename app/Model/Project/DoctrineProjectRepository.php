@@ -70,6 +70,21 @@ final readonly class DoctrineProjectRepository implements ProjectRepository
 		return $counts;
 	}
 
+	public function countProposalsFromIp(string $ip, \DateTimeImmutable $since): int
+	{
+		$count = $this->entityManager->createQueryBuilder()
+			->select('COUNT(p.id)')
+			->from(Project::class, 'p')
+			->where('p.submitterIp = :ip')
+			->andWhere('p.createdAt >= :since')
+			->setParameter('ip', $ip)
+			->setParameter('since', $since, \Doctrine\DBAL\Types\Types::DATETIME_IMMUTABLE)
+			->getQuery()
+			->getSingleScalarResult();
+
+		return is_numeric($count) ? (int) $count : 0;
+	}
+
 	public function add(Project $project): void
 	{
 		$this->entityManager->persist($project);

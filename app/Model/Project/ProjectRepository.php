@@ -29,5 +29,10 @@ interface ProjectRepository
 	 */
 	public function countByStatus(Municipality $municipality): array;
 
+	/**
+	 * Počet podnětů z jedné IP adresy od daného okamžiku (ochrana proti spamu).
+	 */
+	public function countProposalsFromIp(string $ip, \DateTimeImmutable $since): int;
+
 	public function add(Project $project): void;
 }

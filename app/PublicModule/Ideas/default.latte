@@ -1,0 +1,59 @@
+{block title}Podněty a úkoly – {$municipality->getProfile()->officialName}{/block}
+
+{block content}
+{varType App\Model\Municipality\Municipality $municipality}
+{varType App\Model\Project\Project[] $projects}
+{varType App\Model\Project\ProjectStatus[] $path}
+<main class="mx-auto w-100" style="max-width: 64rem">
+	{include '@header.latte', municipality: $municipality}
+
+	<div class="row g-4">
+		<div class="col-lg-7">
+			<h1 class="h4 mb-3">Na čem obec pracuje</h1>
+			{foreach $projects as $project}
+				<a n:href="detail, municipality: $municipality->getSlug(), id: $project->getId()" class="card project-card text-reset mb-3">
+					<div class="card-body">
+						<div class="d-flex flex-wrap gap-1 mb-2">
+							<span class="badge status-badge bg-{$project->getStatus()->tone()}-subtle text-{$project->getStatus()->tone()}-emphasis">{$project->getStatus()->label()}</span>
+							<span class="badge text-bg-light">priorita: {$project->getPriority()->label()}</span>
+						</div>
+						<h2 class="h6 mb-1">{$project->getTitle()}</h2>
+						<p n:if="$project->getDescription()" class="small text-body-secondary mb-2">{$project->getDescription()|truncate: 160}</p>
+						{var $step = $project->getStatus()->step()}
+						<div n:if="$step" class="progress" style="height: .4rem" role="progressbar" aria-label="Postup" aria-valuenow="{$step}" aria-valuemin="0" aria-valuemax="{count($path)}">
+							<div class="progress-bar" style="width: {round($step / count($path) * 100)|noescape}%"></div>
+						</div>
+					</div>
+				</a>
+			{else}
+				<div class="card"><div class="card-body empty-state"><i class="bi bi-kanban" aria-hidden="true"></i>Obec zatím nezveřejnila žádné úkoly.</div></div>
+			{/foreach}
+		</div>
+		<div class="col-lg-5">
+			<div class="card shadow-sm" id="podnet">
+				<div class="card-header"><i class="bi bi-lightbulb text-warning me-1" aria-hidden="true"></i> Máte nápad nebo podnět?</div>
+				<div class="card-body">
+					<p class="small text-body-secondary">Napište nám, co by se v obci mělo zlepšit. Podnět posoudí obecní úřad a zastupitelé; zveřejněné podněty uvidíte v seznamu i s informací, v jaké jsou fázi.</p>
+					{form proposalForm}
+						<div n:foreach="$form->getOwnErrors() as $error" class="alert alert-danger py-2">{$error}</div>
+						{foreach ['name', 'email', 'title', 'description'] as $field}
+							<div class="mb-3">
+								{label $field, class: 'form-label' /}
+								{input $field, class: ($form[$field]->hasErrors() ? 'form-control is-invalid' : 'form-control')}
+								<div n:ifcontent class="invalid-feedback d-block">{inputError $field}</div>
+								<div n:if="$form[$field]->getOption('description')" class="form-text">{$form[$field]->getOption('description')}</div>
+							</div>
+						{/foreach}
+						<div class="visually-hidden" aria-hidden="true">{label website /}{input website}</div>
+						<div class="form-check mb-3">
+							<input n:name="consent:" n:class="form-check-input, $form['consent']->hasErrors() ? is-invalid" id="consent">
+							<label n:name="consent:" class="form-check-label small" for="consent">{$form['consent']->getCaption()}</label>
+							<div n:ifcontent class="invalid-feedback d-block">{inputError consent}</div>
+						</div>
+						{input send, class: 'btn btn-primary w-100'}
+					{/form}
+				</div>
+			</div>
+		</div>
+	</div>
+</main>

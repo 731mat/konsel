@@ -16,6 +16,7 @@ use App\Model\Project\Command\SaveProject;
 use App\Model\Shared\Exception\InvalidStateException;
 use App\Model\Shared\Exception\ValidationException;
 use App\Model\Shared\TransactionManager;
+use App\Model\Shared\ValueObject\Email;
 use App\Model\Shared\ValueObject\StoredFile;
 use App\Model\Storage\FileStorage;
 use App\Model\Storage\UploadedFile;
@@ -45,6 +46,33 @@ final readonly class ProjectFacade
 	{
 		return $this->transaction->run(function () use ($municipalityId, $command, $createdByName, $status): Project {
 			$project = new Project($this->municipalities->get($municipalityId), $this->details($command), $createdByName, $status);
+			$this->projects->add($project);
+
+			return $project;
+		});
+	}
+
+	/**
+	 * Nejvýše tolik podnětů za hodinu z jedné IP adresy.
+	 */
+	public const int ProposalsPerHour = 3;
+
+	/**
+	 * Podnět občana z veřejné stránky obce (stav „nový podnět“, neveřejný do posouzení).
+	 *
+	 * @throws ValidationException
+	 */
+	public function submitProposal(int $municipalityId, string $name, string $email, string $title, ?string $description, ?string $ip): Project
+	{
+		if ($ip !== null && $this->projects->countProposalsFromIp($ip, $this->clock->now()->modify('-1 hour')) >= self::ProposalsPerHour) {
+			throw new ValidationException('Z vašeho připojení bylo odesláno příliš mnoho podnětů. Zkuste to prosím za hodinu.');
+		}
+
+		$details = new ProjectDetails($title, $description);
+		$contact = new Email($email);
+
+		return $this->transaction->run(function () use ($municipalityId, $details, $name, $contact, $ip): Project {
+			$project = Project::citizenProposal($this->municipalities->get($municipalityId), $details, $name, $contact, $ip);
 			$this->projects->add($project);
 
 			return $project;

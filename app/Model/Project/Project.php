@@ -12,6 +12,7 @@ use App\Model\Shared\IntegerId;
 use App\Model\Shared\TenantOwned;
 use App\Model\Shared\Timestampable;
 use App\Model\Shared\TimestampableTrait;
+use App\Model\Shared\ValueObject\Email;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -66,6 +67,18 @@ final class Project implements TenantOwned, Timestampable
 	private string $createdByName;
 
 	/**
+	 * Kontakt na občana u podnětu (jen pro úřad, veřejně se nezobrazuje).
+	 */
+	#[ORM\Column(length: 180, nullable: true)]
+	private ?string $submitterEmail = null;
+
+	/**
+	 * IP adresa odesílatele podnětu – jen kvůli omezení zneužití.
+	 */
+	#[ORM\Column(length: 45, nullable: true)]
+	private ?string $submitterIp = null;
+
+	/**
 	 * @var Collection<int, ProjectStatusChange>
 	 */
 	#[ORM\OneToMany(targetEntity: ProjectStatusChange::class, mappedBy: 'project', cascade: ['persist', 'remove'], orphanRemoval: true)]
@@ -82,6 +95,23 @@ final class Project implements TenantOwned, Timestampable
 		$this->createdByName = mb_substr(trim($createdByName), 0, 200);
 		$this->statusChanges = new ArrayCollection();
 		$this->update($details);
+	}
+
+	/**
+	 * Podnět občana z veřejné stránky – čeká na posouzení úřadem, do té doby není veřejný.
+	 */
+	public static function citizenProposal(Municipality $municipality, ProjectDetails $details, string $name, Email $email, ?string $ip): self
+	{
+		$name = trim($name);
+		if ($name === '' || mb_strlen($name) > 100) {
+			throw new ValidationException('Zadejte své jméno (nejvýše 100 znaků).', 'name');
+		}
+
+		$project = new self($municipality, $details, $name . ' (podnět občana)', ProjectStatus::Submitted);
+		$project->submitterEmail = $email->value;
+		$project->submitterIp = $ip === null ? null : mb_substr($ip, 0, 45);
+
+		return $project;
 	}
 
 	/**
@@ -173,6 +203,16 @@ final class Project implements TenantOwned, Timestampable
 	public function getCreatedByName(): string
 	{
 		return $this->createdByName;
+	}
+
+	public function isCitizenProposal(): bool
+	{
+		return $this->submitterEmail !== null;
+	}
+
+	public function getSubmitterEmail(): ?Email
+	{
+		return $this->submitterEmail === null ? null : new Email($this->submitterEmail);
 	}
 
 	/**

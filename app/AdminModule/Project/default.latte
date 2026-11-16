@@ -16,6 +16,7 @@
 		<h1 class="h3 mb-0">Úkolníček</h1>
 		<p class="text-body-secondary mb-0">Dlouhodobé úkoly a záměry obce – od námětu přes schválení na zasedání až po dokončení.</p>
 	</div>
+	<a n:if="$currentMunicipality" n:href=":Public:Ideas:default, municipality: $currentMunicipality->getSlug()" target="_blank" rel="noopener" class="btn btn-outline-secondary"><i class="bi bi-globe" aria-hidden="true"></i> Stránka pro občany</a>
 	<a n:if="$canEdit" n:href="add" class="btn btn-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nový úkol</a>
 </div>
 
