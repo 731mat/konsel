@@ -6,6 +6,7 @@ use PhpCsFixer\Fixer\ClassNotation\VisibilityRequiredFixer;
 use PhpCsFixer\Fixer\FunctionNotation\VoidReturnFixer;
 use PhpCsFixer\Fixer\Import\NoUnusedImportsFixer;
 use PhpCsFixer\Fixer\Import\OrderedImportsFixer;
+use PhpCsFixer\Fixer\Operator\NotOperatorWithSuccessorSpaceFixer;
 use PhpCsFixer\Fixer\Strict\DeclareStrictTypesFixer;
 use PhpCsFixer\Fixer\Strict\StrictComparisonFixer;
 use PhpCsFixer\Fixer\Strict\StrictParamFixer;
@@ -37,6 +38,7 @@ return ECSConfig::configure()
 		'sort_algorithm' => 'alpha',
 	])
 	->withSkip([
+		NotOperatorWithSuccessorSpaceFixer::class,
 		__DIR__ . '/temp',
 		__DIR__ . '/tests/**/output',
 	]);

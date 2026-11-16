@@ -135,7 +135,7 @@ konsel/
 - composer scripts: `stan`, `cs`, `cs-fix`, `test`, `qa` (= cs + stan + test)
 **Hotovo když:** `composer qa` projde. Úmyslně rozbitý typ ho shodí.
 
-### [ ] T03 – Doctrine, migrace, konzole
+### [x] T03 – Doctrine, migrace, konzole
 **Cíl:** Perzistence a CLI připravené.
 - `nettrine/dbal`, `nettrine/orm`, `nettrine/migrations`, `nettrine/cache`, `contributte/console`, `phpstan/phpstan-doctrine`
 - doctrine.neon: SQLite `%appDir%/../var/database.sqlite`, attribute mapping na `app/Domain`
@@ -499,3 +499,4 @@ Vše od T32 je rozšíření, pořadí se dá upravit podle potřeby.
 - 2026-11-16 T00 – Místo lokální instalace je vše v Dockeru (A16): php:8.4-apache, www-data přemapovaný na UID/GID hostitele, wrapper Makefile. PDF → Gotenberg, mail → Mailpit (upraveno v T27/T20).
 - 2026-11-16 T01 – Composer vybral nette/application 3.3 (plán počítal s 3.2). Debug režim jen přes env NETTE_DEBUG=1 (compose.yaml). Mapování `App\Presentation\*\**Presenter`, šablony vedle presenterů.
 - 2026-11-16 T02 – ECS se sadou PER-CS + common + cleanCode, odsazení tabulátory (Nette konvence). PHPStan max + strict + deprecation rules, analyzuje i .phpt. Pravidlo `final` tříd zatím jen v CLAUDE.md, ne jako fixer (kvůli Doctrine proxy, rozhodne se v T03).
+- 2026-11-16 T03 – nettrine/cache je opuštěný → metadata cache přes symfony/cache (PhpFilesAdapter). ORM s `lazyNativeObjects: true` (PHP 8.4), entity tedy mohou být `final`. Integrační testy: SQLite in-memory + migrace + SchemaValidator (nahrazuje orm:validate-schema v qa). Každé vlákno Testeru má vlastní temp/tests/N. Šablona migrací resources/migration.tpl.

@@ -1,0 +1,44 @@
+extensions:
+	console: Contributte\Console\DI\ConsoleExtension(%consoleMode%)
+	nettrine.dbal: Nettrine\DBAL\DI\DbalExtension
+	nettrine.orm: Nettrine\ORM\DI\OrmExtension
+	nettrine.migrations: Nettrine\Migrations\DI\MigrationsExtension
+
+
+console:
+	name: Konšel
+	catchExceptions: true
+	autoExit: true
+
+
+nettrine.dbal:
+	debug:
+		panel: %debugMode%
+		sourcePaths: [%appDir%]
+	connections:
+		default:
+			driver: pdo_sqlite
+			path: %varDir%/database.sqlite
+			middlewares:
+				sqlitePragma: App\Core\Doctrine\SqlitePragmaMiddleware
+			schemaAssetsFilter: App\Core\Doctrine\SchemaAssetsFilter
+
+
+nettrine.orm:
+	managers:
+		default:
+			connection: default
+			lazyNativeObjects: true
+			mapping:
+				App:
+					type: attributes
+					directories: [%appDir%/Domain]
+					namespace: App\Domain
+			defaultCache: Symfony\Component\Cache\Adapter\PhpFilesAdapter(namespace: doctrine, directory: %tempDir%/cache/doctrine)
+
+
+nettrine.migrations:
+	table: doctrine_migrations
+	customTemplate: %rootDir%/resources/migration.tpl
+	directories:
+		App\Migrations: %rootDir%/migrations

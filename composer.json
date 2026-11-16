@@ -5,6 +5,7 @@
     "license": "proprietary",
     "require": {
         "php": ">=8.4",
+        "contributte/console": "^0.11.0",
         "latte/latte": "^3.1",
         "nette/application": "^3.3",
         "nette/bootstrap": "^3.3",
@@ -15,6 +16,11 @@
         "nette/mail": "^4.2",
         "nette/security": "^3.2",
         "nette/utils": "^4.1",
+        "nettrine/dbal": "^0.10.3",
+        "nettrine/migrations": "^0.10.1",
+        "nettrine/orm": "^0.10.1",
+        "symfony/cache": "^8.1",
+        "symfony/clock": "^8.1",
         "tracy/tracy": "^2.12"
     },
     "autoload": {
@@ -40,6 +46,7 @@
         "phpstan/extension-installer": "^1.4",
         "phpstan/phpstan": "^2.3",
         "phpstan/phpstan-deprecation-rules": "^2.0",
+        "phpstan/phpstan-doctrine": "^2.1",
         "phpstan/phpstan-nette": "^2.0",
         "phpstan/phpstan-strict-rules": "^2.1",
         "symplify/easy-coding-standard": "^13.3"
@@ -53,6 +60,10 @@
             "@cs",
             "@stan",
             "@test"
+        ],
+        "db:reset": [
+            "@php -r \"array_map('unlink', glob('var/database.sqlite*') ?: []);\"",
+            "@php bin/console migrations:migrate --no-interaction --allow-no-migration"
         ]
     },
     "scripts-descriptions": {
@@ -60,6 +71,7 @@
         "cs-fix": "Oprava coding standardu",
         "stan": "Statická analýza PHPStan",
         "test": "Testy (Nette Tester)",
-        "qa": "Kompletní brána kvality"
+        "qa": "Kompletní brána kvality",
+        "db:reset": "Smaže DB, spustí migrace a nahraje demo data"
     }
 }

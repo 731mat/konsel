@@ -1,0 +1,9 @@
+# Konfigurace pro integrační testy – každý testovací proces má vlastní SQLite v paměti.
+nettrine.dbal:
+	debug:
+		panel: false
+	connections:
+		default:
+			driver: pdo_sqlite
+			memory: true
+			path: ':memory:'

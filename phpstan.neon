@@ -10,3 +10,5 @@ parameters:
 	fileExtensions:
 		- php
 		- phpt
+	doctrine:
+		objectManagerLoader: tests/Support/phpstan-object-manager.php

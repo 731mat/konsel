@@ -38,10 +38,18 @@ final class Bootstrap
 
 	public function bootTestContainer(): Container
 	{
+		// Každé vlákno Nette Testeru má vlastní temp, jinak se procesy perou o cache adresáře.
+		$thread = getenv('NETTE_TESTER_THREAD');
+		$tempDir = $this->rootDir . '/temp/tests/' . ($thread === false ? 'main' : $thread);
+		if (!is_dir($tempDir . '/cache')) {
+			@mkdir($tempDir . '/cache', 0o777, true);
+		}
+
+		$this->configurator->setTempDirectory($tempDir);
 		$this->configurator->setDebugMode(false);
 		$this->configurator->addStaticParameters([
 			'rootDir' => $this->rootDir,
-			'varDir' => $this->rootDir . '/temp/tests',
+			'varDir' => $tempDir . '/var',
 		]);
 		$this->setupContainer();
 
@@ -68,6 +76,7 @@ final class Bootstrap
 	{
 		$configDir = $this->rootDir . '/config';
 		$this->configurator->addConfig($configDir . '/common.neon');
+		$this->configurator->addConfig($configDir . '/doctrine.neon');
 		$this->configurator->addConfig($configDir . '/services.neon');
 
 		if (is_file($configDir . '/local.neon')) {
