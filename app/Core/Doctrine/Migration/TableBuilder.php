@@ -8,6 +8,7 @@ use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Schema\ForeignKeyConstraint;
 use Doctrine\DBAL\Schema\ForeignKeyConstraint\ReferentialAction;
 use Doctrine\DBAL\Schema\Index;
+use Doctrine\DBAL\Schema\Index\IndexedColumn;
 use Doctrine\DBAL\Schema\Index\IndexType;
 use Doctrine\DBAL\Schema\PrimaryKeyConstraint;
 use Doctrine\DBAL\Schema\Table;
@@ -225,6 +226,15 @@ final class TableBuilder
 	 */
 	private function addIndex(IndexType $type, string $prefix, array $columns): self
 	{
+		if ($type === IndexType::UNIQUE) {
+			// jako DBAL: unikátní index nahradí běžný index nad stejnými sloupci (např. z cizího klíče)
+			$this->indexes = array_values(array_filter(
+				$this->indexes,
+				static fn(Index $index): bool => $index->getType() !== IndexType::REGULAR
+					|| array_map(static fn(IndexedColumn $column): string => $column->getColumnName()->getIdentifier()->getValue(), $index->getIndexedColumns()) !== $columns,
+			));
+		}
+
 		$this->indexes[] = Index::editor()
 			->setUnquotedName($this->identifier($prefix, $columns))
 			->setType($type)

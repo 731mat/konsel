@@ -1,5 +1,6 @@
 parameters:
 	doctrineCache: false
+	encryptionKey: 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8='
 
 
 # Konfigurace pro integrační testy – každý testovací proces má vlastní SQLite v paměti.
@@ -14,6 +15,7 @@ nettrine.dbal:
 
 
 services:
+	aiClient: Tests\Support\FakeAiClient
 	clock:
 		type: Psr\Clock\ClockInterface
 		factory: Symfony\Component\Clock\MockClock('2026-11-16 10:00:00', 'Europe/Prague')

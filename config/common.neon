@@ -1,4 +1,6 @@
 parameters:
+	# Šifrovací klíč aplikace (base64, 32 B) – nastavuje se v local.neon, vygeneruje: make console ARGS="app:encryption-key"
+	encryptionKey: ''
 
 
 application:

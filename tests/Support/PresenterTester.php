@@ -118,6 +118,22 @@ final readonly class PresenterTester
 		));
 	}
 
+	/**
+	 * Vykreslí cíl přesměrování v rámci téhož presenteru/akce včetně flash zpráv (parametr _fid).
+	 *
+	 * @param array<string, mixed> $params
+	 */
+	public function followRedirect(Response $response, string $presenter, string $action = 'default', array $params = []): string
+	{
+		$query = parse_url(self::assertRedirect($response)->getUrl(), PHP_URL_QUERY);
+		parse_str(is_string($query) ? $query : '', $redirectParams);
+		$fid = $redirectParams['_fid'] ?? null;
+
+		return $this->render($presenter, $action, $params + (is_string($fid) ? [
+			'_fid' => $fid,
+		] : []));
+	}
+
 	public static function assertRedirect(Response $response): RedirectResponse
 	{
 		Assert::type(RedirectResponse::class, $response);

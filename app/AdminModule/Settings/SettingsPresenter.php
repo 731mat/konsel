@@ -8,11 +8,17 @@ use App\AdminModule\SecuredPresenter;
 use App\Core\Security\Allowed;
 use App\Core\Security\Privilege;
 use App\Core\Security\Resource;
+use App\Model\Ai\AiException;
+use App\Model\Ai\AiFacade;
+use App\Model\Ai\AiSettings;
+use App\Model\Ai\Command\SaveAiSettings;
 use App\Model\Municipality\Command\UpdateMunicipalitySettings;
+use App\Model\Shared\Exception\DomainException;
 use App\Model\Shared\Exception\ValidationException;
 use App\Model\Storage\UploadedFile;
 use App\UI\Form\FormErrors;
 use App\UI\Form\FormFactory;
+use Nette\Application\Attributes\Requires;
 use Nette\Application\UI\Form;
 
 #[Allowed(Resource::Settings, Privilege::Edit)]
@@ -20,6 +26,7 @@ final class SettingsPresenter extends SecuredPresenter
 {
 	public function __construct(
 		private readonly FormFactory $formFactory,
+		private readonly AiFacade $aiFacade,
 	) {
 		parent::__construct();
 	}
@@ -53,6 +60,74 @@ final class SettingsPresenter extends SecuredPresenter
 	{
 		$logo = $this->requireMunicipality()->getLogo() ?? $this->error('Obec nemá logo.');
 		$this->sendStoredFile($logo, forceDownload: false);
+	}
+
+	public function actionAi(): void
+	{
+		$settings = $this->aiFacade->getSettings($this->requireMunicipality()->getId());
+		$this->getComponent('aiForm')->setDefaults([
+			'model' => $settings?->getModel() ?? AiSettings::DefaultModel,
+			'enabled' => $settings?->isEnabled() ?? true,
+		]);
+	}
+
+	public function renderAi(): void
+	{
+		$this->template->aiSettings = $this->aiFacade->getSettings($this->requireMunicipality()->getId());
+		$this->template->encryptionConfigured = $this->aiFacade->isEncryptionConfigured();
+	}
+
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleTestAi(): void
+	{
+		try {
+			$this->aiFacade->testConnection($this->requireMunicipality()->getId());
+			$this->flashMessage('Připojení k OpenAI funguje, klíč i model jsou v pořádku.', 'success');
+		} catch (AiException|DomainException $e) {
+			$this->flashMessage($e->getMessage(), 'danger');
+		}
+
+		$this->redirect('ai');
+	}
+
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleRemoveAiKey(): void
+	{
+		$this->aiFacade->removeApiKey($this->requireMunicipality()->getId());
+		$this->flashMessage('API klíč byl odstraněn. AI funkce jsou vypnuté.', 'success');
+		$this->redirect('ai');
+	}
+
+	protected function createComponentAiForm(): Form
+	{
+		$settings = $this->aiFacade->getSettings($this->requireMunicipality()->getId());
+		$form = $this->formFactory->create();
+		$form->addPassword('apiKey', 'API klíč OpenAI')
+			->setNullable()
+			->setHtmlAttribute('autocomplete', 'off')
+			->setHtmlAttribute('placeholder', $settings?->hasApiKey() === true ? "Uložen klíč sk-{$settings->getApiKeyHint()} – vyplňte jen pro změnu" : 'sk-…')
+			->setOption('description', 'Klíč vytvoříte na platform.openai.com → API keys. Uloží se zašifrovaný a už nikdy se nezobrazí celý.');
+		$form->addText('model', 'Model')
+			->setRequired('Zadejte model.')
+			->setMaxLength(100)
+			->setOption('description', 'Např. ' . AiSettings::DefaultModel . '. Dostupnost modelu ověří tlačítko „Otestovat připojení“.');
+		$form->addCheckbox('enabled', 'Povolit AI funkce (návrhy textů bodů a usnesení)');
+		$form->addSubmit('save', 'Uložit');
+		$form->onSuccess[] = function (Form $form): void {
+			$data = $form->getValues(AiFormData::class);
+			try {
+				$this->aiFacade->saveSettings($this->requireMunicipality()->getId(), new SaveAiSettings($data->model, $data->enabled, $data->apiKey));
+			} catch (ValidationException $e) {
+				FormErrors::apply($form, $e);
+
+				return;
+			}
+
+			$this->flashMessage('Nastavení AI bylo uloženo.', 'success');
+			$this->redirect('this');
+		};
+
+		return $form;
 	}
 
 	protected function createComponentSettingsForm(): Form

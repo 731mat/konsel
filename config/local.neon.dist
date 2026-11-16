@@ -1,2 +1,5 @@
 # Lokální konfigurace – zkopírujte jako config/local.neon (není v gitu).
 parameters:
+	# Šifrovací klíč pro API klíče v DB (vygenerujte: make console ARGS="app:encryption-key").
+	# Po nasazení ho neměňte – uložené klíče by nešlo dešifrovat.
+	encryptionKey: ''
