@@ -55,7 +55,10 @@
         "cs": "ecs check",
         "cs-fix": "ecs check --fix",
         "stan": "phpstan analyse --memory-limit=1G",
-        "test": "tester tests -C -s --colors 1",
+        "test": [
+            "@php -r \"require 'vendor/autoload.php'; Nette\\\\Utils\\\\FileSystem::delete('temp/tests');\"",
+            "tester tests -C -s --colors 1"
+        ],
         "qa": [
             "@cs",
             "@stan",

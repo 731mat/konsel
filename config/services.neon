@@ -7,6 +7,7 @@ services:
 
 	- App\Core\Tenancy\CurrentMunicipality
 	- App\Core\Doctrine\TimestampableSubscriber
+	- App\Core\Doctrine\MigrationsTableSchemaSubscriber
 	- App\Infrastructure\Persistence\DoctrineTransactionManager
 	- App\Infrastructure\Storage\LocalFileStorage(%varDir%/storage)
 	- App\Core\Security\Authenticator
@@ -14,7 +15,7 @@ services:
 	- App\Application\Security\LoginThrottle
 	- App\Presentation\Accessory\FormFactory
 	- App\Presentation\Accessory\Menu\AdminMenuFactory
-	- App\Core\Latte\ViteAssets(%rootDir%/www/assets/.vite/manifest.json)
+	viteAssets: App\Core\Latte\ViteAssets(%rootDir%/www/assets/.vite/manifest.json)
 
 
 # Automatická registrace podle konvence adresářů

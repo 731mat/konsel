@@ -1,3 +1,8 @@
+parameters:
+	# Perzistentní cache metadat jen v produkci (ve vývoji/testech by držela staré mapování).
+	doctrineCache: %productionMode%
+
+
 extensions:
 	console: Contributte\Console\DI\ConsoleExtension(%consoleMode%)
 	nettrine.dbal: Nettrine\DBAL\DI\DbalExtension
@@ -12,6 +17,8 @@ console:
 
 
 nettrine.dbal:
+	types:
+		stored_file: App\Core\Doctrine\Type\StoredFileType
 	debug:
 		panel: %debugMode%
 		sourcePaths: [%appDir%]
@@ -38,7 +45,7 @@ nettrine.orm:
 				tenant:
 					class: App\Core\Tenancy\TenantFilter
 					enabled: false
-			defaultCache: Symfony\Component\Cache\Adapter\PhpFilesAdapter(namespace: doctrine, directory: %tempDir%/cache/doctrine)
+			defaultCache: App\Core\Doctrine\CacheFactory::create(%doctrineCache%, %tempDir%/cache/doctrine)
 
 
 nettrine.migrations:

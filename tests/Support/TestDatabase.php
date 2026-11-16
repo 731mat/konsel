@@ -13,7 +13,10 @@ use Nette\DI\Container;
  */
 final class TestDatabase
 {
-	public static function migrate(Container $container): void
+	/**
+	 * @param string $target 'latest' nebo FQCN verze, např. App\Migrations\Version20261116160655
+	 */
+	public static function migrate(Container $container, string $target = 'latest'): void
 	{
 		$dependencyFactory = $container->getByType(DependencyFactory::class);
 		$dependencyFactory->getMetadataStorage()->ensureInitialized();
@@ -22,7 +25,7 @@ final class TestDatabase
 			return;
 		}
 
-		$version = $dependencyFactory->getVersionAliasResolver()->resolveVersionAlias('latest');
+		$version = $dependencyFactory->getVersionAliasResolver()->resolveVersionAlias($target);
 		$plan = $dependencyFactory->getMigrationPlanCalculator()->getPlanUntilVersion($version);
 		$dependencyFactory->getMigrator()->migrate($plan, new MigratorConfiguration());
 	}

@@ -31,7 +31,8 @@ make db-reset             # smazat DB → migrace → demo data
   - Externí služby (mail, storage, AI, ARES, PDF, STT, search) jsou rozhraní v Domain/Application, implementace v Infrastructure.
 - **Entity mají chování, ne settery:** `$meeting->start($clock)`, ne `$meeting->setStatus(...)`. Invarianty hlídá entita a porušení vyhodí doménovou výjimku (`App\Domain\Shared\Exception\*`).
 - Stavy a číselníky = PHP backed enumy s metodou `label(): string` pro české UI.
-- Jedna metoda fasády = jedna transakce (`wrapInTransaction` / flush na konci). Vstupy jsou readonly Command DTO.
+- Jedna metoda fasády = jedna transakce přes `TransactionManager::run()` (flush + commit). Nepoužívej `EntityManager::wrapInTransaction()` – při doménové chybě zavře EntityManager. Vstupy jsou readonly Command DTO, nahrané soubory jako `UploadedFile` (ne Nette FileUpload).
+- Validuj před změnou stavu: doménové metody vyhodí výjimku dřív, než změní pole.
 - Čas jen přes `Psr\Clock\ClockInterface`, vždy `DateTimeImmutable`. Nikdy `new DateTime()` ani `time()` v doméně.
 - Entity patřící obci implementují `TenantOwned`. Izolaci hlídá `TenantFilter`, nespoléhej na ruční `WHERE`.
 - Migrace dědí z `SchemaMigration` a používají `createTable('x', fn (TableBuilder $t) => …)` / `alterTable()` / `dropTable()`. Žádné raw SQL ani deprekované `$schema->createTable()`. `make console ARGS="migrations:diff"` slouží jen jako předloha. Test `DatabaseSchemaTest` ověří, že migrace = mapping.
@@ -39,7 +40,9 @@ make db-reset             # smazat DB → migrace → demo data
 - Soubory se ukládají jen přes `FileStorage` a servírují přes presenter s kontrolou ACL. Nic uživatelského ve `www/`.
 - Každá `action*`/`handle*` v Admin modulu má `#[Allowed(resource, privilege)]`.
 - Formuláře přes `FormFactory`. Zpracování formuláře volá fasádu a doménové výjimky převádí na chyby formuláře.
-- Testy: doménová pravidla = unit testy (povinné), fasády = integrační testy nad SQLite. Nová funkce rozšíří `DemoSeeder`.
+- Testy: doménová pravidla = unit testy (povinné), fasády = integrační testy nad SQLite, presentery přes `Tests\Support\PresenterTester` (loginAs, render, submitForm). Data přes `Tests\Support\Fixtures`. Nová funkce rozšíří `DemoSeeder`.
+- Migrace s daty: nový NOT NULL sloupec = (1) přidat s výchozí hodnotou + UPDATE, (2) v další migraci výchozí hodnotu odebrat. `alterTable()` nekombinuj s jinou změnou téže tabulky v jedné migraci.
+- Doménové `ValidationException` nesou `field` = název pole formuláře. V presenteru je převede `FormErrors::apply()`.
 - UI texty česky, vykání. Kód, DB a komentáře anglicky.
 
 ## Slovníček (UI ↔ kód)

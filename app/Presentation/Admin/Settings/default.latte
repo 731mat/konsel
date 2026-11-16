@@ -1,0 +1,32 @@
+{block title}Nastavení obce{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item active" aria-current="page">Nastavení</li>
+{/block}
+
+{block content}
+<h1 class="h3 mb-4">Nastavení obce</h1>
+
+<div class="row g-4">
+	<div class="col-xl-8">
+		<div class="card">
+			<div class="card-body">
+				{control settingsForm}
+			</div>
+		</div>
+	</div>
+
+	<div class="col-xl-4">
+		<div class="card">
+			<div class="card-body">
+				<h2 class="h6 text-body-secondary">Současné logo</h2>
+				{if $logo}
+					<img src="{link logo}" alt="Logo obce" class="img-fluid rounded border p-2 bg-white" style="max-height: 10rem">
+					<p class="small text-body-secondary mt-2 mb-0">{$logo->originalName} · {$logo->size|bytes}</p>
+				{else}
+					<p class="text-body-secondary mb-0">Logo zatím není nahrané.</p>
+				{/if}
+			</div>
+		</div>
+	</div>
+</div>

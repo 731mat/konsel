@@ -196,7 +196,7 @@ konsel/
 - servírování souborů **jen přes presenter** s kontrolou ACL (`FileResponse`), nikdy přímo z www
 **Hotovo když:** testy uloží, přečtou a smažou soubor. Path traversal je ošetřený.
 
-### [ ] T09 – Nastavení obce
+### [x] T09 – Nastavení obce
 **Cíl:** Údaje obce pro hlavičky dokumentů.
 - `Municipality` rozšířit: oficiální název („Obec Neplachovice“), IČO, adresa, e-mail, telefon, web, logo/znak (přes FileStorage), počet obyvatel
 - Admin `Settings` presenter: formulář obce
@@ -505,3 +505,4 @@ Vše od T32 je rozšíření, pořadí se dá upravit podle potřeby.
 - 2026-11-16 T06 – Zdroje a privilegia jako enumy `Core\Security\Resource` / `Privilege` (+ `dashboard`, `audit`, `system` navíc proti plánu). `#[Allowed]` na třídě i metodě, test `AllowedCoverageTest` hlídá, že žádný vstupní bod Admin modulu nezůstane bez oprávnění.
 - 2026-11-16 T07 – Node kontejner pouští `vite build --watch` (bez dev serveru/HMR) → ViteAssets vždy čte manifest, dev = prod. Bootstrap 5.3 (SCSS) + Bootstrap Icons + Naja + nette-forms. Menu (`AdminMenu`) ukazuje jen položky s oprávněním a existujícím presenterem. **contributte/datagrid odložen** – rozhodnout v T10 (alternativa: vlastní Latte tabulky + Paginator). Přepínač orgánu přesunut do T10/T34 (zatím nejsou orgány). Odkazy na presenter v šabloně komponenty: `$presenter->link()`.
 - 2026-11-16 T08 – `FileStorage` v Application/Shared/Storage, `StoredFile` je Doctrine embeddable v Domain (validuje cestu regexem – žádné `..`). Úložiště `var/storage`, jmenný prostor volí volající (`m{id}/attachments`). `SecuredPresenter::sendStoredFile()` pro stahování.
+- 2026-11-16 T09 – `StoredFile` místo embeddable jako vlastní DBAL typ `stored_file` (JSON, umí NULL). **Opraveny 3 systémové chyby:** (a) `SchemaAssetsFilter` skrýval `doctrine_migrations` i před migracemi → tabulku do ORM schématu přidává `MigrationsTableSchemaSubscriber`; (b) přestavba tabulky na SQLite smazala přes ON DELETE CASCADE podřízená data → `SchemaMigration` na SQLite vypíná FK a kontroluje `foreign_key_check` (regresní test); (c) `wrapInTransaction` zavíral EM při validační chybě → vlastní `DoctrineTransactionManager`. Doctrine metadata cache jen v produkci. `composer test` maže temp/tests (kontejner v testech se jinak nepřekompiluje). Nový `PresenterTester` + `MemoryUserStorage` pro testy presenterů.

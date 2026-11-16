@@ -50,11 +50,7 @@ final class TableBuilder
 	 */
 	public function id(string $column = 'id'): self
 	{
-		$this->columns[] = Column::editor()
-			->setUnquotedName($column)
-			->setTypeName(Types::INTEGER)
-			->setAutoincrement(true)
-			->create();
+		$this->columns[] = ColumnFactory::make($column, Types::INTEGER, autoincrement: true);
 		$this->primaryKey = PrimaryKeyConstraint::editor()
 			->setUnquotedColumnNames($column)
 			->create();
@@ -219,17 +215,7 @@ final class TableBuilder
 		bool $nullable = false,
 		mixed $default = null,
 	): self {
-		$editor = Column::editor()
-			->setUnquotedName($name)
-			->setTypeName($type)
-			->setNotNull(!$nullable)
-			->setDefaultValue($default);
-
-		if ($length !== null) {
-			$editor->setLength($length);
-		}
-
-		$this->columns[] = $editor->create();
+		$this->columns[] = ColumnFactory::make($name, $type, length: $length, nullable: $nullable, default: $default);
 
 		return $this;
 	}

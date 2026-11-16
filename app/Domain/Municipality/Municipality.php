@@ -8,7 +8,9 @@ use App\Domain\Shared\Exception\ValidationException;
 use App\Domain\Shared\IntegerId;
 use App\Domain\Shared\Timestampable;
 use App\Domain\Shared\TimestampableTrait;
+use App\Domain\Shared\ValueObject\Email;
 use App\Domain\Shared\ValueObject\Ico;
+use App\Domain\Shared\ValueObject\StoredFile;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -32,11 +34,75 @@ final class Municipality implements Timestampable
 	#[ORM\Column(length: 8, unique: true, nullable: true)]
 	private ?string $ico;
 
+	#[ORM\Column(length: 200)]
+	private string $officialName;
+
+	#[ORM\Column(length: 200, nullable: true)]
+	private ?string $street = null;
+
+	#[ORM\Column(length: 100, nullable: true)]
+	private ?string $city = null;
+
+	#[ORM\Column(length: 6, nullable: true)]
+	private ?string $postalCode = null;
+
+	#[ORM\Column(length: 180, nullable: true)]
+	private ?string $email = null;
+
+	#[ORM\Column(length: 50, nullable: true)]
+	private ?string $phone = null;
+
+	#[ORM\Column(length: 255, nullable: true)]
+	private ?string $website = null;
+
+	#[ORM\Column(nullable: true)]
+	private ?int $population = null;
+
+	#[ORM\Column(type: 'stored_file', nullable: true)]
+	private ?StoredFile $logo = null;
+
 	public function __construct(string $name, string $slug, ?Ico $ico = null)
 	{
 		$this->name = self::validateName($name);
 		$this->slug = self::validateSlug($slug);
 		$this->ico = $ico?->value;
+		$this->officialName = 'Obec ' . $this->name;
+	}
+
+	public function updateProfile(MunicipalityProfile $profile): void
+	{
+		$this->officialName = $profile->officialName;
+		$this->street = $profile->street;
+		$this->city = $profile->city;
+		$this->postalCode = $profile->postalCode;
+		$this->email = $profile->email?->value;
+		$this->phone = $profile->phone;
+		$this->website = $profile->website;
+		$this->population = $profile->population;
+	}
+
+	public function getProfile(): MunicipalityProfile
+	{
+		return new MunicipalityProfile(
+			officialName: $this->officialName,
+			street: $this->street,
+			city: $this->city,
+			postalCode: $this->postalCode,
+			email: $this->email === null ? null : new Email($this->email),
+			phone: $this->phone,
+			website: $this->website,
+			population: $this->population,
+		);
+	}
+
+	public function changeLogo(?StoredFile $logo): void
+	{
+		$this->logo = $logo;
+	}
+
+	public function getLogo(): ?StoredFile
+	{
+		return $this->logo;
 	}
 
 	public function rename(string $name): void

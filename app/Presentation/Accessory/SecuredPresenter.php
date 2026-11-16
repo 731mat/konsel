@@ -8,6 +8,7 @@ use App\Application\Municipality\MunicipalityFacade;
 use App\Application\Shared\Storage\FileStorage;
 use App\Core\Security\Allowed;
 use App\Core\Tenancy\CurrentMunicipality;
+use App\Domain\Municipality\Municipality;
 use App\Domain\Shared\ValueObject\StoredFile;
 use App\Presentation\Accessory\Menu\AdminMenu;
 use App\Presentation\Accessory\Menu\AdminMenuFactory;
@@ -70,6 +71,18 @@ abstract class SecuredPresenter extends BasePresenter
 	protected function createComponentAdminMenu(): AdminMenu
 	{
 		return $this->adminMenuFactory->create();
+	}
+
+	/**
+	 * Obec aktuálního uživatele. Superadmin bez zvolené obce dostane 404.
+	 */
+	protected function requireMunicipality(): Municipality
+	{
+		if (!$this->currentMunicipality->isSet()) {
+			$this->error('Tato stránka vyžaduje kontext obce.');
+		}
+
+		return $this->currentMunicipality->get();
 	}
 
 	/**

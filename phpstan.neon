@@ -12,5 +12,12 @@ parameters:
 	fileExtensions:
 		- php
 		- phpt
+	ignoreErrors:
+		-
+			identifier: method.deprecated
+			path: app/Core/Doctrine/MigrationsTableSchemaSubscriber.php
+		-
+			identifier: classConstant.deprecated
+			path: app/Core/Doctrine/MigrationsTableSchemaSubscriber.php
 	doctrine:
 		objectManagerLoader: tests/Support/phpstan-object-manager.php

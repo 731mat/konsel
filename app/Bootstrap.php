@@ -38,9 +38,7 @@ final class Bootstrap
 
 	public function bootTestContainer(): Container
 	{
-		// Každé vlákno Nette Testeru má vlastní temp, jinak se procesy perou o cache adresáře.
-		$thread = getenv('NETTE_TESTER_THREAD');
-		$tempDir = $this->rootDir . '/temp/tests/' . ($thread === false ? 'main' : $thread);
+		$tempDir = self::testTempDir();
 		if (!is_dir($tempDir . '/cache')) {
 			@mkdir($tempDir . '/cache', 0o777, true);
 		}
@@ -59,6 +57,16 @@ final class Bootstrap
 		}
 
 		return $this->configurator->createContainer();
+	}
+
+	/**
+	 * Každé vlákno Nette Testeru má vlastní temp, jinak se procesy perou o cache adresáře.
+	 */
+	public static function testTempDir(): string
+	{
+		$thread = getenv('NETTE_TESTER_THREAD');
+
+		return dirname(__DIR__) . '/temp/tests/' . ($thread === false ? 'main' : $thread);
 	}
 
 	private function initializeEnvironment(): void

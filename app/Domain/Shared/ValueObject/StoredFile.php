@@ -5,30 +5,23 @@ declare(strict_types=1);
 namespace App\Domain\Shared\ValueObject;
 
 use App\Domain\Shared\Exception\ValidationException;
-use Doctrine\ORM\Mapping as ORM;
 
 /**
  * Soubor uložený ve FileStorage. `path` je relativní klíč v úložišti, nikdy absolutní cesta.
- * Vkládá se do entit jako Doctrine embeddable (sloupce file_path, file_original_name…).
+ * V entitách se ukládá do jednoho sloupce typu `stored_file` (JSON, viz Core\Doctrine\Type\StoredFileType).
  */
-#[ORM\Embeddable]
 final readonly class StoredFile
 {
 	public const string PathPattern = '~^(?!.*\.\.)[a-z0-9_-]+(?:/[a-z0-9_-]+)*/[a-z0-9]{32}(?:\.[a-z0-9]{1,10})?$~';
 
-	#[ORM\Column(length: 255)]
 	public string $path;
 
-	#[ORM\Column(length: 255)]
 	public string $originalName;
 
-	#[ORM\Column(length: 150)]
 	public string $mimeType;
 
-	#[ORM\Column(type: 'bigint')]
 	public int $size;
 
-	#[ORM\Column(length: 64)]
 	public string $sha256;
 
 	public function __construct(string $path, string $originalName, string $mimeType, int $size, string $sha256)
@@ -46,6 +39,34 @@ final readonly class StoredFile
 		$this->mimeType = mb_substr($mimeType, 0, 150);
 		$this->size = $size;
 		$this->sha256 = $sha256;
+	}
+
+	/**
+	 * @param array<mixed> $data
+	 */
+	public static function fromArray(array $data): self
+	{
+		return new self(
+			path: is_string($data['path'] ?? null) ? $data['path'] : '',
+			originalName: is_string($data['originalName'] ?? null) ? $data['originalName'] : '',
+			mimeType: is_string($data['mimeType'] ?? null) ? $data['mimeType'] : '',
+			size: is_int($data['size'] ?? null) ? $data['size'] : -1,
+			sha256: is_string($data['sha256'] ?? null) ? $data['sha256'] : '',
+		);
+	}
+
+	/**
+	 * @return array{path: string, originalName: string, mimeType: string, size: int, sha256: string}
+	 */
+	public function toArray(): array
+	{
+		return [
+			'path' => $this->path,
+			'originalName' => $this->originalName,
+			'mimeType' => $this->mimeType,
+			'size' => $this->size,
+			'sha256' => $this->sha256,
+		];
 	}
 
 	public function getExtension(): string
