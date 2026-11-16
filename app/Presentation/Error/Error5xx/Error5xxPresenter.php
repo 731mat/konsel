@@ -18,8 +18,7 @@ final class Error5xxPresenter implements IPresenter
 {
 	public function __construct(
 		private readonly ILogger $logger,
-	) {
-	}
+	) {}
 
 	public function run(Request $request): Response
 	{

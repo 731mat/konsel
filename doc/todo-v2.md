@@ -127,7 +127,7 @@ konsel/
 - adresáře `temp/`, `log/`, `var/` s `.gitkeep`
 **Hotovo když:** http://localhost:8080 ukáže titulní stránku, Tracy bar je v dev režimu, 404 vrací vlastní stránku.
 
-### [ ] T02 – Brána kvality
+### [x] T02 – Brána kvality
 **Cíl:** Automatická kontrola kvality od prvního řádku.
 - dev závislosti: `nette/tester`, `phpstan/phpstan`, `phpstan/phpstan-nette`, `phpstan/phpstan-strict-rules`, `phpstan/extension-installer`, `symplify/easy-coding-standard`
 - phpstan.neon (level max, paths app + tests), ecs.php (PSR-12 + `declare_strict_types`, `final` třídy, řazení importů)
@@ -498,3 +498,4 @@ Vše od T32 je rozšíření, pořadí se dá upravit podle potřeby.
 
 - 2026-11-16 T00 – Místo lokální instalace je vše v Dockeru (A16): php:8.4-apache, www-data přemapovaný na UID/GID hostitele, wrapper Makefile. PDF → Gotenberg, mail → Mailpit (upraveno v T27/T20).
 - 2026-11-16 T01 – Composer vybral nette/application 3.3 (plán počítal s 3.2). Debug režim jen přes env NETTE_DEBUG=1 (compose.yaml). Mapování `App\Presentation\*\**Presenter`, šablony vedle presenterů.
+- 2026-11-16 T02 – ECS se sadou PER-CS + common + cleanCode, odsazení tabulátory (Nette konvence). PHPStan max + strict + deprecation rules, analyzuje i .phpt. Pravidlo `final` tříd zatím jen v CLAUDE.md, ne jako fixer (kvůli Doctrine proxy, rozhodne se v T03).

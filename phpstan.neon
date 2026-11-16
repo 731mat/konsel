@@ -7,3 +7,6 @@ parameters:
 	tmpDir: temp/phpstan
 	checkMissingCallableSignature: true
 	reportUnmatchedIgnoredErrors: true
+	fileExtensions:
+		- php
+		- phpt
