@@ -22,6 +22,13 @@ final class FakeAiClient implements AiClient
 
 	public string $reply = 'Návrh textu od AI.';
 
+	/**
+	 * Zprávy posledního volání complete().
+	 *
+	 * @var list<\App\Model\Ai\AiMessage>
+	 */
+	public array $lastMessages = [];
+
 	public function verify(string $apiKey, string $model): void
 	{
 		$this->calls[] = ['verify', $apiKey, $model];
@@ -33,6 +40,7 @@ final class FakeAiClient implements AiClient
 	public function complete(string $apiKey, string $model, array $messages): AiCompletion
 	{
 		$this->calls[] = ['complete', $apiKey, $model];
+		$this->lastMessages = $messages;
 		if ($this->failWith !== null) {
 			throw $this->failWith;
 		}

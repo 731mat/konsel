@@ -47,6 +47,28 @@ final class AiSettings implements TenantOwned, Timestampable
 	#[ORM\Column(nullable: true)]
 	private ?\DateTimeImmutable $verifiedAt = null;
 
+	/**
+	 * Pokyny obce pro AI – štábní kultura (styl, co ano a co ne).
+	 */
+	#[ORM\Column(type: 'text', nullable: true)]
+	private ?string $instructions = null;
+
+	/**
+	 * Vzorové texty obce (důvodové zprávy, usnesení), podle kterých AI píše.
+	 */
+	#[ORM\Column(type: 'text', nullable: true)]
+	private ?string $examples = null;
+
+	/**
+	 * Jako vzory poslat i poslední přijatá usnesení obce.
+	 */
+	#[ORM\Column]
+	private bool $useRecentResolutions = true;
+
+	public const int MaxInstructionsLength = 4000;
+
+	public const int MaxExamplesLength = 20_000;
+
 	public function __construct(Municipality $municipality)
 	{
 		$this->municipality = $municipality;
@@ -86,6 +108,48 @@ final class AiSettings implements TenantOwned, Timestampable
 		$this->apiKeyEncrypted = null;
 		$this->apiKeyHint = null;
 		$this->verifiedAt = null;
+	}
+
+	/**
+	 * @throws ValidationException
+	 */
+	public function changeWritingGuide(?string $instructions, ?string $examples, bool $useRecentResolutions): void
+	{
+		$instructions = self::normalize($instructions);
+		$examples = self::normalize($examples);
+		if ($instructions !== null && mb_strlen($instructions) > self::MaxInstructionsLength) {
+			throw new ValidationException(sprintf('Pokyny mohou mít nejvýše %d znaků.', self::MaxInstructionsLength), 'instructions');
+		}
+
+		if ($examples !== null && mb_strlen($examples) > self::MaxExamplesLength) {
+			throw new ValidationException(sprintf('Vzory mohou mít nejvýše %d znaků.', self::MaxExamplesLength), 'examples');
+		}
+
+		$this->instructions = $instructions;
+		$this->examples = $examples;
+		$this->useRecentResolutions = $useRecentResolutions;
+	}
+
+	public function getInstructions(): ?string
+	{
+		return $this->instructions;
+	}
+
+	public function getExamples(): ?string
+	{
+		return $this->examples;
+	}
+
+	public function usesRecentResolutions(): bool
+	{
+		return $this->useRecentResolutions;
+	}
+
+	private static function normalize(?string $text): ?string
+	{
+		$text = $text === null ? null : trim(str_replace(["\r\n", "\r"], "\n", $text));
+
+		return $text === '' ? null : $text;
 	}
 
 	public function markVerified(\DateTimeImmutable $at): void

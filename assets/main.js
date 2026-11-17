@@ -281,6 +281,62 @@ document.addEventListener('keydown', (event) => {
 	field.setRangeText('\t', field.selectionStart, field.selectionEnd, 'end');
 });
 
+// AI asistent textů: <textarea data-ai-suggest="URL signálu"> dostane tlačítko „Navrhnout pomocí AI“.
+// Návrh se jen vloží do pole (jde vrátit), uloží ho až odeslání formuláře.
+function initAiSuggest(root) {
+	root.querySelectorAll('textarea[data-ai-suggest]').forEach((field) => {
+		if (field.dataset.aiReady) {
+			return;
+		}
+		field.dataset.aiReady = '1';
+		const bar = document.createElement('div');
+		bar.className = 'd-flex flex-wrap align-items-center gap-2 mb-2';
+		bar.innerHTML = '<button type="button" class="btn btn-sm btn-outline-primary"><i class="bi bi-stars" aria-hidden="true"></i> <span>Navrhnout pomocí AI</span></button>'
+			+ '<button type="button" class="btn btn-sm btn-link p-0" hidden>Vrátit původní text</button>'
+			+ '<span class="small text-danger" role="alert"></span>';
+		const [suggest, undo] = bar.querySelectorAll('button');
+		const message = bar.querySelector('[role=alert]');
+		field.before(bar);
+		let previous = null;
+
+		suggest.addEventListener('click', async () => {
+			const data = new FormData();
+			['title', 'description', 'proposedResolution', 'parent'].forEach((name) => {
+				const element = field.form?.elements.namedItem(name);
+				if (element && 'value' in element) {
+					data.append(name, element.value);
+				}
+			});
+			suggest.disabled = true;
+			suggest.querySelector('span').textContent = 'AI píše…';
+			message.textContent = '';
+			try {
+				const response = await fetch(field.dataset.aiSuggest, { method: 'POST', body: data, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+				const result = await response.json();
+				if (result.error) {
+					message.textContent = result.error;
+				} else {
+					previous = field.value;
+					field.value = result.text;
+					field.dispatchEvent(new Event('input', { bubbles: true }));
+					undo.hidden = previous === '';
+				}
+			} catch {
+				message.textContent = 'Návrh se nepodařilo získat. Zkuste to znovu.';
+			} finally {
+				suggest.disabled = false;
+				suggest.querySelector('span').textContent = 'Navrhnout pomocí AI';
+			}
+		});
+		undo.addEventListener('click', () => {
+			field.value = previous ?? '';
+			undo.hidden = true;
+		});
+	});
+}
+
+document.addEventListener('DOMContentLoaded', () => initAiSuggest(document));
+
 // filtr, který se odešle hned po výběru (bez inline JS kvůli budoucí CSP)
 document.addEventListener('change', (event) => {
 	const field = event.target;

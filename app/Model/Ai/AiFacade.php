@@ -22,9 +22,30 @@ final readonly class AiFacade
 		private MunicipalityRepository $municipalities,
 		private AiClient $client,
 		private SecretBox $secretBox,
+		private AiUsageLogRepository $usage,
 		private TransactionManager $transaction,
 		private ClockInterface $clock,
 	) {}
+
+	/**
+	 * Pokyny (štábní kultura) a vzory obce pro AI asistenta textů.
+	 *
+	 * @throws \App\Model\Shared\Exception\ValidationException
+	 */
+	public function saveWritingGuide(int $municipalityId, ?string $instructions, ?string $examples, bool $useRecentResolutions): void
+	{
+		$this->transaction->run(function () use ($municipalityId, $instructions, $examples, $useRecentResolutions): void {
+			$this->findOrCreate($municipalityId)->changeWritingGuide($instructions, $examples, $useRecentResolutions);
+		});
+	}
+
+	/**
+	 * @return array{count: int, tokens: int} použití AI v tomto měsíci
+	 */
+	public function monthlyUsage(int $municipalityId): array
+	{
+		return $this->usage->summarize($this->municipalities->get($municipalityId), $this->clock->now()->modify('first day of this month')->setTime(0, 0));
+	}
 
 	public function getSettings(int $municipalityId): ?AiSettings
 	{

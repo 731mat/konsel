@@ -281,10 +281,16 @@ final class SettingsPresenter extends SecuredPresenter
 			'model' => $settings?->getModel() ?? AiSettings::DefaultModel,
 			'enabled' => $settings?->isEnabled() ?? true,
 		]);
+		$this->getComponent('writingGuideForm')->setDefaults([
+			'instructions' => $settings?->getInstructions(),
+			'examples' => $settings?->getExamples(),
+			'useRecentResolutions' => $settings?->usesRecentResolutions() ?? true,
+		]);
 	}
 
 	public function renderAi(): void
 	{
+		$this->template->usage = $this->aiFacade->monthlyUsage($this->requireMunicipality()->getId());
 		$this->template->aiSettings = $this->aiFacade->getSettings($this->requireMunicipality()->getId());
 		$this->template->encryptionConfigured = $this->aiFacade->isEncryptionConfigured();
 	}
@@ -308,6 +314,39 @@ final class SettingsPresenter extends SecuredPresenter
 		$this->aiFacade->removeApiKey($this->requireMunicipality()->getId());
 		$this->flashMessage('API klíč byl odstraněn. AI funkce jsou vypnuté.', 'success');
 		$this->redirect('ai');
+	}
+
+	protected function createComponentWritingGuideForm(): Form
+	{
+		$form = $this->formFactory->create();
+		$form->addTextArea('instructions', 'Pokyny pro AI (štábní kultura)', rows: 8)
+			->setNullable()
+			->setMaxLength(AiSettings::MaxInstructionsLength)
+			->setHtmlAttribute('placeholder', "Např.:\nUsnesení začínej slovesem s dvojtečkou (Schvaluje:, Bere na vědomí:).\nNepiš „Zastupitelstvo obce … schvaluje“.\nČástky v Kč s mezerami (1 840 000 Kč).\nŽádné anglicismy, zkratky jen ZO, OÚ, RO.")
+			->setOption('description', 'Co AI má a nemá dělat – styl, oslovení, tvar usnesení, zakázaná slova. Platí přednostně.');
+		$form->addTextArea('examples', 'Vzory textů', rows: 10)
+			->setNullable()
+			->setMaxLength(AiSettings::MaxExamplesLength)
+			->setHtmlAttribute('placeholder', 'Vložte několik vašich typických usnesení nebo důvodových zpráv, každé na nový řádek.')
+			->setOption('description', 'AI napodobí jejich tvar a styl, obsah z nich nepřebírá.');
+		$form->addCheckbox('useRecentResolutions', 'Jako vzory použít i posledních 20 přijatých usnesení obce a knihovnu šablon usnesení');
+		$form->addSubmit('save', 'Uložit pokyny a vzory');
+		$form->onSuccess[] = function (Form $form): void {
+			/** @var array{instructions: ?string, examples: ?string, useRecentResolutions: bool} $values */
+			$values = $form->getValues('array');
+			try {
+				$this->aiFacade->saveWritingGuide($this->requireMunicipality()->getId(), $values['instructions'], $values['examples'], $values['useRecentResolutions']);
+			} catch (ValidationException $e) {
+				FormErrors::apply($form, $e);
+
+				return;
+			}
+
+			$this->flashMessage('Pokyny a vzory pro AI byly uloženy.', 'success');
+			$this->redirect('this');
+		};
+
+		return $form;
 	}
 
 	protected function createComponentAiForm(): Form

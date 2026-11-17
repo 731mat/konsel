@@ -8,6 +8,11 @@ use App\AdminModule\SecuredPresenter;
 use App\Core\Security\Allowed;
 use App\Core\Security\Privilege;
 use App\Core\Security\Resource;
+use App\Model\Ai\AgendaDraft;
+use App\Model\Ai\AgendaWritingFacade;
+use App\Model\Ai\AiException;
+use App\Model\Ai\AiFacade;
+use App\Model\Ai\AiPurpose;
 use App\Model\Attachment\AttachmentFacade;
 use App\Model\Attachment\AttachmentPolicy;
 use App\Model\Comment\Comment;
@@ -49,6 +54,8 @@ final class AgendaPresenter extends SecuredPresenter
 		private readonly CommentFacade $commentFacade,
 		private readonly TemplateFacade $templateFacade,
 		private readonly ProjectFacade $projectFacade,
+		private readonly AiFacade $aiFacade,
+		private readonly AgendaWritingFacade $writingFacade,
 		private readonly FormFactory $formFactory,
 	) {
 		parent::__construct();
@@ -267,6 +274,35 @@ final class AgendaPresenter extends SecuredPresenter
 		return $form;
 	}
 
+	/**
+	 * Návrh textu pomocí AI z rozepsaného formuláře (AJAX, odpověď JSON {text} nebo {error}). Nic neukládá.
+	 */
+	#[Allowed(Resource::Agenda, Privilege::Edit)]
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleSuggest(int $meeting, string $purpose): void
+	{
+		$loaded = $this->loadMeeting($meeting);
+		$selected = AiPurpose::tryFrom($purpose) ?? $this->error('Neznámý druh návrhu.');
+		$post = fn(string $name): ?string => is_string($value = $this->getRequest()->getPost($name)) && trim($value) !== '' ? $value : null;
+		$parent = $post('parent');
+		try {
+			$text = $this->writingFacade->suggest($loaded->getId(), $selected, new AgendaDraft(
+				(string) $post('title'),
+				$post('description'),
+				$post('proposedResolution'),
+				$parent !== null && ctype_digit($parent) ? (int) $parent : null,
+			), $this->currentUserId());
+		} catch (DomainException|AiException $e) {
+			$this->sendJson([
+				'error' => $e->getMessage(),
+			]);
+		}
+
+		$this->sendJson([
+			'text' => $text,
+		]);
+	}
+
 	protected function createComponentItemForm(): Form
 	{
 		$meeting = $this->meeting ?? $this->error();
@@ -314,13 +350,22 @@ final class AgendaPresenter extends SecuredPresenter
 				->setOption('description', 'Bod se objeví ve vlákně plánu (např. schválení projektové dokumentace, investice).');
 		}
 
-		$form->addTextArea('description', 'Důvodová zpráva / popis', null, 8)
+		$description = $form->addTextArea('description', 'Důvodová zpráva / popis', null, 8)
 			->setNullable()
 			->setOption('description', 'Prostý text, odstavce oddělte prázdným řádkem.');
-		$form->addTextArea('proposedResolution', 'Návrh usnesení', null, 6)
+		$proposal = $form->addTextArea('proposedResolution', 'Návrh usnesení', null, 6)
 			->setNullable()
 			->setHtmlAttribute('placeholder', "{$meeting->getBody()->getName()} schvaluje …")
 			->setOption('description', 'Text, o kterém se bude hlasovat. Bod bez usnesení (např. informace, diskuse) nechte prázdný.');
+		// tlačítko „Navrhnout pomocí AI“ doplní JS, jen když má obec AI zapnutou
+		if ($this->aiFacade->isAvailable($meeting->getMunicipality()->getId())) {
+			foreach ([[$description, AiPurpose::AgendaDescription], [$proposal, AiPurpose::ProposedResolution]] as [$field, $purpose]) {
+				$field->setHtmlAttribute('data-ai-suggest', $this->link('suggest!', [
+					'meeting' => $meeting->getId(),
+					'purpose' => $purpose->value,
+				]));
+			}
+		}
 		$form->addSubmit('save', $this->item === null ? 'Přidat bod' : 'Uložit');
 		$form->onSuccess[] = function (Form $form) use ($meeting, $plansEnabled): void {
 			$data = $form->getValues(ItemFormData::class);

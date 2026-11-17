@@ -128,7 +128,7 @@ flowchart TB
 | Záznamy zasedání | `Recording` | detail zasedání → Záznam zasedání | zvukové záznamy (MP3…), přehrávání, po ověření zápisu jen přidávat |
 | Archiv | `Document` (ArchiveEntry) | menu Archiv | proběhlá zasedání podle let a orgánů, konečný zápis a usnesení |
 | Archiv dokumentů | `Document` (ArchivedDocument) | Dokumenty → Archiv dokumentů | uložené verze PDF, konečný zápis po ověření, podepsané skeny; po ověření jen přidávat |
-| AI | `Ai` | Nastavení → Umělá inteligence | napojení na OpenAI (klíč šifrovaně) |
+| AI | `Ai` | Nastavení → Umělá inteligence, tlačítko u bodu programu | napojení na OpenAI (klíč šifrovaně), návrh důvodové zprávy a usnesení podle pokynů a vzorů obce (`AgendaWritingFacade`, prompty v `resources/prompts`), záznam spotřeby |
 | Hledání | `Search` | Hledat (menu a pole v horní liště) | fulltext bez diakritiky v zasedáních, bodech, usneseních, diskusích, plánech a šablonách |
 | Nápověda | – (`doc/wiki`) | Nápověda | tato wiki |
 

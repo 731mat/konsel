@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Demo;
 
 use App\Model\Access\AccessFacade;
+use App\Model\Ai\AiFacade;
 use App\Model\Attachment\AttachmentFacade;
 use App\Model\Comment\CommentAuthorRef;
 use App\Model\Comment\CommentFacade;
@@ -87,6 +88,7 @@ final readonly class DemoSeeder
 		private ResolutionTaskFacade $tasks,
 		private DocumentArchiveFacade $archive,
 		private DocumentTemplateFacade $documentTemplates,
+		private AiFacade $ai,
 		private ClockInterface $clock,
 		private string $appUrl = 'http://localhost:8080',
 	) {}
@@ -219,6 +221,21 @@ final readonly class DemoSeeder
 				default => null,
 			};
 		}
+
+		// pokyny a vzory pro AI asistenta textů (bez API klíče se tlačítka nezobrazí, ale nastavení je vidět)
+		$this->ai->saveWritingGuide(
+			$municipalityId,
+			"Usnesení začínej slovesem s velkým písmenem a dvojtečkou: Schvaluje:, Bere na vědomí:, Pověřuje:, Stanoví:, Ukládá:.\n"
+			. "Nepiš „Zastupitelstvo obce Neplachovice schvaluje“ – jen sloveso a předmět.\n"
+			. "Částky piš v Kč s mezerami mezi tisíci (1 840 000 Kč), data jako 10. 11. 2026.\n"
+			. "Zkratky jen zavedené: ZO, OÚ, MŠ, ZŠ. Žádné anglicismy.\n"
+			. 'Důvodová zpráva: 2–3 krátké odstavce – co, proč, kolik a z čeho se platí.',
+			"Schvaluje: rozpočtové opatření č. 9/2026 v předloženém znění\n"
+			. "Bere na vědomí: zápis kontrolního výboru\n"
+			. "Pověřuje: starostu obce podpisem smlouvy o dílo se zhotovitelem vybraným ve výběrovém řízení\n"
+			. 'Schvaluje: zahájení kroků, které budou vést k podání žádosti o dotaci (příprava veřejné zakázky, zpracování podkladů pro žádost)',
+			true,
+		);
 
 		// vzor dokumentu „Usnesení“ ve formátu obce (19/2/1 – Schvaluje: …, účast, podpisy)
 		$this->documentTemplates->save(

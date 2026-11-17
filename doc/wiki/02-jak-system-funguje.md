@@ -54,6 +54,8 @@ flowchart LR
 - Dokumenty: **informace o konání zasedání** k vyvěšení na úřední desku (§ 93), **podklady**, **prezenční listina**.
 - **Uložit verzi do archivu**: PDF v současné podobě se uloží natrvalo – typicky pozvánka v den vyvěšení (demo to ukazuje u sdíleného zasedání).
 
+- **AI asistent** (je-li v Nastavení → Umělá inteligence zadaný klíč): u důvodové zprávy a návrhu usnesení je tlačítko **Navrhnout pomocí AI**. Navrhne text podle názvu bodu, nadřazeného bodu a toho, co už je napsané, a drží se **pokynů a vzorů obce** (Nastavení → Umělá inteligence → Pokyny a vzory; jako vzory slouží i poslední usnesení obce). Návrh se jen vloží do pole a jde vrátit – uloží se až s formulářem. Osobní údaje členů se neposílají.
+
 ### 3. Před zasedáním
 - Zastupitelé v portálu čtou podklady a diskutují u bodů (formátovaný text, soubory přetažením). Úřad vidí diskusi u bodu v administraci.
 
