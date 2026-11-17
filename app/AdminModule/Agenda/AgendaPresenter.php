@@ -13,6 +13,7 @@ use App\Model\Ai\AgendaWritingFacade;
 use App\Model\Ai\AiException;
 use App\Model\Ai\AiFacade;
 use App\Model\Ai\AiPurpose;
+use App\Model\Ares\AresFacade;
 use App\Model\Attachment\AttachmentFacade;
 use App\Model\Attachment\AttachmentPolicy;
 use App\Model\Comment\Comment;
@@ -55,6 +56,7 @@ final class AgendaPresenter extends SecuredPresenter
 		private readonly TemplateFacade $templateFacade,
 		private readonly ProjectFacade $projectFacade,
 		private readonly AiFacade $aiFacade,
+		private readonly AresFacade $aresFacade,
 		private readonly AgendaWritingFacade $writingFacade,
 		private readonly FormFactory $formFactory,
 	) {
@@ -275,6 +277,16 @@ final class AgendaPresenter extends SecuredPresenter
 	}
 
 	/**
+	 * Subjekt z ARES podle IČO pro text bodu (AJAX, JSON).
+	 */
+	#[Allowed(Resource::Agenda, Privilege::Edit)]
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleAresLookup(): void
+	{
+		$this->sendAresLookup($this->aresFacade, $this->getRequest()->getPost('ico'));
+	}
+
+	/**
 	 * Návrh textu pomocí AI z rozepsaného formuláře (AJAX, odpověď JSON {text} nebo {error}). Nic neukládá.
 	 */
 	#[Allowed(Resource::Agenda, Privilege::Edit)]
@@ -357,6 +369,8 @@ final class AgendaPresenter extends SecuredPresenter
 			->setNullable()
 			->setHtmlAttribute('placeholder', "{$meeting->getBody()->getName()} schvaluje …")
 			->setOption('description', 'Text, o kterém se bude hlasovat. Bod bez usnesení (např. informace, diskuse) nechte prázdný.');
+		// „Vložit firmu z ARES“ – název, sídlo a IČO podle IČO do důvodové zprávy
+		$description->setHtmlAttribute('data-ares-insert', $this->link('aresLookup!'));
 		// tlačítko „Navrhnout pomocí AI“ doplní JS, jen když má obec AI zapnutou
 		if ($this->aiFacade->isAvailable($meeting->getMunicipality()->getId())) {
 			foreach ([[$description, AiPurpose::AgendaDescription], [$proposal, AiPurpose::ProposedResolution]] as [$field, $purpose]) {

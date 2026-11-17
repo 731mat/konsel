@@ -337,6 +337,131 @@ function initAiSuggest(root) {
 
 document.addEventListener('DOMContentLoaded', () => initAiSuggest(document));
 
+// ARES: dotaz na údaje subjektu podle IČO (signál vrací {subject} nebo {error}).
+async function aresLookup(url, ico) {
+	const data = new FormData();
+	data.append('ico', ico);
+	const response = await fetch(url, { method: 'POST', body: data, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+	return response.json();
+}
+
+function aresBar(buttonLabel) {
+	const message = document.createElement('span');
+	message.className = 'small';
+	message.setAttribute('role', 'status');
+	const button = document.createElement('button');
+	button.type = 'button';
+	button.className = 'btn btn-outline-secondary';
+	button.innerHTML = `<i class="bi bi-building-check" aria-hidden="true"></i> ${buttonLabel}`;
+	return { button, message };
+}
+
+// Nastavení obce: vedle IČO tlačítko „Načíst z ARES“ – vyplní oficiální název a adresu (data-ares-fill: pole → údaj ARES).
+function initAresLookup(root) {
+	root.querySelectorAll('input[data-ares-lookup]').forEach((input) => {
+		if (input.dataset.aresReady) {
+			return;
+		}
+		input.dataset.aresReady = '1';
+		const { button, message } = aresBar('Načíst z ARES');
+		const group = document.createElement('div');
+		group.className = 'input-group';
+		input.before(group);
+		group.append(input, button);
+		group.after(message);
+		button.addEventListener('click', async () => {
+			button.disabled = true;
+			message.className = 'small text-body-secondary';
+			message.textContent = 'Hledám v ARES…';
+			try {
+				const result = await aresLookup(input.dataset.aresLookup, input.value);
+				if (result.error) {
+					message.className = 'small text-danger';
+					message.textContent = result.error;
+					return;
+				}
+				const fill = JSON.parse(input.dataset.aresFill || '{}');
+				Object.entries(fill).forEach(([name, key]) => {
+					const field = input.form?.elements.namedItem(name);
+					if (field && 'value' in field && result.subject[key]) {
+						field.value = result.subject[key];
+					}
+				});
+				const shortName = input.form?.elements.namedItem('name');
+				if (shortName && 'value' in shortName && shortName.value === '' && result.subject.city) {
+					shortName.value = result.subject.city;
+				}
+				input.value = result.subject.ico;
+				message.className = 'small text-success';
+				message.textContent = `Načteno: ${result.subject.name}. Zkontrolujte údaje a uložte.`;
+			} catch {
+				message.className = 'small text-danger';
+				message.textContent = 'ARES se nepodařilo zavolat.';
+			} finally {
+				button.disabled = false;
+			}
+		});
+	});
+}
+
+// Bod programu: nad důvodovou zprávou „IČO [ ] Vložit firmu z ARES“ – vloží „název, se sídlem …, IČO …“ na místo kurzoru.
+function initAresInsert(root) {
+	root.querySelectorAll('textarea[data-ares-insert]').forEach((field) => {
+		if (field.dataset.aresReady) {
+			return;
+		}
+		field.dataset.aresReady = '1';
+		const { button, message } = aresBar('Vložit firmu z ARES');
+		button.classList.add('btn-sm');
+		const ico = document.createElement('input');
+		ico.type = 'text';
+		ico.inputMode = 'numeric';
+		ico.maxLength = 8;
+		ico.placeholder = 'IČO';
+		ico.className = 'form-control form-control-sm';
+		ico.style.maxWidth = '8rem';
+		ico.setAttribute('aria-label', 'IČO firmy');
+		const bar = document.createElement('div');
+		bar.className = 'd-flex flex-wrap align-items-center gap-2 mb-2';
+		bar.append(ico, button, message);
+		field.before(bar);
+		button.addEventListener('click', async () => {
+			button.disabled = true;
+			message.className = 'small text-body-secondary';
+			message.textContent = 'Hledám v ARES…';
+			try {
+				const result = await aresLookup(field.dataset.aresInsert, ico.value);
+				if (result.error) {
+					message.className = 'small text-danger';
+					message.textContent = result.error;
+					return;
+				}
+				field.setRangeText(result.subject.sentence, field.selectionStart, field.selectionEnd, 'end');
+				field.dispatchEvent(new Event('input', { bubbles: true }));
+				message.className = 'small text-success';
+				message.textContent = `Vloženo: ${result.subject.name}`;
+				ico.value = '';
+			} catch {
+				message.className = 'small text-danger';
+				message.textContent = 'ARES se nepodařilo zavolat.';
+			} finally {
+				button.disabled = false;
+			}
+		});
+		ico.addEventListener('keydown', (event) => {
+			if (event.key === 'Enter') {
+				event.preventDefault();
+				button.click();
+			}
+		});
+	});
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+	initAresLookup(document);
+	initAresInsert(document);
+});
+
 // filtr, který se odešle hned po výběru (bez inline JS kvůli budoucí CSP)
 document.addEventListener('change', (event) => {
 	const field = event.target;

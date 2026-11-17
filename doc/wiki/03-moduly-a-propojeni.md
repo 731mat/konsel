@@ -130,6 +130,7 @@ flowchart TB
 | Archiv dokumentů | `Document` (ArchivedDocument) | Dokumenty → Archiv dokumentů | uložené verze PDF, konečný zápis po ověření, podepsané skeny; po ověření jen přidávat |
 | AI | `Ai` | Nastavení → Umělá inteligence, tlačítko u bodu programu | napojení na OpenAI (klíč šifrovaně), návrh důvodové zprávy a usnesení podle pokynů a vzorů obce (`AgendaWritingFacade`, prompty v `resources/prompts`), záznam spotřeby |
 | Hledání | `Search` | Hledat (menu a pole v horní liště) | fulltext bez diakritiky v zasedáních, bodech, usneseních, diskusích, plánech a šablonách |
+| ARES | `Ares` | Nastavení → Údaje obce, formulář bodu programu | údaje subjektu podle IČO z registru MF (`RestAresClient`, cache 24 h) |
 | Nápověda | – (`doc/wiki`) | Nápověda | tato wiki |
 
 ## Tři vstupy do aplikace

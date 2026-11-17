@@ -36,6 +36,7 @@ services:
 		factory: Symfony\Component\HttpClient\HttpClient::create([timeout: 30])
 
 	aiClient: App\Model\Ai\OpenAiClient
+	aresClient: App\Model\Ares\RestAresClient
 	mailer: App\Model\Mail\NetteMailer(from: %mailFrom%)
 	viteAssets: App\Core\Latte\ViteAssets(%rootDir%/www/assets/.vite/manifest.json)
 	- App\UI\Help\Wiki(%rootDir%/doc/wiki)

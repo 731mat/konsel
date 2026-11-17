@@ -16,6 +16,7 @@ nettrine.dbal:
 
 services:
 	aiClient: Tests\Support\FakeAiClient
+	aresClient: Tests\Support\FakeAresClient
 	mailer: Tests\Support\FakeMailer
 	clock:
 		type: Psr\Clock\ClockInterface

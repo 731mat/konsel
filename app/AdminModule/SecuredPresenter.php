@@ -9,11 +9,13 @@ use App\Core\Security\Privilege;
 use App\Core\Security\RequiresModule;
 use App\Core\Security\Resource;
 use App\Core\Tenancy\CurrentMunicipality;
+use App\Model\Ares\AresFacade;
 use App\Model\Municipality\Municipality;
 use App\Model\Municipality\MunicipalityFacade;
 use App\Model\People\Body;
 use App\Model\People\PeopleFacade;
 use App\Model\Shared\Exception\ConcurrencyException;
+use App\Model\Shared\Exception\ValidationException;
 use App\Model\Shared\TenantOwned;
 use App\Model\Shared\ValueObject\StoredFile;
 use App\Model\Storage\FileStorage;
@@ -170,6 +172,24 @@ abstract class SecuredPresenter extends BasePresenter
 		if (!$this->getUser()->isAllowed($resource->value, $privilege->value)) {
 			$this->error('K této operaci nemáte oprávnění.', 403);
 		}
+	}
+
+	/**
+	 * Odpověď na hledání v ARES pro formuláře (JSON {subject: …} nebo {error: …}).
+	 */
+	protected function sendAresLookup(AresFacade $ares, mixed $ico): never
+	{
+		try {
+			$subject = $ares->lookup(is_string($ico) ? $ico : '');
+		} catch (ValidationException $e) {
+			$this->sendJson([
+				'error' => $e->getMessage(),
+			]);
+		}
+
+		$this->sendJson([
+			'subject' => $subject->toArray(),
+		]);
 	}
 
 	/**

@@ -12,6 +12,7 @@ use App\Model\Ai\AiException;
 use App\Model\Ai\AiFacade;
 use App\Model\Ai\AiSettings;
 use App\Model\Ai\Command\SaveAiSettings;
+use App\Model\Ares\AresFacade;
 use App\Model\Document\DocumentTemplateFacade;
 use App\Model\Document\DocumentTemplateType;
 use App\Model\Municipality\BrandColors;
@@ -51,6 +52,7 @@ final class SettingsPresenter extends SecuredPresenter
 		private readonly FormFactory $formFactory,
 		private readonly AiFacade $aiFacade,
 		private readonly DocumentTemplateFacade $documentTemplateFacade,
+		private readonly AresFacade $aresFacade,
 		private readonly PeopleFacade $peopleFacade,
 	) {
 		parent::__construct();
@@ -134,6 +136,15 @@ final class SettingsPresenter extends SecuredPresenter
 		};
 
 		return $form;
+	}
+
+	/**
+	 * Údaje subjektu z ARES podle IČO (AJAX, JSON {subject} nebo {error}).
+	 */
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleAresLookup(): void
+	{
+		$this->sendAresLookup($this->aresFacade, $this->getRequest()->getPost('ico'));
 	}
 
 	public function renderDocuments(): void
@@ -397,7 +408,10 @@ final class SettingsPresenter extends SecuredPresenter
 		$form->addText('ico', 'IČO')
 			->setNullable()
 			->setMaxLength(8)
-			->setHtmlAttribute('inputmode', 'numeric');
+			->setHtmlAttribute('inputmode', 'numeric')
+			// tlačítko „Načíst z ARES“ doplní JS: vyplní oficiální název a adresu
+			->setHtmlAttribute('data-ares-lookup', $this->link('aresLookup!'))
+			->setHtmlAttribute('data-ares-fill', '{"officialName":"name","street":"street","city":"city","postalCode":"postalCode"}');
 		$form->addInteger('population', 'Počet obyvatel')
 			->setNullable()
 			->addRule(Form::Min, 'Počet obyvatel nemůže být záporný.', 0);

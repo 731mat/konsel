@@ -45,6 +45,7 @@ flowchart LR
 - **Zasedání → Nové zasedání**: orgán, datum, místo, typ (řádné, mimořádné, ustavující).
 - Program: body ručně, ze **šablony programu**, nebo „Vložit standardní body“ (zahájení, ověřovatelé, schválení programu, diskuse, závěr). Pořadí se mění přetažením.
 - **Podbody**: tlačítkem + u bodu přidáte podbod (např. 26 Nájemní bydlení → 26.1 schválení projektu, 26.2 dodavatele, 26.3 peněz). O každém podbodu se hlasuje zvlášť a má vlastní usnesení; bod s podbody sám hlasování nemá. Podbody se při přesunu drží pod svým bodem.
+- **ARES**: u důvodové zprávy zadáte IČO firmy a tlačítko **Vložit firmu z ARES** vloží „název, se sídlem …, IČO …“. V Nastavení → Údaje obce tlačítko **Načíst z ARES** vyplní oficiální název a adresu obce.
 - U bodu: důvodová zpráva, **návrh usnesení** (pomůže knihovna šablon usnesení), předkladatel, přílohy (PDF, Word…), propojení s plánem.
 - **Funkce**: předsedající, zapisovatel, ověřovatelé.
 
