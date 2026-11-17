@@ -12,6 +12,7 @@ use App\Model\Project\Project;
 use App\Model\Shared\Exception\InvalidStateException;
 use App\Model\Shared\Exception\ValidationException;
 use App\Model\Shared\IntegerId;
+use App\Model\Shared\RichText\RichText;
 use App\Model\Shared\TenantOwned;
 use App\Model\Shared\Timestampable;
 use App\Model\Shared\TimestampableTrait;
@@ -33,7 +34,15 @@ final class Comment implements TenantOwned, Timestampable
 	use IntegerId;
 	use TimestampableTrait;
 
+	/**
+	 * Nejvýše znaků textu (bez formátování).
+	 */
 	public const int MaxLength = 5000;
+
+	/**
+	 * Nejvýše znaků HTML včetně značek (ochrana před zneužitím formátování).
+	 */
+	public const int MaxHtmlLength = 50_000;
 
 	#[ORM\ManyToOne(targetEntity: Municipality::class)]
 	#[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
@@ -71,6 +80,9 @@ final class Comment implements TenantOwned, Timestampable
 	#[ORM\Column(length: 200)]
 	private string $authorName;
 
+	/**
+	 * Pročištěné HTML (RichText).
+	 */
 	#[ORM\Column(type: 'text')]
 	private string $body;
 
@@ -87,14 +99,13 @@ final class Comment implements TenantOwned, Timestampable
 	private Collection $attachments;
 
 	/**
+	 * @param bool $withFiles komentář nese soubory – text pak není povinný
 	 * @throws ValidationException
 	 * @throws InvalidStateException
 	 */
-	/**
-	 * @param bool $withFiles komentář nese soubory – text pak není povinný
-	 */
-	private function __construct(Municipality $municipality, ?AgendaItem $agendaItem, ?Project $project, CommentAuthor $author, string $body, ?self $parent, bool $withFiles)
+	private function __construct(Municipality $municipality, ?AgendaItem $agendaItem, ?Project $project, CommentAuthor $author, RichText $body, ?self $parent, bool $withFiles)
 	{
+		$body = self::validate($body, $withFiles);
 		if ($parent !== null && ($parent->agendaItem !== $agendaItem || $parent->project !== $project || $parent->parent !== null)) {
 			throw new ValidationException('Odpovídat lze jen na komentář ve stejné diskusi.', 'parentId');
 		}
@@ -110,7 +121,7 @@ final class Comment implements TenantOwned, Timestampable
 		$this->authorUser = $author->user;
 		$this->authorPerson = $author->person;
 		$this->authorName = $author->name();
-		$this->body = self::normalize($body, $withFiles);
+		$this->body = $body->html;
 		$this->attachments = new ArrayCollection();
 	}
 
@@ -118,7 +129,7 @@ final class Comment implements TenantOwned, Timestampable
 	 * @throws ValidationException
 	 * @throws InvalidStateException zasedání je uzavřené
 	 */
-	public static function onAgendaItem(AgendaItem $item, CommentAuthor $author, string $body, ?self $parent = null, bool $withFiles = false): self
+	public static function onAgendaItem(AgendaItem $item, CommentAuthor $author, RichText $body, ?self $parent = null, bool $withFiles = false): self
 	{
 		if (!$item->getMeeting()->canEditAttachments()) {
 			throw new InvalidStateException('Zasedání je uzavřené, diskuse k bodům už není možná.');
@@ -130,7 +141,7 @@ final class Comment implements TenantOwned, Timestampable
 	/**
 	 * @throws ValidationException
 	 */
-	public static function onProject(Project $project, CommentAuthor $author, string $body, ?self $parent = null, bool $withFiles = false): self
+	public static function onProject(Project $project, CommentAuthor $author, RichText $body, ?self $parent = null, bool $withFiles = false): self
 	{
 		return new self($project->getMunicipality(), null, $project, $author, $body, $parent, $withFiles);
 	}
@@ -235,9 +246,9 @@ final class Comment implements TenantOwned, Timestampable
 		return $this->authorPerson !== null;
 	}
 
-	public function getBody(): string
+	public function getBody(): RichText
 	{
-		return $this->deletedAt === null ? $this->body : '';
+		return $this->deletedAt === null ? RichText::fromSanitizedHtml($this->body) : RichText::empty();
 	}
 
 	public function isDeleted(): bool
@@ -245,15 +256,22 @@ final class Comment implements TenantOwned, Timestampable
 		return $this->deletedAt !== null;
 	}
 
-	private static function normalize(string $body, bool $withFiles): string
+	private static function validate(RichText $body, bool $withFiles): RichText
 	{
-		$body = trim(str_replace(["\r\n", "\r"], "\n", $body));
-		if ($body === '' && !$withFiles) {
-			throw new ValidationException('Napište text komentáře.', 'body');
+		if ($body->isEmpty()) {
+			if (!$withFiles) {
+				throw new ValidationException('Napište text komentáře.', 'body');
+			}
+
+			return RichText::empty();
 		}
 
-		if (mb_strlen($body) > self::MaxLength) {
+		if ($body->length() > self::MaxLength) {
 			throw new ValidationException('Komentář může mít nejvýše ' . self::MaxLength . ' znaků.', 'body');
+		}
+
+		if (strlen($body->html) > self::MaxHtmlLength) {
+			throw new ValidationException('Komentář obsahuje příliš mnoho formátování. Zkraťte ho nebo formátování zjednodušte.', 'body');
 		}
 
 		return $body;

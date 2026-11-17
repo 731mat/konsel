@@ -13,6 +13,7 @@ use App\Model\Project\ProjectRepository;
 use App\Model\Shared\Exception\AccessDeniedException;
 use App\Model\Shared\Exception\InvalidStateException;
 use App\Model\Shared\Exception\ValidationException;
+use App\Model\Shared\RichText\HtmlSanitizer;
 use App\Model\Shared\TransactionManager;
 use App\Model\Shared\ValueObject\StoredFile;
 use App\Model\Storage\FileStorage;
@@ -36,18 +37,19 @@ final readonly class CommentFacade
 		private FileStorage $storage,
 		private TransactionManager $transaction,
 		private ClockInterface $clock,
+		private HtmlSanitizer $sanitizer,
 	) {}
 
 	/**
+	 * @param string $body HTML z editoru (pročistí se), nebo prostý text
+	 * @param list<UploadedFile> $files soubory přiložené ke komentáři
 	 * @throws ValidationException
 	 * @throws InvalidStateException
-	 */
-	/**
-	 * @param list<UploadedFile> $files soubory přiložené ke komentáři
 	 */
 	public function addByUser(int $itemId, int $userId, string $body, ?int $parentId = null, array $files = []): Comment
 	{
 		$item = $this->items->get($itemId);
+		$body = $this->sanitizer->sanitize($body);
 
 		return $this->create($item->getMunicipality()->getId(), $files, fn(bool $withFiles): Comment => Comment::onAgendaItem(
 			$this->items->get($itemId),
@@ -66,6 +68,7 @@ final readonly class CommentFacade
 	public function addByPerson(int $itemId, int $personId, string $body, ?int $parentId = null, array $files = []): Comment
 	{
 		$item = $this->items->get($itemId);
+		$body = $this->sanitizer->sanitize($body);
 
 		return $this->create($item->getMunicipality()->getId(), $files, fn(bool $withFiles): Comment => Comment::onAgendaItem(
 			$this->items->get($itemId),
@@ -84,6 +87,7 @@ final readonly class CommentFacade
 	public function addToProject(int $projectId, CommentAuthorRef $author, string $body, ?int $parentId = null, array $files = [], bool $publicForCitizens = false): Comment
 	{
 		$project = $this->projects->get($projectId);
+		$body = $this->sanitizer->sanitize($body);
 
 		return $this->create($project->getMunicipality()->getId(), $files, function (bool $withFiles) use ($projectId, $author, $body, $parentId, $publicForCitizens): Comment {
 			$comment = Comment::onProject($this->projects->get($projectId), $this->author($author), $body, $this->parent($parentId), $withFiles);

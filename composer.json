@@ -22,6 +22,7 @@
         "nettrine/orm": "^0.10.1",
         "symfony/cache": "^8.1",
         "symfony/clock": "^8.1",
+        "symfony/html-sanitizer": "^8.1",
         "symfony/http-client": "^8.1",
         "tracy/tracy": "^2.12"
     },

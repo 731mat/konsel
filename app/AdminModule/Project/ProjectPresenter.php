@@ -320,7 +320,7 @@ final class ProjectPresenter extends SecuredPresenter
 		$form->getElementPrototype()->addClass('ajax');
 		$form->addHidden('parentId')->setNullable();
 		$form->addTextArea('body', 'Komentář', null, 3)
-			->setMaxLength(5000)
+			->setMaxLength(Comment::MaxHtmlLength)
 			->setHtmlAttribute('placeholder', 'Novinka, dotaz nebo informace k úkolu…');
 		$form->addMultiUpload('files', 'Soubory')
 			->addRule(Form::MaxFileSize, 'Soubor je příliš velký.', $this->attachmentPolicy->maxSize);

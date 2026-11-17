@@ -7,6 +7,7 @@ namespace App\PortalModule\Meeting;
 use App\Model\Attachment\Attachment;
 use App\Model\Attachment\AttachmentFacade;
 use App\Model\Attachment\AttachmentPolicy;
+use App\Model\Comment\Comment;
 use App\Model\Comment\CommentFacade;
 use App\Model\Document\MeetingDocumentFacade;
 use App\Model\Document\MeetingDocumentType;
@@ -130,7 +131,7 @@ final class MeetingPresenter extends PortalPresenter
 		$form->getElementPrototype()->addClass('ajax');
 		$form->addHidden('parentId')->setNullable();
 		$form->addTextArea('body', 'Komentář', null, 3)
-			->setMaxLength(5000)
+			->setMaxLength(Comment::MaxHtmlLength)
 			->setHtmlAttribute('placeholder', 'Dotaz nebo připomínka k bodu – uvidí ji úřad i ostatní zastupitelé…');
 		$form->addMultiUpload('files', 'Soubory')
 			->addRule(Form::MaxFileSize, 'Soubor je příliš velký.', $this->attachmentPolicy->maxSize);

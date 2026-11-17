@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\PublicModule\Sign;
+namespace App\UI\Sign;
 
 final class SignInFormData
 {

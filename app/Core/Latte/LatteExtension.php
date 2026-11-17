@@ -6,7 +6,11 @@ namespace App\Core\Latte;
 
 use App\Core\Security\Privilege;
 use App\Core\Security\Resource;
+use App\Core\Tenancy\CurrentMunicipality;
+use App\Model\Shared\RichText\HtmlSanitizer;
+use App\Model\Shared\RichText\RichText;
 use App\Model\Shared\ValueObject\StoredFile;
+use App\UI\Theme\BrandStyle;
 use Latte\Extension;
 use Latte\Runtime\Html as LatteHtml;
 use Nette\Security\User;
@@ -15,14 +19,16 @@ use Nette\Utils\Html;
 /**
  * Filtry a funkce Latte pro celou aplikaci.
  *
- * Filtry:  |czDate  |czDateLong  |czDateTime  |czMonth  |nl2p  |fileIcon  |initials  |genitiveBody
- * Funkce:  vite('assets/main.js'), allowed(Resource::Meeting, Privilege::Edit)
+ * Filtry:  |czDate  |czDateLong  |czDateTime  |czMonth  |nl2p  |richText  |fileIcon  |initials  |genitiveBody
+ * Funkce:  vite('assets/main.js'), allowed(Resource::Meeting, Privilege::Edit), brandStyle()
  */
 final class LatteExtension extends Extension
 {
 	public function __construct(
 		private readonly ViteAssets $viteAssets,
 		private readonly User $user,
+		private readonly HtmlSanitizer $sanitizer,
+		private readonly CurrentMunicipality $currentMunicipality,
 	) {}
 
 	/**
@@ -39,6 +45,7 @@ final class LatteExtension extends Extension
 			'fileIcon' => self::fileIcon(...),
 			'initials' => self::initials(...),
 			'nl2p' => self::nl2p(...),
+			'richText' => $this->richText(...),
 		];
 	}
 
@@ -50,7 +57,20 @@ final class LatteExtension extends Extension
 		return [
 			'vite' => fn(string $entry): Html => $this->viteAssets->tags($entry),
 			'allowed' => fn(Resource $resource, Privilege $privilege = Privilege::View): bool => $this->user->isAllowed($resource->value, $privilege->value),
+			'brandStyle' => $this->brandStyle(...),
 		];
+	}
+
+	/**
+	 * <style> s barvami obce aktuálního požadavku (prázdné, pokud obec používá výchozí barvy).
+	 */
+	public function brandStyle(): LatteHtml
+	{
+		if (!$this->currentMunicipality->isSet() || !$this->currentMunicipality->get()->hasCustomBrandColors()) {
+			return new LatteHtml('');
+		}
+
+		return new LatteHtml('<style>' . BrandStyle::css($this->currentMunicipality->get()->getBrandColors()) . '</style>');
 	}
 
 	public static function czDate(?\DateTimeInterface $date): string
@@ -129,6 +149,14 @@ final class LatteExtension extends Extension
 			'mp4' => 'bi-file-earmark-play',
 			default => 'bi-file-earmark',
 		};
+	}
+
+	/**
+	 * Formátovaný text (komentáře) jako HTML. Pro jistotu se pročistí i při výpisu.
+	 */
+	public function richText(?RichText $text): LatteHtml
+	{
+		return new LatteHtml($text === null || $text->html === '' ? '' : $this->sanitizer->sanitize($text->html)->html);
 	}
 
 	/**

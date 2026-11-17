@@ -5,23 +5,18 @@ declare(strict_types=1);
 namespace App\PublicModule\Sign;
 
 use App\UI\BasePresenter;
-use App\UI\Form\FormFactory;
+use App\UI\Sign\SignInFormFactory;
 use Nette\Application\Attributes\Persistent;
 use Nette\Application\Attributes\Requires;
 use Nette\Application\UI\Form;
-use Nette\Security\AuthenticationException;
 
 final class SignPresenter extends BasePresenter
 {
-	private const string RememberExpiration = '14 days';
-
-	private const string DefaultExpiration = '60 minutes';
-
 	#[Persistent]
 	public string $backlink = '';
 
 	public function __construct(
-		private readonly FormFactory $formFactory,
+		private readonly SignInFormFactory $signInFormFactory,
 	) {
 		parent::__construct();
 	}
@@ -43,36 +38,9 @@ final class SignPresenter extends BasePresenter
 
 	protected function createComponentSignInForm(): Form
 	{
-		$form = $this->formFactory->create();
-		$form->addEmail('email', 'E-mail')
-			->setRequired('Zadejte e-mail.')
-			->setHtmlAttribute('autocomplete', 'username')
-			->setHtmlAttribute('autofocus');
-		$form->addPassword('password', 'Heslo')
-			->setRequired('Zadejte heslo.')
-			->setHtmlAttribute('autocomplete', 'current-password');
-		$form->addCheckbox('remember', 'Zůstat přihlášen 14 dní');
-		$form->addSubmit('send', 'Přihlásit se');
-
-		$form->onSuccess[] = $this->signInFormSucceeded(...);
-
-		return $form;
-	}
-
-	private function signInFormSucceeded(Form $form): void
-	{
-		$data = $form->getValues(SignInFormData::class);
-
-		try {
-			$this->getUser()->setExpiration($data->remember ? self::RememberExpiration : self::DefaultExpiration);
-			$this->getUser()->login($data->email, $data->password);
-		} catch (AuthenticationException $e) {
-			$form->addError($e->getMessage());
-
-			return;
-		}
-
-		$this->restoreRequest($this->backlink);
-		$this->redirect(':Admin:Dashboard:');
+		return $this->signInFormFactory->create(function (): void {
+			$this->restoreRequest($this->backlink);
+			$this->redirect(':Admin:Dashboard:');
+		});
 	}
 }

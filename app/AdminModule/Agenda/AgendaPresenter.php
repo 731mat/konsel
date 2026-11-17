@@ -10,6 +10,7 @@ use App\Core\Security\Privilege;
 use App\Core\Security\Resource;
 use App\Model\Attachment\AttachmentFacade;
 use App\Model\Attachment\AttachmentPolicy;
+use App\Model\Comment\Comment;
 use App\Model\Comment\CommentFacade;
 use App\Model\Meeting\AgendaFacade;
 use App\Model\Meeting\AgendaItem;
@@ -177,7 +178,7 @@ final class AgendaPresenter extends SecuredPresenter
 		$form->getElementPrototype()->addClass('ajax');
 		$form->addHidden('parentId')->setNullable();
 		$form->addTextArea('body', 'Komentář', null, 3)
-			->setMaxLength(5000)
+			->setMaxLength(Comment::MaxHtmlLength)
 			->setHtmlAttribute('placeholder', 'Připomínka, dotaz nebo doplnění k bodu…');
 		$form->addMultiUpload('files', 'Soubory')
 			->addRule(Form::MaxFileSize, 'Soubor je příliš velký.', $this->attachmentPolicy->maxSize);

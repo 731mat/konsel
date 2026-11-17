@@ -117,6 +117,20 @@ final readonly class MunicipalityFacade
 		}
 	}
 
+	/**
+	 * Barvy obce v aplikaci; null = výchozí barvy.
+	 *
+	 * @throws ValidationException
+	 */
+	public function changeBrandColors(int $municipalityId, ?string $primary, ?string $accent): void
+	{
+		$colors = $primary === null || $accent === null ? null : BrandColors::fromStrings($primary, $accent);
+
+		$this->transaction->run(function () use ($municipalityId, $colors): void {
+			$this->municipalities->get($municipalityId)->changeBrandColors($colors);
+		});
+	}
+
 	public function removeLogo(int $municipalityId): void
 	{
 		$previous = $this->transaction->run(function () use ($municipalityId) {

@@ -50,3 +50,27 @@ test('reader can join the discussion, delete own comment and reply', function ()
 	]));
 	Assert::contains('Komentář byl smazán.', $tester->render('Admin:Agenda', 'detail', $params));
 });
+
+test('formatted comment from the editor is rendered as safe HTML', function (): void {
+	$container = ContainerFactory::create();
+	TestDatabase::migrate($container);
+	$fixtures = new Fixtures($container);
+	$scenario = MeetingScenario::create($container);
+	$tester = new PresenterTester($container);
+	$tester->loginAs($fixtures->user($scenario->municipality, 'editor@obec.cz', Role::Editor));
+	$params = [
+		'id' => $scenario->item->getId(),
+	];
+
+	PresenterTester::assertRedirect($tester->submitForm('Admin:Agenda', 'commentForm', [
+		'parentId' => '',
+		'body' => '<p>Prosím <strong>doplnit</strong>:</p><ol><li><p>smlouvu</p></li></ol><p><a href="javascript:alert(1)" onmouseover="x()">klik</a><script>alert(1)</script></p>',
+	], action: 'detail', params: $params));
+
+	$html = $tester->render('Admin:Agenda', 'detail', $params);
+	Assert::contains('<p>Prosím <strong>doplnit</strong>:</p><ol><li><p>smlouvu</p></li></ol>', $html);
+	Assert::notContains('javascript:alert', $html);
+	Assert::notContains('<script>alert(1)', $html);
+	Assert::notContains('onmouseover', $html);
+	Assert::contains('data-rich-editor', $html, 'pole komentáře má editor');
+});

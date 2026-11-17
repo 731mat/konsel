@@ -159,7 +159,7 @@ final readonly class DemoSeeder
 			self::file('Rozpočet 2027 – položky.csv', "Paragraf;Položka;Částka\n2212;Silnice;2 400 000\n3113;Základní škola;1 850 000\n3722;Odpady;1 100 000\n"),
 		], null);
 		$question = $this->comments->addByPerson($sharedItems[3]->getId(), $persons[2]->getId(), 'Proč se proti letošku zvyšují výdaje na odpady o 180 tisíc? Je to jen novým ceníkem svozové firmy?');
-		$this->comments->addByUser($sharedItems[3]->getId(), $admin->getId(), 'Ano, svozová firma zdražila od ledna o 12 %. Ceník je v příloze rozpočtu, řádek 3722.', $question->getId());
+		$this->comments->addByUser($sharedItems[3]->getId(), $admin->getId(), '<p>Ano, svozová firma zdražila od ledna o <strong>12 %</strong>. Rozpis:</p><ul><li><p>svoz směsného odpadu +140 tis. Kč</p></li><li><p>tříděný odpad +40 tis. Kč</p></li></ul><p>Ceník je v příloze rozpočtu, řádek 3722.</p>', $question->getId());
 		$this->comments->addByPerson($sharedItems[3]->getId(), $persons[6]->getId(), 'Navrhuji do rozpočtu doplnit rezervu na opravu hřiště u školy.');
 		$this->attachments->upload($sharedItems[6]->getId(), [
 			self::file('Záměr prodeje pozemku 456-7.pdf', self::pdf(['Zamer prodeje pozemku p. c. 456/7', 'Vymera 312 m2, k. u. Neplachovice'])),
@@ -221,7 +221,7 @@ final readonly class DemoSeeder
 		$this->projects->changeStatus($school->getId(), ProjectStatus::Preparation, 'Jana Správcová', 'Zastupitelstvo souhlasí se záměrem');
 		$this->comments->addToProject($school->getId(), CommentAuthorRef::person($persons[3]->getId()), 'Prosím o porovnání s variantou rozšíření stávající budovy – může vyjít levněji.');
 		$this->projects->changeStatus($school->getId(), ProjectStatus::Design, 'Jana Správcová', 'Objednána projektová dokumentace');
-		$this->comments->addToProject($school->getId(), CommentAuthorRef::user($adminId), 'Projektant předá dokumentaci do konce roku. Na projekt je v rozpočtu 2027 vyčleněno 2 mil. Kč.', publicForCitizens: true);
+		$this->comments->addToProject($school->getId(), CommentAuthorRef::user($adminId), '<p>Projektant předá dokumentaci <strong>do konce roku</strong>. Na projekt je v rozpočtu 2027 vyčleněno 2 mil. Kč.</p><blockquote><p>Dotační výzva MMR se otevírá v březnu 2027.</p></blockquote>', publicForCitizens: true);
 		$this->projects->linkAgendaItem($budgetItemId, $school->getId());
 		$this->projects->linkAgendaItem($documentationItemId, $school->getId());
 		$this->projects->setPublic($school->getId(), true);

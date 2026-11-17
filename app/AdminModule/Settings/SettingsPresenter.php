@@ -12,6 +12,7 @@ use App\Model\Ai\AiException;
 use App\Model\Ai\AiFacade;
 use App\Model\Ai\AiSettings;
 use App\Model\Ai\Command\SaveAiSettings;
+use App\Model\Municipality\BrandColors;
 use App\Model\Municipality\Command\UpdateMunicipalitySettings;
 use App\Model\Shared\Exception\DomainException;
 use App\Model\Shared\Exception\ValidationException;
@@ -24,6 +25,20 @@ use Nette\Application\UI\Form;
 #[Allowed(Resource::Settings, Privilege::Edit)]
 final class SettingsPresenter extends SecuredPresenter
 {
+	/**
+	 * Hotové kombinace barev: název, hlavní, doplňková.
+	 */
+	public const array ColorPresets = [
+		['Konšel (výchozí)', BrandColors::DefaultPrimary, BrandColors::DefaultAccent],
+		['Státní modrá a červená', '#11457e', '#d7141a'],
+		['Lesní zelená', '#1e6b45', '#d9a441'],
+		['Vínová', '#8c1b3a', '#e3b45d'],
+		['Tyrkysová', '#0f6e74', '#f08a5d'],
+		['Fialová', '#5b3c88', '#f2b84b'],
+		['Heraldická hnědá', '#7a4a1e', '#c9a227'],
+		['Břidlicová', '#334155', '#f59e0b'],
+	];
+
 	public function __construct(
 		private readonly FormFactory $formFactory,
 		private readonly AiFacade $aiFacade,
@@ -60,6 +75,55 @@ final class SettingsPresenter extends SecuredPresenter
 	{
 		$logo = $this->requireMunicipality()->getLogo() ?? $this->error('Obec nemá logo.');
 		$this->sendStoredFile($logo, forceDownload: false);
+	}
+
+	public function actionAppearance(): void
+	{
+		$colors = $this->requireMunicipality()->getBrandColors();
+		$this->getComponent('appearanceForm')->setDefaults([
+			'primaryColor' => $colors->primary->value,
+			'accentColor' => $colors->accent->value,
+		]);
+	}
+
+	public function renderAppearance(): void
+	{
+		$this->template->presets = self::ColorPresets;
+		$this->template->customColors = $this->requireMunicipality()->hasCustomBrandColors();
+		$this->template->minContrast = BrandColors::MinPrimaryContrast;
+	}
+
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleResetColors(): void
+	{
+		$this->municipalityFacade->changeBrandColors($this->requireMunicipality()->getId(), null, null);
+		$this->flashMessage('Barvy byly vráceny na výchozí.', 'success');
+		$this->redirect('appearance');
+	}
+
+	protected function createComponentAppearanceForm(): Form
+	{
+		$form = $this->formFactory->create();
+		$form->addColor('primaryColor', 'Hlavní barva')
+			->setRequired('Vyberte hlavní barvu.');
+		$form->addColor('accentColor', 'Doplňková barva')
+			->setRequired('Vyberte doplňkovou barvu.');
+		$form->addSubmit('save', 'Uložit barvy');
+		$form->onSuccess[] = function (Form $form): void {
+			$data = $form->getValues(AppearanceFormData::class);
+			try {
+				$this->municipalityFacade->changeBrandColors($this->requireMunicipality()->getId(), $data->primaryColor, $data->accentColor);
+			} catch (ValidationException $e) {
+				FormErrors::apply($form, $e);
+
+				return;
+			}
+
+			$this->flashMessage('Barvy obce byly uloženy.', 'success');
+			$this->redirect('this');
+		};
+
+		return $form;
 	}
 
 	public function actionAi(): void

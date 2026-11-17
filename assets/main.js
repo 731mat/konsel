@@ -3,6 +3,8 @@ import * as bootstrap from 'bootstrap';
 import naja from 'naja';
 import netteForms from 'nette-forms';
 import Sortable from 'sortablejs';
+import { destroyRichEditors, focusTextInput, initRichEditors, isFilePaste } from './richEditor.js';
+import { initThemePreview } from './themePreview.js';
 
 window.bootstrap = bootstrap;
 
@@ -82,7 +84,7 @@ function initDropzones(root) {
 			}
 		});
 		zone.addEventListener('paste', (event) => {
-			if (event.clipboardData?.files.length) {
+			if (isFilePaste(event.clipboardData)) {
 				event.preventDefault();
 				addFiles([...event.clipboardData.files]);
 			}
@@ -104,11 +106,18 @@ document.addEventListener('DOMContentLoaded', () => {
 	naja.initialize();
 	initSortable(document);
 	initDropzones(document);
+	initRichEditors(document);
+	initThemePreview(document);
+});
+
+naja.snippetHandler.addEventListener('beforeUpdate', (event) => {
+	destroyRichEditors(event.detail.snippet);
 });
 
 naja.snippetHandler.addEventListener('afterUpdate', (event) => {
 	initSortable(event.detail.snippet);
 	initDropzones(event.detail.snippet);
+	initRichEditors(event.detail.snippet);
 });
 
 // Potvrzení nevratných akcí: <button data-confirm="Opravdu smazat?">
@@ -135,7 +144,7 @@ document.addEventListener('click', (event) => {
 	info.hidden = !replyButton;
 	if (replyButton) {
 		info.querySelector('[data-reply-name]').textContent = replyButton.dataset.replyName;
-		form.querySelector('textarea').focus();
+		focusTextInput(form);
 	}
 });
 

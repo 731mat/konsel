@@ -1,0 +1,99 @@
+{block title}Vzhled – nastavení obce{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href="default">Nastavení</a></li>
+	<li class="breadcrumb-item active" aria-current="page">Vzhled</li>
+{/block}
+
+{block content}
+{varType array<array{string, string, string}> $presets}
+{varType bool $customColors}
+{varType float $minContrast}
+<h1 class="h3 mb-3">Nastavení obce</h1>
+{include '@tabs.latte', current: 'appearance'}
+
+<div class="row g-4">
+	<div class="col-xl-7">
+		<div class="card">
+			<div class="card-body">
+				<h2 class="h5">Barvy obce</h2>
+				<p class="text-body-secondary small">Barvy se použijí v administraci, v portálu zastupitele i na stránce pro občany. Hodí se barvy z vlajky nebo znaku obce.</p>
+
+				{form appearanceForm}
+					<div n:foreach="$form->getOwnErrors() as $error" class="alert alert-danger py-2">{$error}</div>
+
+					<div class="row g-3 mb-4">
+						<div class="col-sm-6">
+							<label n:name="primaryColor" class="form-label">{$form['primaryColor']->getCaption()}</label>
+							<div class="d-flex align-items-center gap-2">
+								<input n:name="primaryColor" n:class="form-control, form-control-color, $form['primaryColor']->hasErrors() ? is-invalid" data-theme-input="primary">
+								<code class="small" data-theme-value="primary">{$form['primaryColor']->getValue()}</code>
+							</div>
+							<div n:ifcontent class="invalid-feedback d-block">{inputError primaryColor}</div>
+							<div class="form-text">Tlačítka, odkazy a zvýraznění. Musí být dost tmavá, aby na ní byl čitelný bílý text.</div>
+						</div>
+						<div class="col-sm-6">
+							<label n:name="accentColor" class="form-label">{$form['accentColor']->getCaption()}</label>
+							<div class="d-flex align-items-center gap-2">
+								<input n:name="accentColor" n:class="form-control, form-control-color, $form['accentColor']->hasErrors() ? is-invalid" data-theme-input="accent">
+								<code class="small" data-theme-value="accent">{$form['accentColor']->getValue()}</code>
+							</div>
+							<div n:ifcontent class="invalid-feedback d-block">{inputError accentColor}</div>
+							<div class="form-text">Proužek v horní liště, znak aplikace a drobné akcenty.</div>
+						</div>
+					</div>
+
+					<h3 class="h6 text-body-secondary">Hotové kombinace</h3>
+					<div class="theme-presets mb-4">
+						<button n:foreach="$presets as [$name, $primary, $accent]" type="button" class="theme-preset" data-theme-preset data-primary="{$primary}" data-accent="{$accent}">
+							<svg class="theme-preset-swatch" viewBox="0 0 24 24" aria-hidden="true">
+								<circle cx="12" cy="12" r="12" fill="{$primary}"/>
+								<path d="M12 0a12 12 0 0 1 0 24z" fill="{$accent}"/>
+							</svg>
+							<span>{$name}</span>
+						</button>
+					</div>
+
+					<div class="d-flex flex-wrap align-items-center gap-2">
+						<button n:name="save" class="btn btn-primary"><i class="bi bi-check2" aria-hidden="true"></i> Uložit barvy</button>
+						<span class="small text-body-secondary">Změna se projeví hned po uložení.</span>
+					</div>
+				{/form}
+
+				<form n:if="$customColors" method="post" action="{link resetColors!}" class="mt-3 pt-3 border-top">
+					<button type="submit" class="btn btn-link btn-sm px-0 text-decoration-none" data-confirm="Vrátit výchozí barvy Konšela?"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Vrátit výchozí barvy</button>
+				</form>
+			</div>
+		</div>
+	</div>
+
+	<div class="col-xl-5">
+		<div class="card theme-preview" data-theme-preview data-min-contrast="{$minContrast}">
+			<div class="theme-preview-bar">
+				{include '../../UI/@logo.latte'}
+				<strong>{$currentMunicipality?->getName()}</strong>
+				<span class="ms-auto small text-body-secondary">Náhled</span>
+			</div>
+			<div class="card-body">
+				<div class="d-flex flex-wrap gap-2 mb-3">
+					<button type="button" class="btn btn-primary btn-sm" tabindex="-1">Uložit</button>
+					<button type="button" class="btn btn-outline-primary btn-sm" tabindex="-1">Upravit</button>
+					<span class="badge bg-primary-subtle text-primary-emphasis align-self-center">zastupitel</span>
+					<span class="badge theme-preview-accent-badge align-self-center">nový podnět</span>
+				</div>
+				<p class="small mb-3">Program zasedání je zveřejněn, podklady najdete <a href="#diskuse" tabindex="-1">u jednotlivých bodů</a>.</p>
+				<ul class="project-steps mb-3">
+					<li class="done">Nápad</li>
+					<li class="current">Příprava</li>
+					<li>Realizace</li>
+				</ul>
+				<div class="progress" style="height: .4rem" role="presentation">
+					<div class="progress-bar" style="width: 60%"></div>
+				</div>
+			</div>
+		</div>
+		<div class="alert alert-warning small mt-3" data-theme-contrast hidden>
+			<i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Hlavní barva je příliš světlá, odkazy a tlačítka by nebyly čitelné. Zvolte tmavší odstín.
+		</div>
+	</div>
+</div>

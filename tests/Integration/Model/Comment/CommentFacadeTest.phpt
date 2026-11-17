@@ -44,10 +44,10 @@ test('users and members discuss in one-level threads', function (): void {
 
 	$threads = $facade->findThreads($itemId);
 	Assert::count(2, $threads);
-	Assert::same("Proč se zvyšuje položka na odpady?\n\nDěkuji.", $threads[0]->comment->getBody());
+	Assert::same('<p>Proč se zvyšuje položka na odpady?</p><p>Děkuji.</p>', $threads[0]->comment->getBody()->html, 'prostý text (bez JavaScriptu) se převede na odstavce');
 	Assert::true($threads[0]->comment->isFromMember());
 	Assert::same('Petr Novotný', $threads[0]->comment->getAuthorName());
-	Assert::same(['Kvůli novému ceníku svozové firmy.'], array_map(static fn($c) => $c->getBody(), $threads[0]->replies));
+	Assert::same(['<p>Kvůli novému ceníku svozové firmy.</p>'], array_map(static fn($c) => $c->getBody()->html, $threads[0]->replies));
 	Assert::same([
 		$itemId => 3,
 	], $facade->countByMeeting($scenario->meeting));
@@ -56,6 +56,33 @@ test('users and members discuss in one-level threads', function (): void {
 	$e = Assert::exception(fn() => $facade->addByUser($itemId, $clerk->getId(), 'Odpověď na odpověď', $reply->getId()), ValidationException::class);
 	Assert::same('parentId', $e?->field);
 	Assert::exception(fn() => $facade->addByUser($itemId, $clerk->getId(), '   '), ValidationException::class, 'Napište text komentáře.');
+	Assert::exception(fn() => $facade->addByUser($itemId, $clerk->getId(), '<p></p><p><br></p>'), ValidationException::class, 'Napište text komentáře.'); // prázdný odstavec z editoru
+});
+
+test('formatted comment keeps allowed tags and loses anything dangerous', function (): void {
+	[$facade, $scenario, $fixtures] = bootComments();
+	$clerk = $fixtures->user($scenario->municipality);
+
+	$comment = $facade->addByUser(
+		$scenario->item->getId(),
+		$clerk->getId(),
+		'<p onclick="steal()">Viz <strong>rozpočet</strong> a <a href="javascript:alert(1)">tohle</a>'
+		. '<script>alert(1)</script></p><ul><li><p>položka</p></li></ul><p><a href="https://obec.cz/rozpocet">web</a></p><img src=x onerror=alert(1)>',
+	);
+
+	$html = $comment->getBody()->html;
+	Assert::contains('<strong>rozpočet</strong>', $html);
+	Assert::contains('<ul><li><p>položka</p></li></ul>', $html);
+	Assert::contains('<a href="https://obec.cz/rozpocet" rel="noopener noreferrer nofollow" target="_blank">web</a>', $html);
+	foreach (['onclick', 'javascript:', '<script', 'alert', '<img', 'onerror'] as $forbidden) {
+		Assert::notContains($forbidden, $html);
+	}
+
+	Assert::exception(
+		fn() => $facade->addByUser($scenario->item->getId(), $clerk->getId(), '<p>' . str_repeat('a', 5001) . '</p>'),
+		ValidationException::class,
+		'Komentář může mít nejvýše 5000 znaků.',
+	);
 });
 
 test('only author or moderator can delete; deleted comment with replies stays as placeholder', function (): void {
@@ -75,7 +102,7 @@ test('only author or moderator can delete; deleted comment with replies stays as
 	$threads = $facade->findThreads($itemId);
 	Assert::count(1, $threads, 'smazaný komentář bez odpovědí zmizí');
 	Assert::true($threads[0]->comment->isDeleted());
-	Assert::same('', $threads[0]->comment->getBody());
+	Assert::true($threads[0]->comment->getBody()->isEmpty());
 	Assert::count(1, $threads[0]->replies);
 });
 
@@ -104,7 +131,7 @@ test('comment carries files; file-only comment is allowed; deleting comment remo
 	$storage = $container->getByType(App\Model\Storage\FileStorage::class);
 
 	$comment = $facade->addByUser($scenario->item->getId(), $user->getId(), '', null, [$file('foto.jpg', "\xFF\xD8\xFFjpeg"), $file('rozpocet.xlsx', 'PK')]);
-	Assert::same('', $comment->getBody());
+	Assert::same('', $comment->getBody()->html);
 	Assert::same(['foto.jpg', 'rozpocet.xlsx'], array_map(static fn($a) => $a->getTitle(), $comment->getAttachments()));
 	Assert::same($scenario->meeting, $comment->getAttachments()[0]->getMeeting());
 	Assert::same([], $container->getByType(App\Model\Attachment\AttachmentFacade::class)->findByAgendaItem($scenario->item->getId()), 'soubory komentáře nejsou mezi přílohami bodu');

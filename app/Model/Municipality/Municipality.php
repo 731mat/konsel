@@ -9,6 +9,7 @@ use App\Model\Shared\IntegerId;
 use App\Model\Shared\Timestampable;
 use App\Model\Shared\TimestampableTrait;
 use App\Model\Shared\ValueObject\Email;
+use App\Model\Shared\ValueObject\HexColor;
 use App\Model\Shared\ValueObject\Ico;
 use App\Model\Shared\ValueObject\StoredFile;
 use Doctrine\ORM\Mapping as ORM;
@@ -61,6 +62,15 @@ final class Municipality implements Timestampable
 	#[ORM\Column(type: 'stored_file', nullable: true)]
 	private ?StoredFile $logo = null;
 
+	/**
+	 * Barvy obce v aplikaci (null = výchozí barvy Konšela).
+	 */
+	#[ORM\Column(length: 7, nullable: true)]
+	private ?string $primaryColor = null;
+
+	#[ORM\Column(length: 7, nullable: true)]
+	private ?string $accentColor = null;
+
 	public function __construct(string $name, string $slug, ?Ico $ico = null)
 	{
 		$this->name = self::validateName($name);
@@ -103,6 +113,30 @@ final class Municipality implements Timestampable
 	public function getLogo(): ?StoredFile
 	{
 		return $this->logo;
+	}
+
+	/**
+	 * @param ?BrandColors $colors null = vrátit výchozí barvy
+	 */
+	public function changeBrandColors(?BrandColors $colors): void
+	{
+		$custom = $colors !== null && !$colors->isDefault();
+		$this->primaryColor = $custom ? $colors->primary->value : null;
+		$this->accentColor = $custom ? $colors->accent->value : null;
+	}
+
+	public function getBrandColors(): BrandColors
+	{
+		if ($this->primaryColor === null || $this->accentColor === null) {
+			return BrandColors::default();
+		}
+
+		return new BrandColors(new HexColor($this->primaryColor), new HexColor($this->accentColor));
+	}
+
+	public function hasCustomBrandColors(): bool
+	{
+		return $this->primaryColor !== null;
 	}
 
 	public function rename(string $name): void

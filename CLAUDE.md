@@ -55,6 +55,8 @@ make screenshots          # screenshoty stránek (desktop + mobil) do temp/scree
 - Doménové `ValidationException` nesou `field` = název pole formuláře. V presenteru je převede `FormErrors::apply()`.
 - UI texty česky, vykání. Kód, DB a komentáře anglicky.
 - Vzhled: Bootstrap 5.3 + téma v assets/main.scss (písmo Inter a ikony jsou v buildu, žádné CDN). Stav zasedání přes `@status.latte`, datum přes `@dateTile.latte`, prázdné stavy třídou `empty-state`. Musí fungovat i tmavý režim (barvy přes `var(--bs-…)`). Po změně vzhledu zkontroluj `make screenshots`.
+- Barvy obce (Nastavení → Vzhled) přebíjejí téma za běhu: hlavní barvu nikdy natvrdo (`$primary`, `#1b5e8c`), vždy `var(--bs-primary)` / `var(--bs-primary-rgb)`, text na ní `var(--konsel-on-primary)`, doplňková `var(--konsel-accent)`. Nová komponenta Bootstrapu se zkompilovanou barvou se napojí v sekci „Barvy obce“ v main.scss.
+- Formátovaný text od uživatele (komentáře) = `RichText`: fasáda ho pročistí přes `HtmlSanitizer`, šablona vypisuje `|richText`, nikdy `|noescape`. Pole formuláře dostane `data-rich-editor`.
 
 ## Slovníček (UI ↔ kód)
 

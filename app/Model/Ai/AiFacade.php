@@ -129,7 +129,7 @@ final readonly class AiFacade
 
 	private static function assertApiKeyFormat(string $apiKey): void
 	{
-		if (!str_starts_with($apiKey, 'sk-') || preg_match('~^[A-Za-z0-9_\-]{20,300}$~', $apiKey) !== 1) {
+		if (strncmp($apiKey, 'sk-', 3) !== 0 || preg_match('~^[A-Za-z0-9_\-]{20,300}$~', $apiKey) !== 1) {
 			throw new ValidationException('API klíč OpenAI začíná „sk-“ a neobsahuje mezery. Zkopírujte ho celý z platform.openai.com.', 'apiKey');
 		}
 	}

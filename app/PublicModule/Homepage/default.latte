@@ -1,22 +1,99 @@
 {block title}Úvod{/block}
 
 {block content}
+{varType App\Model\Municipality\Municipality[] $municipalities}
+{varType App\Model\Municipality\Municipality|null $municipality}
+{varType App\Model\Project\Project[] $projects}
+{varType int $projectCount}
+{varType bool $portalActive}
 <main class="my-auto py-4">
-	<div class="text-center mx-auto" style="max-width: 44rem">
+	<div class="text-center mx-auto mb-4 mb-lg-5" style="max-width: 44rem">
 		<div class="brand fs-4 mb-4">{include '../../UI/@logo.latte'} Konšel</div>
 		<h1 class="hero-title mb-3">Zasedání zastupitelstva bez papírování</h1>
-		<p class="lead text-body-secondary mb-4">
-			Program, podklady pro zastupitele, pozvánka, průběh hlasování, zápis i usnesení – na jednom místě, přehledně a v souladu se zákonem o obcích.
+		<p class="lead text-body-secondary mb-0">
+			Program, podklady, hlasování, zápis i usnesení na jednom místě. A občané vidí, na čem obec pracuje.
 		</p>
-		<a class="btn btn-primary btn-lg px-4" n:href=":Public:Sign:in"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Přihlásit se</a>
 	</div>
 
-	<div class="row g-4 mt-5 mx-auto" style="max-width: 64rem">
+	<div class="row g-4 mx-auto" style="max-width: 64rem">
+		<div class="col-lg-6">
+			<section class="card crossroad-card h-100" aria-labelledby="crossroad-citizen">
+				<div class="card-body p-4 p-xl-5 d-flex flex-column">
+					<div class="crossroad-icon crossroad-icon-accent mb-3"><i class="bi bi-people" aria-hidden="true"></i></div>
+					<h2 class="h4 mb-2" id="crossroad-citizen">Jsem občan</h2>
+					<p class="text-body-secondary">Podívejte se, na čem obec pracuje, v jaké fázi jsou jednotlivé úkoly a jakou mají prioritu. Máte nápad, co v obci zlepšit? Pošlete podnět.</p>
+
+					{if $municipality}
+						<div class="small fw-semibold text-body-secondary mb-2">{$municipality->getProfile()->officialName} – na čem se pracuje</div>
+						<ul class="list-unstyled crossroad-projects mb-4">
+							<li n:foreach="$projects as $project">
+								<a n:href=":Public:Ideas:detail, municipality: $municipality->getSlug(), id: $project->getId()" class="crossroad-project">
+									<span class="text-truncate">{$project->getTitle()}</span>
+									<span class="badge status-badge bg-{$project->getStatus()->tone()}-subtle text-{$project->getStatus()->tone()}-emphasis ms-auto">{$project->getStatus()->label()}</span>
+								</a>
+							</li>
+							<li n:if="!$projects" class="small text-body-secondary">Obec zatím nezveřejnila žádné úkoly. Můžete ale poslat první podnět.</li>
+						</ul>
+						<div class="mt-auto d-flex flex-wrap gap-2">
+							<a class="btn btn-primary" n:href=":Public:Ideas:default, municipality: $municipality->getSlug()">
+								<i class="bi bi-kanban" aria-hidden="true"></i> Všechny úkoly{if $projectCount > count($projects)} ({$projectCount}){/if}
+							</a>
+							<a class="btn btn-outline-primary" href="{link :Public:Ideas:default, municipality: $municipality->getSlug()}#podnet">
+								<i class="bi bi-lightbulb" aria-hidden="true"></i> Poslat podnět
+							</a>
+						</div>
+					{elseif $municipalities}
+						<div class="small fw-semibold text-body-secondary mb-2">Vyberte svou obec</div>
+						<div class="list-group mt-auto">
+							<a n:foreach="$municipalities as $item" n:href=":Public:Ideas:default, municipality: $item->getSlug()" class="list-group-item list-group-item-action d-flex align-items-center gap-2">
+								<i class="bi bi-bank text-body-secondary" aria-hidden="true"></i>
+								<span>{$item->getProfile()->officialName}</span>
+								<i class="bi bi-chevron-right ms-auto text-body-secondary" aria-hidden="true"></i>
+							</a>
+						</div>
+					{else}
+						<p class="small text-body-secondary mt-auto mb-0">Zatím tu není žádná obec.</p>
+					{/if}
+				</div>
+			</section>
+		</div>
+
+		<div class="col-lg-6">
+			<section class="card crossroad-card h-100" aria-labelledby="crossroad-member">
+				<div class="card-body p-4 p-xl-5 d-flex flex-column">
+					<div class="crossroad-icon mb-3"><i class="bi bi-person-badge" aria-hidden="true"></i></div>
+					<h2 class="h4 mb-2" id="crossroad-member">Jsem zastupitel</h2>
+
+					{if $user->isLoggedIn()}
+						<p class="text-body-secondary">Jste přihlášeni jako <strong class="text-body">{$user->getIdentity()?->getData()['name'] ?? ''}</strong>.</p>
+						<div class="mt-auto">
+							<a class="btn btn-primary" n:href=":Admin:Dashboard:"><i class="bi bi-arrow-right-circle" aria-hidden="true"></i> Pokračovat do administrace</a>
+						</div>
+					{else}
+						<p class="text-body-secondary">Přihlaste se k programu, podkladům a diskusi k bodům. Pracovníci obecního úřadu se přihlašují stejně.</p>
+						<div n:if="$portalActive" class="alert alert-success d-flex align-items-center gap-2 py-2">
+							<i class="bi bi-check-circle" aria-hidden="true"></i>
+							<span class="me-auto">Máte otevřený osobní odkaz.</span>
+							<a n:href=":Portal:Meeting:" class="btn btn-success btn-sm">Do podkladů</a>
+						</div>
+						{control signInForm}
+						<div class="crossroad-hint mt-4">
+							<i class="bi bi-envelope-paper" aria-hidden="true"></i>
+							<span>Máte <strong>odkaz z pozvánky</strong> na zasedání? Stačí ho otevřít. Jste rovnou v podkladech a heslo nepotřebujete.</span>
+						</div>
+					{/if}
+				</div>
+			</section>
+		</div>
+	</div>
+
+	<h2 class="crossroad-section-title text-center mt-5 mb-3">Co Konšel umí</h2>
+	<div class="row g-4 mx-auto" style="max-width: 64rem">
 		<div class="col-md-4">
 			<div class="card h-100 border-0">
 				<div class="card-body p-4">
 					<div class="feature-icon mb-3"><i class="bi bi-list-ol" aria-hidden="true"></i></div>
-					<h2 class="h6">Program a podklady</h2>
+					<h3 class="h6">Program a podklady</h3>
 					<p class="small text-body-secondary mb-0">Body programu, návrhy usnesení a přílohy sdílené se zastupiteli v předstihu.</p>
 				</div>
 			</div>
@@ -25,7 +102,7 @@
 			<div class="card h-100 border-0">
 				<div class="card-body p-4">
 					<div class="feature-icon mb-3"><i class="bi bi-hand-index-thumb" aria-hidden="true"></i></div>
-					<h2 class="h6">Průběh a hlasování</h2>
+					<h3 class="h6">Průběh a hlasování</h3>
 					<p class="small text-body-secondary mb-0">Docházka, usnášeníschopnost, hlasování a diskuse zaznamenané přímo při jednání.</p>
 				</div>
 			</div>
@@ -33,9 +110,9 @@
 		<div class="col-md-4">
 			<div class="card h-100 border-0">
 				<div class="card-body p-4">
-					<div class="feature-icon mb-3"><i class="bi bi-journal-check" aria-hidden="true"></i></div>
-					<h2 class="h6">Zápis a usnesení</h2>
-					<p class="small text-body-secondary mb-0">Číslovaná usnesení, výpisy a zápis ve Wordu i PDF, archiv s vyhledáváním.</p>
+					<div class="feature-icon mb-3"><i class="bi bi-kanban" aria-hidden="true"></i></div>
+					<h3 class="h6">Úkoly a podněty občanů</h3>
+					<p class="small text-body-secondary mb-0">Dlouhodobé úkoly obce v jednom vlákně přes zasedání. Občané vidí fázi i prioritu a mohou posílat podněty.</p>
 				</div>
 			</div>
 		</div>

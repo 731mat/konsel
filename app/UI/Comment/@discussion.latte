@@ -47,7 +47,7 @@
 			{if $comment->isDeleted()}
 				<p class="fst-italic text-body-secondary small mb-0">Komentář byl smazán.</p>
 			{else}
-				<div class="comment-body text-break">{$comment->getBody()|nl2p}</div>
+				<div class="comment-body text-break">{$comment->getBody()|richText}</div>
 				<div n:if="$comment->getAttachments()" class="comment-files d-flex flex-wrap gap-2 mb-2">
 					<a n:foreach="$comment->getAttachments() as $attachment" href="{$attachmentLink($attachment)}" class="comment-file" target="_blank" rel="noopener">
 						<i class="bi {$attachment->getFile()|fileIcon}" aria-hidden="true"></i>
@@ -78,7 +78,7 @@
 			<div n:foreach="$form->getOwnErrors() as $error" class="alert alert-danger py-2">{$error}</div>
 			{input parentId}
 			<div class="dropzone" data-dropzone>
-				<textarea n:name="body" n:class="form-control, $form['body']->hasErrors() ? is-invalid"></textarea>
+				<textarea n:name="body" n:class="form-control, $form['body']->hasErrors() ? is-invalid" data-rich-editor></textarea>
 				<input n:name="files" class="d-none" data-dropzone-input>
 				<ul class="dropzone-list list-unstyled small mb-0 mt-2" data-dropzone-list hidden></ul>
 				<div class="dropzone-overlay" aria-hidden="true"><i class="bi bi-cloud-arrow-up"></i> Pusťte soubory sem</div>
