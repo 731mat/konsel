@@ -27,7 +27,7 @@ stateDiagram-v2
 | Sdíleno | měnit | ano | zapisovat | – | – | + pozvánky e-mailem |
 | Probíhá | jen „doplnit bod“ | ano | zapisovat | **hlasovat** | zapisovat | + zápis a usnesení (koncept) |
 | Ukončeno | – | ano | opravovat | opravovat | opravovat | zápis, usnesení, výpisy; běží lhůta 10 dnů |
-| Zápis ověřen | – | – | – | – | – | vše jen ke čtení |
+| Zápis ověřen | – | – | – | – | – | vše jen ke čtení; konečný zápis a usnesení se uloží do archivu |
 
 Smazat jde jen zasedání v přípravě. Sdílení zasedání méně než 7 dní předem zobrazí varování (§ 93 – vyvěšení na úřední desce).
 
@@ -146,3 +146,21 @@ stateDiagram-v2
 ```
 
 Smazaný komentář s odpověďmi zůstane jako „Komentář byl smazán“, aby vlákno dávalo smysl. Diskuse u bodu se uzavře ověřením zápisu.
+
+## Dokument v archivu (`ArchivedDocument`)
+
+```mermaid
+stateDiagram-v2
+    [*] --> Stored: Uložit verzi do archivu<br/>(PDF v současné podobě)
+    [*] --> Stored: Nahrát podepsaný originál<br/>(sken PDF)
+    [*] --> Final: Ověření zápisu<br/>(zápis + usnesení samy)
+    Stored --> [*]: Smazat (správce,<br/>jen do ověření zápisu)
+    Stored --> Locked: zápis ověřen
+    Final --> Locked
+    Locked: Neměnný – jen ke stažení
+
+    Stored: Uložená verze / podepsaný originál
+    Final: Po ověření zápisu
+```
+
+Obsah uloženého souboru se nikdy nemění – nová podoba dokumentu = nová verze. Verze uložená během zasedání je označená jako **koncept**. Typ nahraného souboru se ověřuje podle obsahu (musí to být opravdu PDF).

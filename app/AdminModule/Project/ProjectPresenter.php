@@ -403,13 +403,6 @@ final class ProjectPresenter extends SecuredPresenter
 		$this->redirect('this');
 	}
 
-	private function currentUserId(): int
-	{
-		$id = $this->getUser()->getId();
-
-		return is_int($id) ? $id : $this->error('Nepřihlášený uživatel.', 403);
-	}
-
 	private function currentUserName(): string
 	{
 		$name = $this->getUser()->getIdentity()?->getData()['name'] ?? null;

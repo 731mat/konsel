@@ -25,7 +25,7 @@ flowchart LR
         T25[T25–T26<br/>čísla usnesení,<br/>úkoly z usnesení]
     end
     subgraph F6["Dokumenty"]
-        T28[T28–T30<br/>pozvánka, zápis,<br/>výpisy, prezenční listina]
+        T28[T27–T30<br/>pozvánka, zápis, výpisy,<br/>prezenční listina, archiv verzí]
     end
     subgraph F10["Navíc"]
         T44[T44–T47<br/>soubory v diskusi, úkolníček,<br/>podněty občanů, rozcestník,<br/>barvy obce, editor]
@@ -39,14 +39,13 @@ flowchart LR
     class T00,T05,T12,T17,T21,T25,T28,T44,T34 done;
 ```
 
-**MVP (T00–T30 + T34) je hotové**: použitelný systém pro zastupitelstvo i radu – program, sdílení, pozvánky, průběh, usnesení, zápis a dokumenty v PDF a pro Word.
+**MVP (T00–T30 + T34) je hotové**: použitelný systém pro zastupitelstvo i radu – program, sdílení, pozvánky, průběh, usnesení, zápis a dokumenty v PDF a pro Word, včetně archivu uložených verzí a podepsaných originálů.
 
 ## Co zbývá
 
 | Task | Co | Poznámka |
 |---|---|---|
 | T16b | nahrávání souborů nad 64 MB po částech | zatím limit 64 MB |
-| T27 | archiv vygenerovaných dokumentů (verze PDF) | dokumenty se zatím tvoří na požádání |
 | T31 | vlastní šablony dokumentů obce | šablony jsou v `resources/documents` |
 | T32 | fulltextové vyhledávání (i bez diakritiky) | přehled usnesení už hledá v textu |
 | T33 | archiv podle let, plná neměnnost po ověření zápisu, důvod znovuotevření | většina pravidel už v entitách je |

@@ -303,3 +303,57 @@ test('minutes are offered only once the meeting has started; Word version is dow
 		'format' => 'doc',
 	]));
 });
+
+test('documents can be archived; approving the minutes archives final versions automatically', function (): void {
+	$scene = MeetingScene::boot();
+	$meetingId = $scene->meeting();
+
+	PresenterTester::assertRedirect($scene->signal($meetingId, 'archiveDocument', [
+		'type' => 'invitation',
+	]));
+	$html = $scene->tester->render('Admin:Meeting', 'detail', [
+		'id' => $meetingId,
+		'tab' => 'documents',
+	]);
+	Assert::contains('Archiv dokumentů', $html);
+	Assert::contains('Uložená verze', $html);
+	Assert::contains('Nahrát podepsaný originál', $html);
+
+	$archived = $scene->tester->run('Admin:Meeting', 'archived', [
+		'id' => $meetingId,
+		'documentId' => 1,
+	]);
+	Assert::type(Nette\Application\Responses\FileResponse::class, $archived);
+
+	foreach (['share', 'start', 'close', 'approve_minutes'] as $transition) {
+		PresenterTester::assertRedirect($scene->signal($meetingId, 'transition', [
+			'transition' => $transition,
+		]));
+	}
+
+	$html = $scene->tester->render('Admin:Meeting', 'detail', [
+		'id' => $meetingId,
+		'tab' => 'documents',
+	]);
+	Assert::contains('Po ověření zápisu', $html);
+	Assert::notContains('Zápis je ověřený, ale v archivu chybí', $html);
+	Assert::notContains('Smazat tuto verzi', $html, 'archiv ověřeného zasedání nejde mazat');
+});
+
+test('reader sees the archive but cannot archive or delete', function (): void {
+	$scene = MeetingScene::boot(Role::Reader);
+	$meetingId = $scene->meeting();
+
+	$html = $scene->tester->render('Admin:Meeting', 'detail', [
+		'id' => $meetingId,
+		'tab' => 'documents',
+	]);
+	Assert::contains('Archiv je zatím prázdný.', $html);
+	Assert::notContains('Uložit verzi do archivu', $html);
+	Assert::notContains('Nahrát podepsaný originál', $html);
+
+	$e = Assert::exception(fn() => $scene->signal($meetingId, 'archiveDocument', [
+		'type' => 'invitation',
+	]), BadRequestException::class);
+	Assert::same(403, $e?->getHttpCode());
+});

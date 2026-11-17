@@ -21,6 +21,10 @@
 {varType array<int, int> $commentCounts}
 {varType App\Model\Document\MeetingDocumentType[] $documentTypes}
 {varType bool $canViewDocuments}
+{varType App\Model\Document\ArchivedDocument[] $archivedDocuments}
+{varType bool $canArchive}
+{varType bool $canDeleteArchived}
+{varType bool $missingFinal}
 {varType App\Model\Template\MeetingTemplate[] $meetingTemplates}
 {varType bool $canSaveTemplate}
 
@@ -156,25 +160,91 @@
 					</li>
 				</ul>
 			{elseif $tab === 'documents' && $canViewDocuments}
+				<div n:if="$missingFinal && $canArchive" class="alert alert-warning d-flex flex-wrap align-items-center gap-2 m-3 mb-0">
+					<i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+					<span class="me-auto">Zápis je ověřený, ale v archivu chybí jeho konečná verze.</span>
+					<form method="post" action="{link archiveFinal!}"><button type="submit" class="btn btn-sm btn-warning">Uložit konečné verze</button></form>
+				</div>
 				<div class="list-group list-group-flush">
-					<div n:foreach="$documentTypes as $documentType" class="list-group-item d-flex flex-wrap align-items-center gap-3 py-3">
-						<i class="bi bi-file-earmark-pdf fs-3 text-danger" aria-hidden="true"></i>
-						<div class="me-auto min-w-0">
-							<div class="fw-semibold">{$documentType->label()}</div>
-							<div class="small text-body-secondary">{$documentType->description()}</div>
-						</div>
-						<a n:href="document, id: $meeting->getId(), type: $documentType->value" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye" aria-hidden="true"></i> Zobrazit</a>
-						<a n:href="document, id: $meeting->getId(), type: $documentType->value, download: true" class="btn btn-sm btn-primary"><i class="bi bi-download" aria-hidden="true"></i> Stáhnout PDF</a>
-						{if $documentType->isEditable()}
-							<div class="w-100 d-flex flex-wrap gap-3 small ps-5">
-								<a n:href="document, id: $meeting->getId(), type: $documentType->value, named: true" target="_blank" rel="noopener"><i class="bi bi-person-lines-fill" aria-hidden="true"></i> S jmenovitým hlasováním</a>
-								<a n:href="document, id: $meeting->getId(), type: $documentType->value, format: doc"><i class="bi bi-file-earmark-word" aria-hidden="true"></i> Stáhnout pro úpravy ve Wordu</a>
+					<div n:foreach="$documentTypes as $documentType" class="list-group-item py-3">
+						<div class="d-flex flex-wrap flex-md-nowrap align-items-center gap-3">
+							<i class="bi bi-file-earmark-pdf fs-3 text-danger d-none d-md-inline" aria-hidden="true"></i>
+							<div class="flex-grow-1 min-w-0">
+								<div class="fw-semibold">{$documentType->label()}</div>
+								<div class="small text-body-secondary">{$documentType->description()}</div>
 							</div>
-						{/if}
+							<div class="d-flex gap-2 flex-shrink-0">
+								<a n:href="document, id: $meeting->getId(), type: $documentType->value" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye" aria-hidden="true"></i> Zobrazit</a>
+								<a n:href="document, id: $meeting->getId(), type: $documentType->value, download: true" class="btn btn-sm btn-primary text-nowrap"><i class="bi bi-download" aria-hidden="true"></i> Stáhnout PDF</a>
+							</div>
+						</div>
+						<div n:ifcontent class="d-flex flex-wrap align-items-center column-gap-3 row-gap-1 small mt-2 ps-md-5">
+							<a n:if="$documentType === App\Model\Document\MeetingDocumentType::Minutes" n:href="document, id: $meeting->getId(), type: $documentType->value, named: true" target="_blank" rel="noopener"><i class="bi bi-person-lines-fill" aria-hidden="true"></i> S jmenovitým hlasováním</a>
+							<a n:if="$documentType->isEditable()" n:href="document, id: $meeting->getId(), type: $documentType->value, format: doc"><i class="bi bi-file-earmark-word" aria-hidden="true"></i> Stáhnout pro úpravy ve Wordu</a>
+							<form n:if="$canArchive" method="post" action="{link archiveDocument!, type: $documentType->value}" class="d-inline">
+								<button type="submit" class="btn btn-link btn-sm p-0 align-baseline small" title="Uloží PDF v současné podobě – např. pozvánku v den vyvěšení"><i class="bi bi-archive" aria-hidden="true"></i> Uložit verzi do archivu</button>
+							</form>
+						</div>
 					</div>
 				</div>
 				<div class="card-footer bg-transparent small text-body-secondary">
 					Dokumenty se vytvářejí vždy z aktuálního stavu zasedání. Zápis je k dispozici po zahájení (do ukončení jako koncept).
+					Po ověření zápisu se konečný zápis a usnesení uloží do archivu samy.
+				</div>
+
+				<div class="border-top">
+					<div class="card-body pb-2">
+						<h2 class="h6 mb-1"><i class="bi bi-archive" aria-hidden="true"></i> Archiv dokumentů</h2>
+						<p class="small text-body-secondary mb-0">Uložené verze se už nemění. Po ověření zápisu je archiv jen pro přidávání – verze nejde smazat.</p>
+					</div>
+					<div n:if="$archivedDocuments" class="table-responsive">
+						<table class="table table-sm align-middle mb-0">
+							<thead class="small text-body-secondary">
+								<tr><th class="ps-3">Dokument</th><th>Verze</th><th>Uloženo</th><th class="d-none d-md-table-cell">Kdo</th><th class="pe-3 text-end"><span class="visually-hidden">Akce</span></th></tr>
+							</thead>
+							<tbody>
+								<tr n:foreach="$archivedDocuments as $archived">
+									<td class="ps-3">
+										<a n:href="archived, id: $meeting->getId(), documentId: $archived->getId()" target="_blank" rel="noopener">{$archived->getType()->label()}</a>
+										<span n:if="$archived->isDraft()" class="badge text-bg-warning ms-1">koncept</span>
+										<div n:if="$archived->getNote()" class="small text-body-secondary">{$archived->getNote()}</div>
+									</td>
+									<td class="small"><i class="bi bi-{$archived->getOrigin()->icon()}" aria-hidden="true"></i> {$archived->getOrigin()->label()}</td>
+									<td class="small text-nowrap">{$archived->getCreatedAt()|czDateTime}</td>
+									<td class="small d-none d-md-table-cell">{$archived->getCreatedBy()?->getName() ?? '—'}</td>
+									<td class="pe-3 text-end text-nowrap">
+										<a n:href="archived, id: $meeting->getId(), documentId: $archived->getId(), download: true" class="btn btn-sm btn-outline-secondary" title="Stáhnout"><i class="bi bi-download" aria-hidden="true"></i><span class="visually-hidden">Stáhnout</span></a>
+										<form n:if="$canDeleteArchived" method="post" action="{link deleteArchived!, documentId: $archived->getId()}" class="d-inline">
+											<button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Smazat tuto verzi z archivu?" title="Smazat"><i class="bi bi-trash" aria-hidden="true"></i><span class="visually-hidden">Smazat</span></button>
+										</form>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+					<div n:if="!$archivedDocuments" class="card-body pt-0 small text-body-secondary">Archiv je zatím prázdný.</div>
+					<div n:if="$canArchive" class="card-footer bg-transparent">
+						{form archiveUploadForm, class: 'row g-2 align-items-end'}
+							<div n:foreach="$form->getOwnErrors() as $error" class="col-12"><div class="alert alert-danger py-2 mb-0">{$error}</div></div>
+							<div class="col-12 small fw-semibold">Nahrát podepsaný originál (sken PDF)</div>
+							<div class="col-md-3">
+								<label n:name="type" class="form-label small mb-1">Dokument</label>
+								<select n:name="type" class="form-select form-select-sm"></select>
+							</div>
+							<div class="col-md-4">
+								<label n:name="file" class="form-label small mb-1">Soubor PDF</label>
+								<input n:name="file" n:class="form-control, form-control-sm, $form['file']->hasErrors() ? is-invalid">
+								<div n:ifcontent class="invalid-feedback d-block">{inputError file}</div>
+							</div>
+							<div class="col-md">
+								<label n:name="note" class="form-label small mb-1">Poznámka</label>
+								<input n:name="note" class="form-control form-control-sm">
+							</div>
+							<div class="col-auto">
+								<button n:name="upload" class="btn btn-sm btn-outline-primary"><i class="bi bi-upload" aria-hidden="true"></i> Nahrát</button>
+							</div>
+						{/form}
+					</div>
 				</div>
 			{else}
 				<div class="card-body empty-state">

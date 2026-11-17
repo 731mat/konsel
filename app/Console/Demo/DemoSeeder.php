@@ -8,6 +8,8 @@ use App\Model\Access\AccessFacade;
 use App\Model\Attachment\AttachmentFacade;
 use App\Model\Comment\CommentAuthorRef;
 use App\Model\Comment\CommentFacade;
+use App\Model\Document\DocumentArchiveFacade;
+use App\Model\Document\MeetingDocumentType;
 use App\Model\Mail\InvitationFacade;
 use App\Model\Meeting\AgendaFacade;
 use App\Model\Meeting\AttendanceStatus;
@@ -80,6 +82,7 @@ final readonly class DemoSeeder
 		private VotingFacade $voting,
 		private ResolutionFacade $resolutions,
 		private ResolutionTaskFacade $tasks,
+		private DocumentArchiveFacade $archive,
 		private ClockInterface $clock,
 		private string $appUrl = 'http://localhost:8080',
 	) {}
@@ -146,6 +149,8 @@ final readonly class DemoSeeder
 			['Odměny neuvolněným členům zastupitelstva', null, 'Zastupitelstvo obce Neplachovice stanoví měsíční odměny neuvolněným členům zastupitelstva podle nařízení vlády č. 318/2017 Sb.'],
 		]);
 		$this->runMeeting($constituent->getId(), $constituentDay->setTime(18, 0), $constituentDay->setTime(19, 40), approveMinutes: true);
+		// archiv: po ověření zápisu se uloží konečný zápis a usnesení (v aplikaci to udělá ověření zápisu samo)
+		$this->archive->archiveFinal($constituent->getId(), $admin->getId());
 
 		// Další zasedání se vztahují k dnešku, aby demo vždy ukazovalo proběhlé, sdílené i připravované zasedání.
 		$today = $this->clock->now()->setTime(18, 0);
@@ -189,6 +194,7 @@ final readonly class DemoSeeder
 			['Prodej pozemku p. č. 456/7 v k. ú. Neplachovice', 'Záměr prodeje byl zveřejněn od 2. do 18. listopadu. Přihlásil se jeden zájemce.', 'Zastupitelstvo obce Neplachovice schvaluje prodej pozemku p. č. 456/7 o výměře 312 m² za cenu 450 Kč/m².'],
 		]);
 		$this->meetings->transition($shared->getId(), MeetingTransition::Share);
+		$this->archive->archive($shared->getId(), MeetingDocumentType::Invitation, $admin->getId(), 'Vyvěšeno na úřední desce a webu obce');
 		$sharedItems = $this->meetings->get($shared->getId())->getAgendaItems();
 		$this->attachments->upload($sharedItems[3]->getId(), [
 			self::file('Návrh rozpočtu 2027.pdf', self::pdf(['Navrh rozpoctu obce Neplachovice na rok 2027', 'Prijmy: 14 200 000 Kc', 'Vydaje: 14 200 000 Kc'])),
@@ -229,7 +235,7 @@ final readonly class DemoSeeder
 			'Volební období 2026–2030, zastupitelstvo 9 členů, finanční a kontrolní výbor',
 			'Knihovna šablon usnesení a programu (řádné a ustavující zasedání)',
 			'Úkolníček: mateřská škola (propojená se 2 zasedáními), oprava komunikace, LED osvětlení, podnět občana',
-			'Zasedání zastupitelstva s programem: ustavující (zápis ověřen), proběhlé (1 omluvený, odhlasované body), sdílené a v přípravě',
+			'Zasedání zastupitelstva s programem: ustavující (zápis ověřen, konečné verze v archivu), proběhlé (1 omluvený, odhlasované body), sdílené a v přípravě',
 			'Usnesení s čísly (1–10/2026) a úkoly z usnesení, jeden po termínu',
 			sprintf('Pozvánky na sdílené zasedání: %d e-mailů odesláno, %d neodesláno (vývoj: http://localhost:8025)', count($invitations->sent), count($invitations->notDelivered())),
 			"Portál zastupitele (Petr Novotný, sdílené zasedání): /odkaz/{$portalLink->token}",

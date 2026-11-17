@@ -477,13 +477,6 @@ final class ProceedingsPresenter extends SecuredPresenter
 		return $day->setTime((int) $m[1], (int) $m[2]);
 	}
 
-	private function currentUserId(): int
-	{
-		$id = $this->getUser()->getId();
-
-		return is_int($id) ? $id : $this->error('Přihlaste se.', 403);
-	}
-
 	private function requireMeeting(): Meeting
 	{
 		return $this->meeting ?? $this->error();

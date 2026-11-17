@@ -162,11 +162,4 @@ final class UserPresenter extends SecuredPresenter
 
 		return $user;
 	}
-
-	private function currentUserId(): int
-	{
-		$id = $this->getUser()->getId();
-
-		return is_int($id) ? $id : 0;
-	}
 }

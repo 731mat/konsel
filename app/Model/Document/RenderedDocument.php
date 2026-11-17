@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Model\Document;
 
 /**
- * Vygenerovaný dokument připravený k odeslání (zatím se neukládá – vzniká na požádání).
+ * Vygenerovaný dokument připravený k odeslání (vzniká na požádání, do archivu ho uloží DocumentArchiveFacade).
  */
-final readonly class GeneratedDocument
+final readonly class RenderedDocument
 {
 	public function __construct(
 		public string $fileName,

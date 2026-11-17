@@ -322,13 +322,6 @@ final class AgendaPresenter extends SecuredPresenter
 		return $form;
 	}
 
-	private function currentUserId(): int
-	{
-		$id = $this->getUser()->getId();
-
-		return is_int($id) ? $id : $this->error('Nepřihlášený uživatel.', 403);
-	}
-
 	private function redrawOrRedirect(): void
 	{
 		if ($this->isAjax()) {

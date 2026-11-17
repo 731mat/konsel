@@ -59,6 +59,7 @@ flowchart TB
 
     subgraph Vystupy["Výstupy"]
         DOC["Dokumenty PDF / Word<br/>pozvánka, podklady, zápis,<br/>usnesení, prezenční listina"]
+        ARCH["Archiv dokumentů<br/>ArchivedDocument<br/>uložené verze, podepsané originály"]
         MAIL["E-maily<br/>pozvánky, upozornění"]
         ACC["Osobní odkazy<br/>MeetingAccessToken"]
     end
@@ -83,6 +84,7 @@ flowchart TB
     MEET --> DOC
     RES --> DOC
     DOCH --> DOC
+    DOC -->|uložit verzi,<br/>po ověření zápisu samo| ARCH
     MEET --> MAIL
     ACC --> MAIL
     PRJ --- AG
@@ -112,6 +114,7 @@ flowchart TB
 | Odkazy zastupitelů | `Access` | Pozvánky a odkazy | osobní odkaz do portálu (v DB jen otisk) |
 | E-maily | `Mail` | Pozvánky a odkazy | pozvánky, upozornění na podnět, záznam odeslání |
 | Dokumenty | `Document` | Dokumenty u zasedání, výpis u usnesení | PDF přes mPDF, verze pro Word |
+| Archiv dokumentů | `Document` (ArchivedDocument) | Dokumenty → Archiv dokumentů | uložené verze PDF, konečný zápis po ověření, podepsané skeny; po ověření jen přidávat |
 | AI | `Ai` | Nastavení → Umělá inteligence | napojení na OpenAI (klíč šifrovaně) |
 | Nápověda | – (`doc/wiki`) | Nápověda | tato wiki |
 

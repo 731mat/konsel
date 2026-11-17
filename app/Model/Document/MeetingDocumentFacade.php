@@ -39,7 +39,7 @@ final readonly class MeetingDocumentFacade
 	/**
 	 * @param bool $namedVotes u zápisu jmenovité výsledky hlasování
 	 */
-	public function generate(int $meetingId, MeetingDocumentType $type, bool $namedVotes = false): GeneratedDocument
+	public function generate(int $meetingId, MeetingDocumentType $type, bool $namedVotes = false): RenderedDocument
 	{
 		$meeting = $this->meetings->get($meetingId);
 		$html = $this->renderHtml($meeting, $type, namedVotes: $namedVotes);
@@ -51,18 +51,18 @@ final readonly class MeetingDocumentFacade
 			$meeting->getScheduledAt()->format('Y-m-d'),
 		);
 
-		return new GeneratedDocument($fileName, $this->pdf->render($html, $title));
+		return new RenderedDocument($fileName, $this->pdf->render($html, $title));
 	}
 
 	/**
 	 * Zápis k úpravě ve Wordu: stejné HTML jako PDF (Word ho otevře jako dokument), bez loga z úložiště.
 	 */
-	public function generateEditable(int $meetingId, MeetingDocumentType $type, bool $namedVotes = false): GeneratedDocument
+	public function generateEditable(int $meetingId, MeetingDocumentType $type, bool $namedVotes = false): RenderedDocument
 	{
 		$meeting = $this->meetings->get($meetingId);
 		$fileName = sprintf('%s-%s-%s.doc', $type->fileSlug(), Strings::webalize($meeting->getTitle()), $meeting->getScheduledAt()->format('Y-m-d'));
 
-		return new GeneratedDocument($fileName, $this->renderHtml($meeting, $type, withLogo: false, namedVotes: $namedVotes), 'application/msword');
+		return new RenderedDocument($fileName, $this->renderHtml($meeting, $type, withLogo: false, namedVotes: $namedVotes), 'application/msword');
 	}
 
 	/**
@@ -112,7 +112,7 @@ final readonly class MeetingDocumentFacade
 	/**
 	 * Výpis z jednoho usnesení (pro úřady, smluvní strany, dotace) s ověřením správnosti.
 	 */
-	public function generateResolutionExtract(int $resolutionId, bool $editable = false): GeneratedDocument
+	public function generateResolutionExtract(int $resolutionId, bool $editable = false): RenderedDocument
 	{
 		$resolution = $this->resolutions->get($resolutionId);
 		$meeting = $resolution->getMeeting();
@@ -131,8 +131,8 @@ final readonly class MeetingDocumentFacade
 		$fileName = sprintf('vypis-usneseni-%s', Strings::webalize($resolution->getNumber()));
 
 		return $editable
-			? new GeneratedDocument("{$fileName}.doc", $html, 'application/msword')
-			: new GeneratedDocument("{$fileName}.pdf", $this->pdf->render($html, "Výpis z usnesení č. {$resolution->getNumber()}"));
+			? new RenderedDocument("{$fileName}.doc", $html, 'application/msword')
+			: new RenderedDocument("{$fileName}.pdf", $this->pdf->render($html, "Výpis z usnesení č. {$resolution->getNumber()}"));
 	}
 
 	/**

@@ -12,6 +12,7 @@ use App\Model\Access\AccessFacade;
 use App\Model\Access\IssuedToken;
 use App\Model\Attachment\AttachmentFacade;
 use App\Model\Comment\CommentFacade;
+use App\Model\Document\DocumentArchiveFacade;
 use App\Model\Document\MeetingDocumentFacade;
 use App\Model\Document\MeetingDocumentType;
 use App\Model\Mail\InvitationFacade;
@@ -33,6 +34,7 @@ use App\Model\Shared\Exception\ValidationException;
 use App\Model\Template\TemplateFacade;
 use App\UI\Form\FormErrors;
 use App\UI\Form\FormFactory;
+use App\UI\Form\FormUploads;
 use Nette\Application\Attributes\Requires;
 use Nette\Application\Responses\CallbackResponse;
 use Nette\Application\UI\Form;
@@ -74,6 +76,7 @@ final class MeetingPresenter extends SecuredPresenter
 		private readonly AttachmentFacade $attachmentFacade,
 		private readonly CommentFacade $commentFacade,
 		private readonly MeetingDocumentFacade $documentFacade,
+		private readonly DocumentArchiveFacade $archiveFacade,
 		private readonly AccessFacade $accessFacade,
 		private readonly InvitationFacade $invitationFacade,
 		private readonly ProceedingsFacade $proceedingsFacade,
@@ -186,7 +189,12 @@ final class MeetingPresenter extends SecuredPresenter
 		));
 		$this->template->meetingTemplates = $this->templateFacade->findMeetingTemplates($meeting->getMunicipality()->getId());
 		$this->template->canSaveTemplate = $this->isAllowed(Resource::Template, Privilege::Edit) && $meeting->getAgendaItems() !== [];
-		$this->template->canViewDocuments = $this->isAllowed(Resource::Document);
+		$this->template->canViewDocuments = $canViewDocuments = $this->isAllowed(Resource::Document);
+		$documentsTab = $this->template->tab === 'documents' && $canViewDocuments;
+		$this->template->archivedDocuments = $documentsTab ? $this->archiveFacade->findByMeeting($meeting->getId()) : [];
+		$this->template->canArchive = $this->isAllowed(Resource::Document, Privilege::Edit);
+		$this->template->canDeleteArchived = $this->isAllowed(Resource::Document, Privilege::Delete) && $meeting->getStatus() !== MeetingStatus::MinutesApproved;
+		$this->template->missingFinal = $documentsTab && $meeting->getStatus() === MeetingStatus::MinutesApproved && !$this->archiveFacade->hasFinalVersion($meeting->getId());
 		$this->template->attendance = $this->template->tab === 'proceedings' ? $this->proceedingsFacade->attendance($meeting->getId()) : null;
 		$this->template->resolutions = $this->template->tab === 'resolutions' ? $this->resolutionFacade->findByMeeting($meeting->getId()) : [];
 		$this->template->canEditProgram = $meeting->canEditProgram() && $this->isAllowed(Resource::Agenda, Privilege::Edit);
@@ -227,6 +235,84 @@ final class MeetingPresenter extends SecuredPresenter
 		$this->sendResponse(new CallbackResponse(static function () use ($document): void {
 			echo $document->content;
 		}));
+	}
+
+	/**
+	 * Verze dokumentu z archivu (PDF) – náhled v prohlížeči, download=1 stažení.
+	 */
+	#[Allowed(Resource::Document)]
+	public function actionArchived(int $id, int $documentId, bool $download = false): void
+	{
+		$meeting = $this->loadMeeting($id);
+		try {
+			$document = $this->assertOwned($this->archiveFacade->get($documentId));
+		} catch (NotFoundException $e) {
+			$this->error($e->getMessage());
+		}
+
+		if ($document->getMeeting() !== $meeting) {
+			$this->error('Dokument v archivu neexistuje.');
+		}
+
+		$this->getHttpResponse()->setHeader('X-Content-Type-Options', 'nosniff');
+		$this->sendStoredFile($document->getFile(), forceDownload: $download);
+	}
+
+	/**
+	 * Uloží aktuální podobu dokumentu do archivu (např. pozvánku v den vyvěšení).
+	 */
+	#[Allowed(Resource::Document, Privilege::Edit)]
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleArchiveDocument(string $type, bool $named = false): void
+	{
+		$meeting = $this->meeting ?? $this->error();
+		$documentType = MeetingDocumentType::tryFrom($type) ?? $this->error('Neznámý typ dokumentu.');
+		try {
+			$this->archiveFacade->archive($meeting->getId(), $documentType, $this->currentUserId(), namedVotes: $named);
+			$this->flashMessage("Dokument „{$documentType->label()}“ byl uložen do archivu.", 'success');
+		} catch (DomainException $e) {
+			$this->flashMessage($e->getMessage(), 'danger');
+		}
+
+		$this->redirectToDocuments($meeting);
+	}
+
+	/**
+	 * Doplní konečné verze zápisu a usnesení, když se po ověření zápisu nepodařilo je uložit.
+	 */
+	#[Allowed(Resource::Document, Privilege::Edit)]
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleArchiveFinal(): void
+	{
+		$meeting = $this->meeting ?? $this->error();
+		try {
+			$this->archiveFacade->archiveFinal($meeting->getId(), $this->currentUserId());
+			$this->flashMessage('Konečné verze zápisu a usnesení jsou uložené v archivu.', 'success');
+		} catch (DomainException $e) {
+			$this->flashMessage($e->getMessage(), 'danger');
+		}
+
+		$this->redirectToDocuments($meeting);
+	}
+
+	#[Allowed(Resource::Document, Privilege::Delete)]
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleDeleteArchived(int $documentId): void
+	{
+		$meeting = $this->meeting ?? $this->error();
+		try {
+			$document = $this->assertOwned($this->archiveFacade->get($documentId));
+			if ($document->getMeeting() !== $meeting) {
+				$this->error('Dokument v archivu neexistuje.');
+			}
+
+			$this->archiveFacade->delete($document->getId());
+			$this->flashMessage('Verze byla z archivu smazána.', 'success');
+		} catch (DomainException $e) {
+			$this->flashMessage($e->getMessage(), 'danger');
+		}
+
+		$this->redirectToDocuments($meeting);
 	}
 
 	#[Allowed(Resource::Meeting, Privilege::Edit)]
@@ -467,6 +553,38 @@ final class MeetingPresenter extends SecuredPresenter
 		$this->redirect('default');
 	}
 
+	/**
+	 * Nahrání podepsaného originálu (sken PDF) do archivu.
+	 */
+	protected function createComponentArchiveUploadForm(): Form
+	{
+		$meeting = $this->meeting ?? $this->error();
+		$form = $this->formFactory->create();
+		$types = [];
+		foreach (MeetingDocumentType::cases() as $type) {
+			if ($type->isAvailableFor($meeting->getStatus())) {
+				$types[$type->value] = $type->label();
+			}
+		}
+
+		$form->addSelect('type', 'Dokument', $types)
+			->setDefaultValue(array_key_exists(MeetingDocumentType::Minutes->value, $types) ? MeetingDocumentType::Minutes->value : null)
+			->setRequired();
+		$form->addUpload('file', 'Soubor PDF')
+			->setRequired('Vyberte soubor.')
+			->addRule(Form::MimeType, 'Nahrajte sken jako PDF.', 'application/pdf')
+			->addRule(Form::MaxFileSize, 'Soubor může mít nejvýše 64 MB.', DocumentArchiveFacade::MaxUploadSize)
+			->setHtmlAttribute('accept', 'application/pdf,.pdf');
+		$form->addText('note', 'Poznámka')
+			->setNullable()
+			->setMaxLength(255)
+			->setHtmlAttribute('placeholder', 'např. podepsáno ověřovateli 20. 11.');
+		$form->addSubmit('upload', 'Nahrát do archivu');
+		$form->onSuccess[] = $this->archiveUploadFormSucceeded(...);
+
+		return $form;
+	}
+
 	protected function createComponentMeetingForm(): Form
 	{
 		$form = $this->formFactory->create();
@@ -557,6 +675,44 @@ final class MeetingPresenter extends SecuredPresenter
 		return $form;
 	}
 
+	private function archiveUploadFormSucceeded(Form $form): void
+	{
+		$this->requirePermission(Resource::Document, Privilege::Edit);
+		$meeting = $this->meeting ?? $this->error();
+		/** @var array{type: string, file: \Nette\Http\FileUpload, note: ?string} $values */
+		$values = $form->getValues('array');
+		$files = FormUploads::toUploadedFiles([$values['file']]);
+		$type = MeetingDocumentType::tryFrom($values['type']);
+		if ($files === [] || $type === null) {
+			$form->addError('Soubor se nepodařilo nahrát.');
+
+			return;
+		}
+
+		try {
+			$this->archiveFacade->upload($meeting->getId(), $type, $files[0], $values['file']->getSize(), $this->currentUserId(), $values['note']);
+		} catch (ValidationException $e) {
+			FormErrors::apply($form, $e);
+
+			return;
+		} catch (DomainException $e) {
+			$form->addError($e->getMessage());
+
+			return;
+		}
+
+		$this->flashMessage('Podepsaný originál byl uložen do archivu.', 'success');
+		$this->redirectToDocuments($meeting);
+	}
+
+	private function redirectToDocuments(Meeting $meeting): never
+	{
+		$this->redirect('detail', [
+			'id' => $meeting->getId(),
+			'tab' => 'documents',
+		]);
+	}
+
 	private function meetingFormSucceeded(Form $form): void
 	{
 		$data = $form->getValues(MeetingFormData::class);
@@ -618,6 +774,9 @@ final class MeetingPresenter extends SecuredPresenter
 	{
 		try {
 			$warnings = $this->meetingFacade->transition($meeting->getId(), $transition);
+			if ($transition === MeetingTransition::ApproveMinutes) {
+				$warnings = [...$warnings, ...$this->archiveFinalVersions($meeting)];
+			}
 			$this->flashMessage(match ($transition) {
 				MeetingTransition::Share => 'Zasedání bylo sdíleno.',
 				MeetingTransition::Start => 'Zasedání bylo zahájeno.',
@@ -635,6 +794,24 @@ final class MeetingPresenter extends SecuredPresenter
 		$this->redirect('detail', [
 			'id' => $meeting->getId(),
 		]);
+	}
+
+	/**
+	 * Po ověření zápisu se konečný zápis a usnesení uloží do archivu. Selhání nevrací ověření zpět – jen upozorní.
+	 *
+	 * @return list<string> upozornění
+	 */
+	private function archiveFinalVersions(Meeting $meeting): array
+	{
+		try {
+			$this->archiveFacade->archiveFinal($meeting->getId(), $this->currentUserId());
+
+			return [];
+		} catch (\Throwable $e) {
+			\Tracy\Debugger::log($e, \Tracy\ILogger::EXCEPTION);
+
+			return ['Konečné verze dokumentů se nepodařilo uložit do archivu. Uložte je na záložce Dokumenty.'];
+		}
 	}
 
 	/**

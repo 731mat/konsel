@@ -165,6 +165,16 @@ abstract class SecuredPresenter extends BasePresenter
 		}
 	}
 
+	/**
+	 * ID přihlášeného uživatele úřadu.
+	 */
+	protected function currentUserId(): int
+	{
+		$id = $this->getUser()->getId();
+
+		return is_int($id) ? $id : $this->error('Přihlaste se.', 403);
+	}
+
 	protected function isAllowed(Resource $resource, Privilege $privilege = Privilege::View): bool
 	{
 		return $this->getUser()->isAllowed($resource->value, $privilege->value);

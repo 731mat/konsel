@@ -51,6 +51,7 @@ flowchart LR
 - **Pozvánky a odkazy → Sdílet a rozeslat pozvánky**: zasedání se sdílí a každý člen orgánu dostane e-mail s osobním odkazem do portálu, programem a PDF pozvánky. Kdo nemá e-mail, tomu se odkaz ukáže k předání jinak.
 - Přehled odeslaných e-mailů včetně chyb. Pozvánku jde poslat znovu jednomu členovi.
 - Dokumenty: **informace o konání zasedání** k vyvěšení na úřední desku (§ 93), **podklady**, **prezenční listina**.
+- **Uložit verzi do archivu**: PDF v současné podobě se uloží natrvalo – typicky pozvánka v den vyvěšení (demo to ukazuje u sdíleného zasedání).
 
 ### 3. Před zasedáním
 - Zastupitelé v portálu čtou podklady a diskutují u bodů (formátovaný text, soubory přetažením). Úřad vidí diskusi u bodu v administraci.
@@ -73,6 +74,8 @@ flowchart LR
 
 ### 7. Ověření zápisu (stav *Zápis ověřen*)
 - Po ověření zápisu už průběh ani funkce nejde měnit. Znovu otevřít smí jen správce.
+- Konečný **zápis a usnesení se samy uloží do archivu** (Dokumenty → Archiv dokumentů). Naskenovaný **podepsaný originál** nahrajete tamtéž jako PDF.
+- Archiv ověřeného zasedání je jen pro přidávání – verze nejde smazat.
 
 ## Úkolníček a občané
 
