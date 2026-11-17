@@ -165,10 +165,16 @@
 						</div>
 						<a n:href="document, id: $meeting->getId(), type: $documentType->value" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye" aria-hidden="true"></i> Zobrazit</a>
 						<a n:href="document, id: $meeting->getId(), type: $documentType->value, download: true" class="btn btn-sm btn-primary"><i class="bi bi-download" aria-hidden="true"></i> Stáhnout PDF</a>
+						{if $documentType->isEditable()}
+							<div class="w-100 d-flex flex-wrap gap-3 small ps-5">
+								<a n:href="document, id: $meeting->getId(), type: $documentType->value, named: true" target="_blank" rel="noopener"><i class="bi bi-person-lines-fill" aria-hidden="true"></i> S jmenovitým hlasováním</a>
+								<a n:href="document, id: $meeting->getId(), type: $documentType->value, format: doc"><i class="bi bi-file-earmark-word" aria-hidden="true"></i> Stáhnout pro úpravy ve Wordu</a>
+							</div>
+						{/if}
 					</div>
 				</div>
 				<div class="card-footer bg-transparent small text-body-secondary">
-					Dokumenty se vytvářejí vždy z aktuálního stavu zasedání. Zápis a výpisy z usnesení přibudou s průběhem zasedání.
+					Dokumenty se vytvářejí vždy z aktuálního stavu zasedání. Zápis je k dispozici po zahájení (do ukončení jako koncept).
 				</div>
 			{else}
 				<div class="card-body empty-state">

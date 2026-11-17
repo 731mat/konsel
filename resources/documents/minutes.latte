@@ -1,0 +1,143 @@
+{layout '@layout.latte'}
+{varType App\Model\Meeting\Meeting $meeting}
+{varType App\Model\Municipality\MunicipalityProfile $profile}
+{varType App\Model\People\Person|null $mayor}
+{varType DateTimeImmutable $generatedAt}
+{varType App\Model\Meeting\AttendanceOverview $attendance}
+{varType array<int, list<App\Model\Meeting\VotingRound>> $rounds}
+{varType array<int, App\Model\Resolution\Resolution> $resolutions}
+{varType bool $namedVotes}
+{varType bool $draft}
+
+{block content}
+{var $body = $meeting->getBody()}
+{var $quorum = $attendance->quorum}
+{var $present = array_filter($attendance->entries, fn($e) => $e->getStatus() === App\Model\Meeting\AttendanceStatus::Present)}
+{var $excused = array_filter($attendance->entries, fn($e) => $e->getStatus() === App\Model\Meeting\AttendanceStatus::Excused)}
+{var $absent = array_filter($attendance->entries, fn($e) => $e->getStatus() === App\Model\Meeting\AttendanceStatus::Absent)}
+{var $late = array_filter($attendance->entries, fn($e) => $e->attendance?->getArrivedAt() !== null || $e->attendance?->getLeftAt() !== null)}
+{* seznam jmen jako konec věty – „Ph.D.“ na konci nesmí dát dvě tečky *}
+{var $names = fn(array $entries) => rtrim(implode(', ', array_map(fn($e) => $e->person->getFullName(), $entries)), '.')}
+
+<div n:if="$draft" style="text-align: center; color: #b42318; font-weight: bold; letter-spacing: 2pt; margin-bottom: 6pt;">KONCEPT – ZASEDÁNÍ PROBÍHÁ</div>
+<h1>Zápis</h1>
+<h2>z {$meeting->getTitle()} {$body->getName()|genitiveBody}</h2>
+
+<table class="facts">
+	<tr><td class="label">Datum</td><td>{$meeting->getScheduledAt()|czDateLong}</td></tr>
+	<tr><td class="label">Místo</td><td>{$meeting->getPlace()}</td></tr>
+	<tr><td class="label">Zahájení</td><td>{$meeting->getStartedAt()?->format('G:i') ?? '—'} hodin{if $meeting->getChairperson()}, zasedání řídil(a) {$meeting->getChairperson()->getFullName()}{/if}</td></tr>
+	<tr><td class="label">Ukončení</td><td>{$meeting->getEndedAt()?->format('G:i') ?? '—'}{if $meeting->getEndedAt()} hodin{/if}</td></tr>
+</table>
+
+<h3>Přítomnost a usnášeníschopnost</h3>
+<p>
+	Přítomno <strong>{$quorum->present} z {$quorum->members}</strong> členů {$body->getName()|genitiveBody}{if $present}: {$names($present)}{/if}.
+	{if $excused}<br>Omluveni: {$names($excused)}.{/if}
+	{if $absent}<br>Neomluveni: {$names($absent)}.{/if}
+	{if $late}
+		<br>Příchody a odchody v průběhu:
+		{foreach $late as $entry}{$entry->person->getFullName()}{if $entry->attendance?->getArrivedAt()} – příchod v {$entry->attendance->getArrivedAt()->format('G:i')}{/if}{if $entry->attendance?->getLeftAt()} – odchod v {$entry->attendance->getLeftAt()->format('G:i')}{/if}{sep}; {/sep}{/foreach}.
+	{/if}
+</p>
+<p>
+	{if $quorum->isReached()}
+		Předsedající konstatoval(a), že je přítomna nadpoloviční většina všech členů a {$body->getName()} je usnášeníschopné (§ 92 odst. 3 zákona o obcích).
+	{else}
+		<strong>{$body->getName()|firstUpper} nebylo usnášeníschopné</strong> (přítomno {$quorum->present}, potřeba {$quorum->required}).
+	{/if}
+	{if $meeting->getGuestCount() !== null}Přítomno hostů: {$meeting->getGuestCount()}.{/if}
+</p>
+
+<table class="facts">
+	<tr><td class="label">Zapisovatel</td><td>{$meeting->getRecorder()?->getFullName() ?? '…………………………'}</td></tr>
+	<tr><td class="label">Ověřovatelé zápisu</td><td>{implode(', ', array_map(fn($p) => $p->getFullName(), $meeting->getVerifiers())) ?: '…………………………'}</td></tr>
+</table>
+
+<h3>Program</h3>
+<ol class="program">
+	<li n:foreach="$meeting->getAgendaItems() as $item">{$item->getTitle()}{if $item->isAddedDuringMeeting()} <span class="muted">(doplněno na zasedání)</span>{/if}</li>
+</ol>
+
+<h3>Průběh jednání</h3>
+{foreach $meeting->getAgendaItems() as $item}
+	{var $itemRounds = $rounds[$item->getId()] ?? []}
+	<div class="item">
+		<h3 style="color: #1f2937">{$item->getPosition()}. {$item->getTitle()}</h3>
+		<div n:if="$item->getRapporteur()" class="muted small">Předkladatel: {$item->getRapporteur()->getFullName()}</div>
+
+		{if $item->getDiscussion()}
+			<p><em>Diskuse:</em></p>
+			{$item->getDiscussion()|nl2p}
+		{elseif $itemRounds}
+			<p class="muted">Bez diskuse.</p>
+		{/if}
+
+		{foreach $itemRounds as $round}
+			{continueIf $round->isOpen()}
+			{var $resolution = $resolutions[$round->getId()] ?? null}
+			<p style="margin-bottom: 2pt">
+				<strong>{$round->getType()->label()}{if $round->getCandidate()}: {$round->getCandidate()->getFullName()}{/if}</strong>
+				{if count($itemRounds) > 1}<span class="muted">(hlasování č. {$round->getSequence()})</span>{/if}
+			</p>
+			{if $resolution}
+				<div class="resolution">
+					<strong>Usnesení č. {$resolution->getNumber()}</strong><br>
+					{$resolution->getText()|breakLines}
+				</div>
+			{elseif $round->getProposalText()}
+				<div class="resolution" style="background: #f3f4f6; border-left-color: #9ca3af;">{$round->getProposalText()|breakLines}</div>
+			{/if}
+			<p>
+				Výsledek hlasování: pro {$round->count(App\Model\Meeting\VoteChoice::For)},
+				proti {$round->count(App\Model\Meeting\VoteChoice::Against)},
+				zdržel se {$round->count(App\Model\Meeting\VoteChoice::Abstain)}{if $round->count(App\Model\Meeting\VoteChoice::NotVoting)}, nehlasoval {$round->count(App\Model\Meeting\VoteChoice::NotVoting)}{/if}
+				– <strong>{$round->getResult()?->label($round->getType())}</strong>.
+			</p>
+			{if $namedVotes}
+				<p class="small">
+					{foreach App\Model\Meeting\VoteChoice::cases() as $choice}
+						{var $voters = array_map(fn($v) => $v->getPerson()->getFullName(), array_filter($round->getVotes(), fn($v) => $v->getChoice() === $choice))}
+						{if $voters}{$choice->label()|firstUpper}: {rtrim(implode(', ', $voters), '.')}.<br>{/if}
+					{/foreach}
+				</p>
+			{/if}
+		{/foreach}
+
+		<p n:if="!$itemRounds && $item->getProposedResolution()" class="muted">O návrhu usnesení se nehlasovalo.</p>
+	</div>
+{/foreach}
+
+{if $meeting->getMinutesNote()}
+	<h3>Poznámky</h3>
+	{$meeting->getMinutesNote()|nl2p}
+{/if}
+
+<p>{if $meeting->getEndedAt()}Předsedající ukončil(a) zasedání v {$meeting->getEndedAt()->format('G:i')} hodin.{/if}</p>
+
+<p class="small muted">Přílohy zápisu: prezenční listina, pozvánka (informace o konání zasedání).</p>
+
+<p>Zápis byl vyhotoven dne {$generatedAt|czDate}.</p>
+
+<table class="signature" width="100%">
+	<tr>
+		<td width="50%" align="center">
+			<br><br>…………………………………………<br>
+			{$meeting->getRecorder()?->getFullName() ?? ''}<br><span class="muted">zapisovatel</span>
+		</td>
+		<td width="50%" align="center">
+			<br><br>…………………………………………<br>
+			{$meeting->getChairperson()?->getFullName() ?? $mayor?->getFullName() ?? ''}<br><span class="muted">{$meeting->getChairperson() ? 'předsedající' : 'starosta obce'}</span>
+		</td>
+	</tr>
+	<tr>
+		{foreach [0, 1] as $i}
+			{var $verifier = $meeting->getVerifiers()[$i] ?? null}
+			<td width="50%" align="center">
+				<br><br><br>…………………………………………<br>
+				{$verifier?->getFullName() ?? ''}<br><span class="muted">ověřovatel zápisu</span>
+			</td>
+		{/foreach}
+	</tr>
+</table>
+{/block}

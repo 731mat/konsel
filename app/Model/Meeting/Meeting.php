@@ -37,6 +37,11 @@ final class Meeting implements TenantOwned, Timestampable
 	 */
 	public const int NoticePeriodDays = 7;
 
+	/**
+	 * Zápis musí být pořízen do 10 dnů po skončení zasedání (§ 95 odst. 1 zákona o obcích).
+	 */
+	public const int MinutesDeadlineDays = 10;
+
 	public const int MaxDiscussionLength = 20_000;
 
 	public const int MaxMinutesNoteLength = 5000;
@@ -289,6 +294,18 @@ final class Meeting implements TenantOwned, Timestampable
 
 		$this->guestCount = $guestCount;
 		$this->minutesNote = $note;
+	}
+
+	/**
+	 * Lhůta pro pořízení zápisu – jen u ukončeného zasedání, jehož zápis ještě není ověřen.
+	 */
+	public function getMinutesDeadline(): ?\DateTimeImmutable
+	{
+		if ($this->status !== MeetingStatus::Closed || $this->endedAt === null) {
+			return null;
+		}
+
+		return $this->endedAt->setTime(0, 0)->modify('+' . self::MinutesDeadlineDays . ' days');
 	}
 
 	public function getGuestCount(): ?int

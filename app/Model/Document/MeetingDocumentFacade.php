@@ -7,8 +7,12 @@ namespace App\Model\Document;
 use App\Model\Attachment\AttachmentRepository;
 use App\Model\Meeting\Meeting;
 use App\Model\Meeting\MeetingRepository;
+use App\Model\Meeting\MeetingStatus;
+use App\Model\Meeting\ProceedingsFacade;
+use App\Model\Meeting\VotingFacade;
 use App\Model\People\MemberFunction;
 use App\Model\People\Person;
+use App\Model\Resolution\ResolutionFacade;
 use App\Model\Storage\FileStorage;
 use Nette\Bridges\ApplicationLatte\LatteFactory;
 use Nette\Utils\Strings;
@@ -25,14 +29,20 @@ final readonly class MeetingDocumentFacade
 		private FileStorage $storage,
 		private LatteFactory $latteFactory,
 		private PdfRenderer $pdf,
+		private ProceedingsFacade $proceedings,
+		private VotingFacade $voting,
+		private ResolutionFacade $resolutions,
 		private ClockInterface $clock,
 		private string $templateDir = __DIR__ . '/../../../resources/documents',
 	) {}
 
-	public function generate(int $meetingId, MeetingDocumentType $type): GeneratedDocument
+	/**
+	 * @param bool $namedVotes u zápisu jmenovité výsledky hlasování
+	 */
+	public function generate(int $meetingId, MeetingDocumentType $type, bool $namedVotes = false): GeneratedDocument
 	{
 		$meeting = $this->meetings->get($meetingId);
-		$html = $this->renderHtml($meeting, $type);
+		$html = $this->renderHtml($meeting, $type, namedVotes: $namedVotes);
 		$title = "{$type->label()} – {$meeting->getTitle()}";
 		$fileName = sprintf(
 			'%s-%s-%s.pdf',
@@ -45,22 +55,44 @@ final readonly class MeetingDocumentFacade
 	}
 
 	/**
-	 * HTML podoba dokumentu (pro PDF i testy).
+	 * Zápis k úpravě ve Wordu: stejné HTML jako PDF (Word ho otevře jako dokument), bez loga z úložiště.
 	 */
-	public function renderHtml(Meeting $meeting, MeetingDocumentType $type): string
+	public function generateEditable(int $meetingId, MeetingDocumentType $type, bool $namedVotes = false): GeneratedDocument
+	{
+		$meeting = $this->meetings->get($meetingId);
+		$fileName = sprintf('%s-%s-%s.doc', $type->fileSlug(), Strings::webalize($meeting->getTitle()), $meeting->getScheduledAt()->format('Y-m-d'));
+
+		return new GeneratedDocument($fileName, $this->renderHtml($meeting, $type, withLogo: false, namedVotes: $namedVotes), 'application/msword');
+	}
+
+	/**
+	 * HTML podoba dokumentu (pro PDF, Word i testy).
+	 */
+	public function renderHtml(Meeting $meeting, MeetingDocumentType $type, bool $withLogo = true, bool $namedVotes = false): string
 	{
 		$municipality = $meeting->getMunicipality();
 		$logo = $municipality->getLogo();
-
-		return $this->latteFactory->create()->renderToString($this->templateDir . "/{$type->value}.latte", [
+		$params = [
 			'meeting' => $meeting,
 			'municipality' => $municipality,
 			'profile' => $municipality->getProfile(),
-			'logoPath' => $logo !== null && $this->storage->exists($logo) ? $this->storage->getLocalPath($logo) : null,
+			'logoPath' => $withLogo && $logo !== null && $this->storage->exists($logo) ? $this->storage->getLocalPath($logo) : null,
 			'mayor' => $this->findMayor($meeting),
 			'attachments' => $type === MeetingDocumentType::Materials ? $this->groupAttachments($meeting) : [],
 			'generatedAt' => $this->clock->now(),
-		]);
+		];
+
+		if ($type === MeetingDocumentType::Minutes) {
+			$params += [
+				'attendance' => $this->proceedings->attendance($meeting->getId()),
+				'rounds' => $this->voting->findByMeeting($meeting->getId()),
+				'resolutions' => $this->resolutions->mapByVotingRound($meeting->getId()),
+				'namedVotes' => $namedVotes,
+				'draft' => $meeting->getStatus() === MeetingStatus::InProgress,
+			];
+		}
+
+		return $this->latteFactory->create()->renderToString($this->templateDir . "/{$type->value}.latte", $params);
 	}
 
 	/**

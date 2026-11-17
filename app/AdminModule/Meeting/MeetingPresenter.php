@@ -178,7 +178,10 @@ final class MeetingPresenter extends SecuredPresenter
 		$this->template->canEdit = $canEdit;
 		$this->template->attachmentCounts = $this->attachmentFacade->countByMeeting($meeting);
 		$this->template->commentCounts = $this->commentFacade->countByMeeting($meeting);
-		$this->template->documentTypes = MeetingDocumentType::cases();
+		$this->template->documentTypes = array_values(array_filter(
+			MeetingDocumentType::cases(),
+			static fn(MeetingDocumentType $type): bool => $type->isAvailableFor($meeting->getStatus()),
+		));
 		$this->template->meetingTemplates = $this->templateFacade->findMeetingTemplates($meeting->getMunicipality()->getId());
 		$this->template->canSaveTemplate = $this->isAllowed(Resource::Template, Privilege::Edit) && $meeting->getAgendaItems() !== [];
 		$this->template->canViewDocuments = $this->isAllowed(Resource::Document);
@@ -189,14 +192,26 @@ final class MeetingPresenter extends SecuredPresenter
 	}
 
 	/**
-	 * PDF dokument zasedání (generuje se na požádání). download=1 vynutí stažení místo náhledu.
+	 * Dokument zasedání (generuje se na požádání). download=1 vynutí stažení, named=1 jmenovité hlasování
+	 * v zápisu, format=doc verze k úpravě ve Wordu.
 	 */
 	#[Allowed(Resource::Document)]
-	public function actionDocument(int $id, string $type, bool $download = false): void
+	public function actionDocument(int $id, string $type, bool $download = false, bool $named = false, string $format = 'pdf'): void
 	{
 		$meeting = $this->loadMeeting($id);
 		$documentType = MeetingDocumentType::tryFrom($type) ?? $this->error('Neznámý typ dokumentu.');
-		$document = $this->documentFacade->generate($meeting->getId(), $documentType);
+		if (!$documentType->isAvailableFor($meeting->getStatus())) {
+			$this->error('Dokument zatím nelze vytvořit.');
+		}
+
+		if ($format === 'doc' && !$documentType->isEditable()) {
+			$this->error('Dokument nelze stáhnout pro Word.');
+		}
+
+		$document = $format === 'doc'
+			? $this->documentFacade->generateEditable($meeting->getId(), $documentType, $named)
+			: $this->documentFacade->generate($meeting->getId(), $documentType, $named);
+		$download = $download || $format === 'doc';
 
 		$response = $this->getHttpResponse();
 		$response->setContentType($document->mimeType);

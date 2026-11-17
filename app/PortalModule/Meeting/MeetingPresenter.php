@@ -46,7 +46,10 @@ final class MeetingPresenter extends PortalPresenter
 		$meeting = $this->getMeeting();
 		$this->template->attachmentCounts = $this->attachmentFacade->countPublicByMeeting($meeting);
 		$this->template->commentCounts = $this->commentFacade->countByMeeting($meeting);
-		$this->template->documentTypes = MeetingDocumentType::cases();
+		$this->template->documentTypes = array_values(array_filter(
+			MeetingDocumentType::cases(),
+			fn(MeetingDocumentType $type): bool => $type->isAvailableFor($this->getMeeting()->getStatus()),
+		));
 	}
 
 	public function actionItem(int $id): void
@@ -96,6 +99,10 @@ final class MeetingPresenter extends PortalPresenter
 	public function actionDocument(string $type): void
 	{
 		$documentType = MeetingDocumentType::tryFrom($type) ?? $this->error('Neznámý typ dokumentu.');
+		if (!$documentType->isAvailableFor($this->getMeeting()->getStatus())) {
+			$this->error('Dokument zatím není k dispozici.');
+		}
+
 		$document = $this->documentFacade->generate($this->getMeeting()->getId(), $documentType);
 		$response = $this->getHttpResponse();
 		$response->setContentType($document->mimeType);

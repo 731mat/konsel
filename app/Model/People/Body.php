@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Model\People;
 
 use App\Model\Municipality\Municipality;
+use App\Model\Shared\CzechCollation;
 use App\Model\Shared\Exception\InvalidStateException;
 use App\Model\Shared\Exception\ValidationException;
 use App\Model\Shared\IntegerId;
@@ -181,8 +182,11 @@ final class Body implements TenantOwned, Timestampable
 			static fn(Membership $membership): bool => $membership->isActiveAt($date),
 		));
 
-		usort($members, static fn(Membership $a, Membership $b): int => [$a->getFunction()->rank(), $a->getPerson()->getName()->sortable()]
-			<=> [$b->getFunction()->rank(), $b->getPerson()->getName()->sortable()]);
+		usort($members, static function (Membership $a, Membership $b): int {
+			$byFunction = $a->getFunction()->rank() <=> $b->getFunction()->rank();
+
+			return $byFunction !== 0 ? $byFunction : CzechCollation::compare($a->getPerson()->getName()->sortable(), $b->getPerson()->getName()->sortable());
+		});
 
 		return $members;
 	}

@@ -7,6 +7,8 @@
 {varType App\Model\Meeting\Meeting[] $upcoming}
 {varType App\Model\Meeting\Meeting[] $recent}
 {varType App\Model\Resolution\ResolutionTask[] $tasks}
+{varType App\Model\Meeting\Meeting[] $minutesDue}
+{varType Closure $daysLeft}
 {varType int $overdueCount}
 {varType Closure $isOverdue}
 {varType bool $canCreateMeeting}
@@ -18,6 +20,18 @@
 	</div>
 	<a n:if="$showMeetings && $canCreateMeeting" n:href="Meeting:add" class="btn btn-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nové zasedání</a>
 </div>
+
+{foreach $minutesDue as $meeting}
+	{var $left = $daysLeft($meeting)}
+	<div n:class="alert, d-flex, flex-wrap, align-items-center, gap-2, $left < 0 ? 'alert-danger' : ($left <= 3 ? 'alert-warning' : 'alert-light border')">
+		<i class="bi bi-journal-text fs-5" aria-hidden="true"></i>
+		<span class="me-auto">
+			Zápis z <strong>{$meeting->getTitle()}</strong> ({$meeting->getScheduledAt()|czDate}) je potřeba vyhotovit do <strong>{$meeting->getMinutesDeadline()|czDate}</strong>
+			{if $left < 0}– lhůta uplynula před {abs($left)} dny.{elseif $left === 0}– dnes je poslední den.{else}– zbývá {$left} {$left === 1 ? 'den' : ($left < 5 ? 'dny' : 'dní')}.{/if}
+		</span>
+		<a n:href="Meeting:detail, id: $meeting->getId(), tab: documents" class="btn btn-sm btn-outline-secondary">Zápis</a>
+	</div>
+{/foreach}
 
 {if $showMeetings}
 	{if $next}

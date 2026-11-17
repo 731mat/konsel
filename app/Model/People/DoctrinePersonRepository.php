@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Model\People;
 
 use App\Model\Municipality\Municipality;
+use App\Model\Shared\CzechCollation;
 use App\Model\Shared\Exception\NotFoundException;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
@@ -29,12 +30,12 @@ final readonly class DoctrinePersonRepository implements PersonRepository
 
 	public function findByMunicipality(Municipality $municipality): array
 	{
-		return $this->repository->findBy([
+		$persons = $this->repository->findBy([
 			'municipality' => $municipality,
-		], [
-			'lastName' => 'ASC',
-			'firstName' => 'ASC',
 		]);
+		usort($persons, static fn(Person $a, Person $b): int => CzechCollation::compare($a->getName()->sortable(), $b->getName()->sortable()));
+
+		return $persons;
 	}
 
 	public function hasMemberships(Person $person): bool

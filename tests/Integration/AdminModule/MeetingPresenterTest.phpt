@@ -276,3 +276,30 @@ test('documents tab offers PDFs and document action streams PDF', function (): v
 	]), BadRequestException::class);
 	Assert::same(404, $e?->getHttpCode());
 });
+
+test('minutes are offered only once the meeting has started; Word version is downloadable', function (): void {
+	$scene = MeetingScene::boot();
+	$meetingId = $scene->meeting();
+
+	Assert::notContains('Zápis ze zasedání', $scene->tester->render('Admin:Meeting', 'detail', [
+		'id' => $meetingId,
+		'tab' => 'documents',
+	]));
+	$e = Assert::exception(fn() => $scene->tester->run('Admin:Meeting', 'document', [
+		'id' => $meetingId,
+		'type' => 'minutes',
+	]), BadRequestException::class);
+	Assert::same(404, $e?->getHttpCode());
+
+	$scene->meetings->transition($meetingId, App\Model\Meeting\MeetingTransition::Share);
+	$scene->meetings->transition($meetingId, App\Model\Meeting\MeetingTransition::Start);
+	Assert::contains('Stáhnout pro úpravy ve Wordu', $scene->tester->render('Admin:Meeting', 'detail', [
+		'id' => $meetingId,
+		'tab' => 'documents',
+	]));
+	Assert::type(Nette\Application\Responses\CallbackResponse::class, $scene->tester->run('Admin:Meeting', 'document', [
+		'id' => $meetingId,
+		'type' => 'minutes',
+		'format' => 'doc',
+	]));
+});
