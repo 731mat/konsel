@@ -10,12 +10,14 @@ use App\Model\Comment\CommentAuthorRef;
 use App\Model\Comment\CommentFacade;
 use App\Model\Mail\InvitationFacade;
 use App\Model\Meeting\AgendaFacade;
+use App\Model\Meeting\AttendanceStatus;
 use App\Model\Meeting\Command\AssignOfficials;
 use App\Model\Meeting\Command\SaveAgendaItem;
 use App\Model\Meeting\Command\SaveMeeting;
 use App\Model\Meeting\MeetingFacade;
 use App\Model\Meeting\MeetingTransition;
 use App\Model\Meeting\MeetingType;
+use App\Model\Meeting\ProceedingsFacade;
 use App\Model\Municipality\Command\CreateMunicipality;
 use App\Model\Municipality\Command\UpdateMunicipalitySettings;
 use App\Model\Municipality\MunicipalityFacade;
@@ -68,6 +70,7 @@ final readonly class DemoSeeder
 		private TemplateFacade $templates,
 		private ProjectFacade $projects,
 		private InvitationFacade $invitations,
+		private ProceedingsFacade $proceedings,
 		private ClockInterface $clock,
 		private string $appUrl = 'http://localhost:8080',
 	) {}
@@ -145,7 +148,7 @@ final readonly class DemoSeeder
 			['Smlouva o dílo – oprava místní komunikace', 'Výběrové řízení vyhrála firma Silnice Morava s.r.o. s nabídkou 1 840 000 Kč bez DPH.', 'Zastupitelstvo obce Neplachovice schvaluje uzavření smlouvy o dílo na opravu místní komunikace se společností Silnice Morava s.r.o. a pověřuje starostu jejím podpisem.'],
 			['Plán inventarizace majetku obce za rok 2026', null, 'Zastupitelstvo obce Neplachovice schvaluje plán inventarizace a jmenuje inventarizační komisi.'],
 		]);
-		$this->runMeeting($past->getId(), $pastDay, $pastDay->setTime(20, 10), approveMinutes: false);
+		$this->runMeeting($past->getId(), $pastDay, $pastDay->setTime(20, 10), approveMinutes: false, excused: [$persons[8]->getId()]);
 
 		$shared = $this->meetings->create($council->getId(), new SaveMeeting(MeetingType::Regular, $today->modify('+3 weeks'), $officeRoom));
 		$this->meetings->assignOfficials($shared->getId(), new AssignOfficials(chairpersonId: $persons[0]->getId(), recorderId: $persons[7]->getId()));
@@ -196,7 +199,7 @@ final readonly class DemoSeeder
 			'Volební období 2026–2030, zastupitelstvo 9 členů, finanční a kontrolní výbor',
 			'Knihovna šablon usnesení a programu (řádné a ustavující zasedání)',
 			'Úkolníček: mateřská škola (propojená se 2 zasedáními), oprava komunikace, LED osvětlení, podnět občana',
-			'Zasedání zastupitelstva s programem: ustavující (zápis ověřen), proběhlé, sdílené a v přípravě',
+			'Zasedání zastupitelstva s programem: ustavující (zápis ověřen), proběhlé (1 omluvený), sdílené a v přípravě',
 			sprintf('Pozvánky na sdílené zasedání: %d e-mailů odesláno, %d neodesláno (vývoj: http://localhost:8025)', count($invitations->sent), count($invitations->notDelivered())),
 			"Portál zastupitele (Petr Novotný, sdílené zasedání): /odkaz/{$portalLink->token}",
 			'Stránka pro občany: /obec/neplachovice/podnety',
@@ -311,9 +314,20 @@ final readonly class DemoSeeder
 	/**
 	 * Proběhlé zasedání: sdílení → zahájení → ukončení se skutečnými časy (případně ověření zápisu).
 	 */
-	private function runMeeting(int $meetingId, \DateTimeImmutable $startedAt, \DateTimeImmutable $endedAt, bool $approveMinutes): void
+	/**
+	 * Odehraje zasedání: sdílení, docházka (omluvení + ostatní přítomni), zahájení, ukončení.
+	 *
+	 * @param list<int> $excused ID omluvených členů
+	 */
+	private function runMeeting(int $meetingId, \DateTimeImmutable $startedAt, \DateTimeImmutable $endedAt, bool $approveMinutes, array $excused = []): void
 	{
-		foreach ([MeetingTransition::Share, MeetingTransition::Start, MeetingTransition::Close] as $transition) {
+		$this->meetings->transition($meetingId, MeetingTransition::Share);
+		foreach ($excused as $personId) {
+			$this->proceedings->mark($meetingId, $personId, AttendanceStatus::Excused);
+		}
+
+		$this->proceedings->markAllPresent($meetingId);
+		foreach ([MeetingTransition::Start, MeetingTransition::Close] as $transition) {
 			$this->meetings->transition($meetingId, $transition);
 		}
 

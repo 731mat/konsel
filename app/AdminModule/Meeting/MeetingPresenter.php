@@ -23,6 +23,7 @@ use App\Model\Meeting\MeetingFacade;
 use App\Model\Meeting\MeetingStatus;
 use App\Model\Meeting\MeetingTransition;
 use App\Model\Meeting\MeetingType;
+use App\Model\Meeting\ProceedingsFacade;
 use App\Model\People\Body;
 use App\Model\People\PeopleFacade;
 use App\Model\Shared\Exception\DomainException;
@@ -74,6 +75,7 @@ final class MeetingPresenter extends SecuredPresenter
 		private readonly MeetingDocumentFacade $documentFacade,
 		private readonly AccessFacade $accessFacade,
 		private readonly InvitationFacade $invitationFacade,
+		private readonly ProceedingsFacade $proceedingsFacade,
 		private readonly TemplateFacade $templateFacade,
 		private readonly PeopleFacade $peopleFacade,
 		private readonly FormFactory $formFactory,
@@ -178,6 +180,7 @@ final class MeetingPresenter extends SecuredPresenter
 		$this->template->meetingTemplates = $this->templateFacade->findMeetingTemplates($meeting->getMunicipality()->getId());
 		$this->template->canSaveTemplate = $this->isAllowed(Resource::Template, Privilege::Edit) && $meeting->getAgendaItems() !== [];
 		$this->template->canViewDocuments = $this->isAllowed(Resource::Document);
+		$this->template->attendance = $this->template->tab === 'proceedings' ? $this->proceedingsFacade->attendance($meeting->getId()) : null;
 		$this->template->canEditProgram = $meeting->canEditProgram() && $this->isAllowed(Resource::Agenda, Privilege::Edit);
 		$this->template->canDelete = $this->isAllowed(Resource::Meeting, Privilege::Delete) && $meeting->getStatus() === MeetingStatus::Draft;
 	}

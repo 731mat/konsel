@@ -1,0 +1,115 @@
+{block title}Průběh – {$meeting->getTitle()}{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href="Meeting:default">Zasedání</a></li>
+	<li class="breadcrumb-item"><a n:href="Meeting:detail, id: $meeting->getId()">{$meeting->getTitle()}</a></li>
+	<li class="breadcrumb-item active" aria-current="page">Průběh</li>
+{/block}
+
+{block content}
+{varType App\Model\Meeting\Meeting $meeting}
+{varType App\Model\Meeting\AttendanceOverview $attendance}
+{varType bool $canRecord}
+{varType App\Model\Meeting\AttendanceStatus[] $choices}
+{varType App\Model\Meeting\MeetingTransition[] $transitions}
+
+<div class="proceedings-header d-flex flex-wrap align-items-center gap-3 mb-4">
+	<div class="me-auto">
+		<h1 class="h3 mb-1">
+			Průběh zasedání
+			<span class="fs-6 align-middle">{include '../Meeting/@status.latte', status: $meeting->getStatus()}</span>
+		</h1>
+		<p class="text-body-secondary mb-0">
+			{$meeting->getTitle()} · {$meeting->getBody()->getName()} · {$meeting->getScheduledAt()|czDateTime}
+			{if $meeting->getStartedAt()} · zahájeno {$meeting->getStartedAt()->format('G:i')}{/if}
+			{if $meeting->getEndedAt()} · ukončeno {$meeting->getEndedAt()->format('G:i')}{/if}
+		</p>
+	</div>
+
+	{snippet quorum}
+		{var $quorum = $attendance->quorum}
+		<div n:class="quorum-indicator, $quorum->isReached() ? quorum-ok : quorum-missing" role="status" aria-live="polite">
+			<i n:class="bi, $quorum->isReached() ? bi-check-circle-fill : bi-exclamation-octagon-fill" aria-hidden="true"></i>
+			<div>
+				<div class="fw-semibold">{$quorum->isReached() ? 'Usnášeníschopné' : 'Není usnášeníschopné'}</div>
+				<div class="small">přítomno {$quorum->present} z {$quorum->members}{if !$quorum->isReached()}, chybí {$quorum->missing()}{else}, potřeba {$quorum->required}{/if}</div>
+			</div>
+		</div>
+	{/snippet}
+
+	<div n:if="$transitions" class="d-flex gap-2">
+		<form n:foreach="$transitions as $transition" method="post" action="{link transition!, transition: $transition->value}">
+			<button type="submit" class="btn btn-primary" data-confirm={$transition->value === 'close' ? 'Ukončit zasedání?' : null}>{$transition->label()}</button>
+		</form>
+	</div>
+</div>
+
+<div n:if="$meeting->getStatus() === App\Model\Meeting\MeetingStatus::Draft" class="alert alert-light border">
+	<i class="bi bi-info-circle" aria-hidden="true"></i> Zasedání je v přípravě. Docházku půjde zapisovat po sdílení se zastupiteli.
+</div>
+
+{snippet attendance}
+<div class="card mb-4" id="dochazka">
+	<div class="card-header d-flex flex-wrap align-items-center gap-2">
+		<span class="me-auto"><i class="bi bi-people" aria-hidden="true"></i> Docházka</span>
+		<span class="small text-body-secondary">
+			<span class="text-success-emphasis">{$attendance->count(App\Model\Meeting\AttendanceStatus::Present)} přítomno</span>
+			· {$attendance->count(App\Model\Meeting\AttendanceStatus::Excused)} omluveno
+			· {$attendance->count(App\Model\Meeting\AttendanceStatus::Absent)} neomluveno
+			{if !$attendance->isComplete()} · <strong>{$attendance->count(App\Model\Meeting\AttendanceStatus::Unknown)} nezapsáno</strong>{/if}
+		</span>
+		<form n:if="$canRecord && !$attendance->isComplete()" method="post" action="{link allPresent!}" class="ajax">
+			<button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check2-all" aria-hidden="true"></i> Ostatní přítomni</button>
+		</form>
+	</div>
+
+	{if $attendance->entries}
+		<ul class="list-group list-group-flush attendance-list">
+			<li n:foreach="$attendance->entries as $entry" class="list-group-item attendance-row">
+				{var $status = $entry->getStatus()}
+				{var $record = $entry->attendance}
+				<div class="attendance-person">
+					<span n:class="attendance-dot, 'bg-' . $status->tone()" aria-hidden="true"></span>
+					<div class="min-w-0">
+						<div class="fw-semibold text-truncate">{$entry->person->getFullName()}</div>
+						<div class="small text-body-secondary">
+							{$entry->function?->label() ?? 'mimo orgán'}
+							{if $record?->getArrivedAt()} · příchod {$record->getArrivedAt()->format('G:i')}{/if}
+							{if $record?->getLeftAt()} · <span class="text-danger-emphasis">odešel {$record->getLeftAt()->format('G:i')}</span>{/if}
+						</div>
+					</div>
+				</div>
+
+				{if $canRecord}
+					<form method="post" action="{link mark!, personId: $entry->person->getId()}" class="ajax attendance-choices" role="group" aria-label="Docházka: {$entry->person->getFullName()}">
+						<button n:foreach="$choices as $choice" type="submit" name="status" value="{$choice->value}"
+							n:class="btn, btn-sm, $choice === $status ? 'btn-' . $choice->tone() : btn-outline-secondary"
+							aria-pressed="{$choice === $status ? 'true' : 'false'}">{$choice->label()|firstUpper}</button>
+					</form>
+					<div class="attendance-extra">
+						{if $status === App\Model\Meeting\AttendanceStatus::Present && $meeting->getStatus() === App\Model\Meeting\MeetingStatus::InProgress}
+							{if $entry->hasLeft()}
+								<form method="post" action="{link return!, personId: $entry->person->getId()}" class="ajax">
+									<button type="submit" class="btn btn-sm btn-link text-decoration-none px-0"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Vrátil se</button>
+								</form>
+							{else}
+								<form method="post" action="{link leave!, personId: $entry->person->getId()}" class="ajax">
+									<button type="submit" class="btn btn-sm btn-link text-decoration-none px-0 text-body-secondary"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Odešel</button>
+								</form>
+							{/if}
+						{/if}
+					</div>
+				{else}
+					<span n:class="badge, status-badge, 'bg-' . $status->tone() . '-subtle', 'text-' . $status->tone() . '-emphasis'">{$status->label()}{if $entry->hasLeft()}, odešel{/if}</span>
+				{/if}
+			</li>
+		</ul>
+	{else}
+		<div class="card-body empty-state"><i class="bi bi-people" aria-hidden="true"></i>Orgán nemá k datu zasedání žádné členy. Doplňte je v Osobách a orgánech.</div>
+	{/if}
+	<div class="card-footer bg-transparent small text-body-secondary">
+		Usnášeníschopnost: přítomna nadpoloviční většina všech {$attendance->quorum->members} členů orgánu, tj. alespoň {$attendance->quorum->required} (§ 92 zákona o obcích).
+		Přítomnost zapsaná po zahájení se zaznamená jako pozdní příchod.
+	</div>
+</div>
+{/snippet}
