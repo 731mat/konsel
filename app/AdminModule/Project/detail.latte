@@ -84,7 +84,7 @@
 											{include '../Meeting/@status.latte', status: $item->getMeeting()->getStatus()}
 										</div>
 										<a n:href="Agenda:detail, id: $item->getId()" class="fw-semibold">{$item->getPosition()}. {$item->getTitle()}</a>
-										<div n:if="$item->getProposedResolution()" class="small mt-1"><i class="bi bi-journal-check text-primary" aria-hidden="true"></i> {$item->getProposedResolution()|truncate: 220}</div>
+										{include '../../UI/Resolution/@outcome.latte', item: $item, resolutions: $entry->resolutions}
 										<form n:if="$canEdit" method="post" action="{link unlinkItem!, itemId: $item->getId()}" class="mt-1">
 											<button type="submit" class="btn btn-link btn-sm p-0 text-body-secondary text-decoration-none" data-confirm="Zrušit propojení bodu s úkolem?">Zrušit propojení</button>
 										</form>

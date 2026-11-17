@@ -7,6 +7,7 @@ namespace App\Model\Project;
 use App\Model\Attachment\Attachment;
 use App\Model\Comment\CommentThread;
 use App\Model\Meeting\AgendaItem;
+use App\Model\Resolution\Resolution;
 
 /**
  * Jedna událost ve vlákně úkolu.
@@ -23,6 +24,9 @@ final readonly class TimelineEntry
 
 	public const string File = 'file';
 
+	/**
+	 * @param list<Resolution> $resolutions usnesení přijatá k bodu (u projednání na zasedání)
+	 */
 	private function __construct(
 		public string $kind,
 		public \DateTimeImmutable $at,
@@ -30,6 +34,7 @@ final readonly class TimelineEntry
 		public ?AgendaItem $agendaItem = null,
 		public ?CommentThread $thread = null,
 		public ?Attachment $file = null,
+		public array $resolutions = [],
 	) {}
 
 	public static function created(Project $project): self
@@ -42,9 +47,12 @@ final readonly class TimelineEntry
 		return new self(self::Status, $change->getChangedAt(), statusChange: $change);
 	}
 
-	public static function agenda(AgendaItem $item): self
+	/**
+	 * @param list<Resolution> $resolutions
+	 */
+	public static function agenda(AgendaItem $item, array $resolutions = []): self
 	{
-		return new self(self::Agenda, $item->getMeeting()->getScheduledAt(), agendaItem: $item);
+		return new self(self::Agenda, $item->getMeeting()->getScheduledAt(), agendaItem: $item, resolutions: $resolutions);
 	}
 
 	public static function thread(CommentThread $thread): self

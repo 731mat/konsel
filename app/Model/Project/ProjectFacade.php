@@ -13,6 +13,7 @@ use App\Model\Meeting\AgendaItemRepository;
 use App\Model\Municipality\MunicipalityRepository;
 use App\Model\People\PersonRepository;
 use App\Model\Project\Command\SaveProject;
+use App\Model\Resolution\ResolutionRepository;
 use App\Model\Shared\Exception\InvalidStateException;
 use App\Model\Shared\Exception\ValidationException;
 use App\Model\Shared\TransactionManager;
@@ -38,6 +39,7 @@ final readonly class ProjectFacade
 		private AttachmentPolicy $policy,
 		private FileStorage $storage,
 		private CommentFacade $comments,
+		private ResolutionRepository $resolutions,
 		private TransactionManager $transaction,
 		private ClockInterface $clock,
 	) {}
@@ -217,7 +219,7 @@ final readonly class ProjectFacade
 		}
 
 		foreach ($this->agendaItems->findByProject($project) as $item) {
-			$entries[] = TimelineEntry::agenda($item);
+			$entries[] = TimelineEntry::agenda($item, $this->resolutions->findByAgendaItem($item));
 		}
 
 		if (!$publicOnly) {

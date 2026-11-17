@@ -54,7 +54,7 @@
 											{include '../../AdminModule/Meeting/@status.latte', status: $item->getMeeting()->getStatus()}
 										</div>
 										<span class="fw-semibold">{$item->getPosition()}. {$item->getTitle()}</span>
-										<div n:if="$item->getProposedResolution()" class="small mt-1"><i class="bi bi-journal-check text-primary" aria-hidden="true"></i> {$item->getProposedResolution()|truncate: 220}</div>
+										{include '../../UI/Resolution/@outcome.latte', item: $item, resolutions: $entry->resolutions}
 									</div>
 								</div>
 							{case 'file'}

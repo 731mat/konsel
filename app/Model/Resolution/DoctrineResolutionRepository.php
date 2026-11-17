@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Model\Resolution;
 
+use App\Model\Meeting\AgendaItem;
 use App\Model\Meeting\Meeting;
 use App\Model\Meeting\VotingRound;
 use App\Model\Municipality\Municipality;
@@ -25,6 +26,15 @@ final readonly class DoctrineResolutionRepository implements ResolutionRepositor
 	{
 		return $this->entityManager->getRepository(Resolution::class)->findOneBy([
 			'votingRound' => $round,
+		]);
+	}
+
+	public function findByAgendaItem(AgendaItem $item): array
+	{
+		return $this->entityManager->getRepository(Resolution::class)->findBy([
+			'agendaItem' => $item,
+		], [
+			'sequence' => 'ASC',
 		]);
 	}
 

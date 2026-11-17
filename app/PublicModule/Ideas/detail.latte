@@ -42,7 +42,7 @@
 								<div class="timeline-card flex-grow-1 min-w-0">
 									<div class="small text-body-secondary">Projednání: {$entry->agendaItem->getMeeting()->getTitle()} · {$entry->agendaItem->getMeeting()->getBody()->getName()} · {$entry->at|czDate}</div>
 									<div class="fw-semibold">{$entry->agendaItem->getTitle()}</div>
-									<div n:if="$entry->agendaItem->getProposedResolution()" class="small mt-1">{$entry->agendaItem->getProposedResolution()}</div>
+									{include '../../UI/Resolution/@outcome.latte', item: $entry->agendaItem, resolutions: $entry->resolutions}
 								</div>
 							</div>
 						{case 'thread'}

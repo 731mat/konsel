@@ -1,0 +1,15 @@
+{* Výsledek projednání bodu ve vlákně úkolu: přijatá usnesení s čísly, jinak návrh usnesení. *}
+{parameters App\Model\Meeting\AgendaItem $item, array $resolutions}
+{if $resolutions}
+	{foreach $resolutions as $resolution}
+		<div class="small mt-1">
+			<span n:class="badge, status-badge, 'bg-' . $resolution->getStatus()->tone() . '-subtle', 'text-' . $resolution->getStatus()->tone() . '-emphasis'">usnesení č. {$resolution->getNumber()} · {$resolution->getStatus()->label()}</span>
+			<span class="d-block mt-1">{$resolution->getText()|truncate: 260}</span>
+		</div>
+	{/foreach}
+{elseif $item->getProposedResolution()}
+	<div class="small mt-1">
+		<span class="text-body-secondary">{$item->getMeeting()->getStatus()->isFinished() ? 'Návrh usnesení (nepřijat):' : 'Návrh usnesení:'}</span>
+		{$item->getProposedResolution()|truncate: 220}
+	</div>
+{/if}
