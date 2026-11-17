@@ -805,6 +805,58 @@ h1, .h1, h2, .h2, h3, .h3 {
 	}
 }
 
+.proposal-text {
+	padding: .6rem .85rem;
+	border-left: 3px solid var(--bs-primary-border-subtle);
+	background: rgba(var(--bs-primary-rgb), .04);
+	border-radius: 0 var(--bs-border-radius) var(--bs-border-radius) 0;
+
+	p:last-child {
+		margin-bottom: 0;
+	}
+}
+
+.voting-round {
+	padding: .75rem .9rem;
+	border: var(--bs-border-width) solid var(--bs-border-color);
+	border-radius: var(--bs-border-radius);
+}
+
+.voting-round-open {
+	border-color: var(--bs-warning-border-subtle);
+	background: rgba(var(--bs-warning-rgb), .05);
+}
+
+.voting-text p {
+	margin-bottom: .2rem;
+}
+
+.voting-tally {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .25rem 1rem;
+	font-size: .875rem;
+}
+
+.voting-matrix-row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: .5rem;
+	padding: .3rem 0;
+	border-bottom: var(--bs-border-width) solid var(--bs-border-color-translucent);
+}
+
+.voting-names summary {
+	cursor: pointer;
+}
+
+@include media-breakpoint-down(sm) {
+	.voting-matrix-row {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
 // --- Datum zasedání (dlaždice) ------------------------------------------------------
 .date-tile {
 	display: flex;

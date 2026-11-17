@@ -12,6 +12,14 @@
 {varType bool $canRecord}
 {varType App\Model\Meeting\AttendanceStatus[] $choices}
 {varType App\Model\Meeting\MeetingTransition[] $transitions}
+{varType App\Model\Meeting\AgendaItem[] $items}
+{varType array<int, list<App\Model\Meeting\VotingRound>> $rounds}
+{varType Closure $voters}
+{varType bool $canVote}
+{varType bool $canCorrect}
+{varType App\Model\Meeting\VoteChoice[] $voteChoices}
+{varType App\Model\Meeting\VotingType[] $otherVotingTypes}
+{varType App\Model\People\Person[] $candidates}
 
 <div class="proceedings-header d-flex flex-wrap align-items-center gap-3 mb-4">
 	<div class="me-auto">
@@ -113,3 +121,159 @@
 	</div>
 </div>
 {/snippet}
+
+{snippet agenda}
+<div class="d-flex align-items-center mb-3" id="program">
+	<h2 class="h5 mb-0 me-auto">Program a hlasování</h2>
+	<span n:if="!$canVote && $meeting->getStatus()->isPlanning()" class="small text-body-secondary">Hlasovat půjde po zahájení zasedání.</span>
+</div>
+
+{foreach $items as $item}
+	{var $itemRounds = $rounds[$item->getId()] ?? []}
+	{var $openRound = null}
+	{var $decided = false}
+	{foreach $itemRounds as $round}
+		{if $round->isOpen()}{var $openRound = $round}{/if}
+		{if !$round->isOpen() && $round->getType()->decidesItem() && $round->getResult() === App\Model\Meeting\VotingResult::Adopted}{var $decided = true}{/if}
+	{/foreach}
+	<section class="card proceedings-item mb-3" id="bod-{$item->getId()}">
+		<div class="card-header d-flex align-items-center gap-2">
+			<span class="agenda-number">{$item->getPosition()}.</span>
+			<span class="me-auto">{$item->getTitle()}</span>
+			<span n:if="$openRound" class="badge status-badge bg-warning-subtle text-warning-emphasis">hlasuje se</span>
+			<span n:if="$decided" class="badge status-badge bg-success-subtle text-success-emphasis">rozhodnuto</span>
+		</div>
+		<div class="card-body">
+			<div n:if="$item->getProposedResolution()" class="proposal-text mb-3">
+				<div class="small fw-semibold text-body-secondary mb-1">Návrh usnesení</div>
+				<div class="text-break">{$item->getProposedResolution()|nl2p}</div>
+			</div>
+
+			{foreach $itemRounds as $round}
+				{if $round->isOpen()}
+					{include openRound, round: $round}
+				{else}
+					{include closedRound, round: $round}
+				{/if}
+			{/foreach}
+
+			{if $canVote && !$openRound}
+				<div class="d-flex flex-wrap align-items-center gap-2">
+					<form n:if="$item->getProposedResolution() && !$decided" method="post" action="{link openVoting!, itemId: $item->getId()}" class="ajax">
+						<input type="hidden" name="type" value="proposal">
+						<button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-hand-index-thumb" aria-hidden="true"></i> Hlasovat o návrhu usnesení</button>
+					</form>
+					<button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#jine-hlasovani-{$item->getId()}" aria-expanded="false">{$itemRounds || !$item->getProposedResolution() ? 'Hlasování…' : 'Jiné hlasování…'}</button>
+				</div>
+				<form method="post" action="{link openVoting!, itemId: $item->getId()}" class="collapse ajax voting-other mt-3" id="jine-hlasovani-{$item->getId()}">
+					<div class="row g-2">
+						<div class="col-md-5">
+							<label class="form-label small" for="voting-type-{$item->getId()}">Typ hlasování</label>
+							<select name="type" class="form-select form-select-sm" id="voting-type-{$item->getId()}">
+								<option n:if="!$decided" value="proposal">{App\Model\Meeting\VotingType::Proposal->label()}</option>
+								<option n:foreach="$otherVotingTypes as $votingType" value="{$votingType->value}">{$votingType->label()}</option>
+							</select>
+						</div>
+						<div class="col-md-7">
+							<label class="form-label small" for="voting-candidate-{$item->getId()}">Kandidát <span class="text-body-secondary">(jen u volby osoby)</span></label>
+							<select name="candidateId" class="form-select form-select-sm" id="voting-candidate-{$item->getId()}">
+								<option value="">—</option>
+								<option n:foreach="$candidates as $candidate" value="{$candidate->getId()}">{$candidate->getFullName()}</option>
+							</select>
+						</div>
+						<div class="col-12">
+							<label class="form-label small" for="voting-text-{$item->getId()}">Znění návrhu</label>
+							<textarea name="proposalText" rows="3" class="form-control form-control-sm" id="voting-text-{$item->getId()}" placeholder="{$meeting->getBody()->getName()} schvaluje / volí …"></textarea>
+						</div>
+					</div>
+					<button type="submit" class="btn btn-primary btn-sm mt-2">Zahájit hlasování</button>
+				</form>
+			{elseif !$itemRounds}
+				<p class="small text-body-secondary mb-0">{$item->getProposedResolution() ? 'Zatím se nehlasovalo.' : 'Bez návrhu usnesení.'}</p>
+			{/if}
+		</div>
+	</section>
+{else}
+	<div class="card"><div class="card-body empty-state"><i class="bi bi-list-ol" aria-hidden="true"></i>Zasedání nemá program.</div></div>
+{/foreach}
+{/snippet}
+
+{define roundTitle, App\Model\Meeting\VotingRound $round}
+	<div class="fw-semibold">
+		Hlasování č. {$round->getSequence()} – {$round->getType()->label()}{if $round->getCandidate()}: {$round->getCandidate()->getFullName()}{/if}
+		<span class="small fw-normal text-body-secondary">· {$round->getOpenedAt()->format('G:i')}</span>
+	</div>
+	<div n:if="$round->getProposalText()" class="small text-break voting-text">{$round->getProposalText()|nl2p}</div>
+{/define}
+
+{define openRound, App\Model\Meeting\VotingRound $round}
+	{var $roundVoters = $voters($round)}
+	{var $rule = App\Model\Meeting\VotingRule::forBody($round->getMeeting()->getBody())}
+	<div class="voting-round voting-round-open mb-3">
+		<div class="d-flex flex-wrap align-items-start gap-2 mb-2">
+			<div class="me-auto min-w-0">{include roundTitle, round: $round}</div>
+			<span class="badge status-badge bg-warning-subtle text-warning-emphasis">probíhá</span>
+		</div>
+		<div class="voting-tally mb-2" aria-live="polite">
+			{foreach $voteChoices as $choice}
+				<span n:class="voting-tally-item, 'text-' . $choice->tone() . '-emphasis'"><strong>{$round->count($choice)}</strong> {$choice->label()}</span>
+			{/foreach}
+			<span class="voting-tally-item text-body-secondary"><strong>{count($roundVoters) - $round->count(App\Model\Meeting\VoteChoice::For) - $round->count(App\Model\Meeting\VoteChoice::Against) - $round->count(App\Model\Meeting\VoteChoice::Abstain)}</strong> nehlasoval</span>
+			<span class="voting-tally-item text-body-secondary">k přijetí {$rule->required()} pro z {$rule->members}</span>
+		</div>
+		<ul class="list-unstyled voting-matrix mb-2">
+			<li n:foreach="$roundVoters as $voter" class="voting-matrix-row">
+				{var $current = $round->getVoteOf($voter)}
+				<span class="text-truncate">{$voter->getFullName()}</span>
+				{if $canCorrect}
+					<form method="post" action="{link vote!, roundId: $round->getId(), personId: $voter->getId()}" class="ajax attendance-choices" role="group" aria-label="Hlas: {$voter->getFullName()}">
+						<button n:foreach="$voteChoices as $choice" type="submit" name="choice" value="{$current === $choice ? 'not_voting' : $choice->value}"
+							n:class="btn, btn-sm, $current === $choice ? 'btn-' . $choice->tone() : btn-outline-secondary"
+							aria-pressed="{$current === $choice ? 'true' : 'false'}">{$choice->label()|firstUpper}</button>
+					</form>
+				{else}
+					<span>{$current?->label() ?? 'nehlasoval'}</span>
+				{/if}
+			</li>
+		</ul>
+		<div n:if="$canCorrect" class="d-flex flex-wrap gap-2">
+			<form method="post" action="{link allFor!, roundId: $round->getId()}" class="ajax">
+				<button type="submit" class="btn btn-sm btn-outline-success"><i class="bi bi-check2-all" aria-hidden="true"></i> Všichni přítomní pro</button>
+			</form>
+			<form method="post" action="{link closeVoting!, roundId: $round->getId()}" class="ajax">
+				<button type="submit" class="btn btn-sm btn-primary" data-confirm="Ukončit hlasování? Kdo nemá zapsaný hlas, nehlasoval.">Ukončit hlasování</button>
+			</form>
+			<form method="post" action="{link deleteVoting!, roundId: $round->getId()}" class="ajax ms-auto">
+				<button type="submit" class="btn btn-sm btn-link text-danger text-decoration-none" data-confirm="Zrušit hlasování založené omylem?">Zrušit hlasování</button>
+			</form>
+		</div>
+		<p class="small text-body-secondary mt-2 mb-0">Hlasují členové přítomní v {$round->getOpenedAt()->format('G:i')} ({count($roundVoters)}). Kliknutím na zvolenou možnost hlas zrušíte.</p>
+	</div>
+{/define}
+
+{define closedRound, App\Model\Meeting\VotingRound $round}
+	{var $result = $round->getResult()}
+	<div class="voting-round mb-3">
+		<div class="d-flex flex-wrap align-items-start gap-2">
+			<div class="me-auto min-w-0">{include roundTitle, round: $round}</div>
+			<span n:if="$result" n:class="badge, status-badge, 'bg-' . $result->tone() . '-subtle', 'text-' . $result->tone() . '-emphasis'">{$result->label($round->getType())}</span>
+		</div>
+		<div class="small mt-1">
+			{foreach App\Model\Meeting\VoteChoice::cases() as $choice}<strong>{$round->count($choice)}</strong> {$choice->label()}{sep} · {/sep}{/foreach}
+			<span class="text-body-secondary">(z {$round->getMembersCount()} členů)</span>
+		</div>
+		<details class="small mt-1 voting-names">
+			<summary class="text-body-secondary">Jmenovitě</summary>
+			<dl class="row mb-0 mt-1">
+				{foreach App\Model\Meeting\VoteChoice::cases() as $choice}
+					{var $names = array_map(fn($vote) => $vote->getPerson()->getFullName(), array_filter($round->getVotes(), fn($vote) => $vote->getChoice() === $choice))}
+					<dt n:if="$names" class="col-sm-3 fw-normal text-body-secondary">{$choice->label()|firstUpper}</dt>
+					<dd n:if="$names" class="col-sm-9 mb-1">{implode(', ', $names)}</dd>
+				{/foreach}
+			</dl>
+		</details>
+		<form n:if="$canCorrect" method="post" action="{link reopenVoting!, roundId: $round->getId()}" class="ajax mt-1">
+			<button type="submit" class="btn btn-sm btn-link text-decoration-none px-0" data-confirm="Znovu otevřít hlasování a opravit hlasy?">Opravit hlasování</button>
+		</form>
+	</div>
+{/define}

@@ -18,6 +18,9 @@ use App\Model\Meeting\MeetingFacade;
 use App\Model\Meeting\MeetingTransition;
 use App\Model\Meeting\MeetingType;
 use App\Model\Meeting\ProceedingsFacade;
+use App\Model\Meeting\VoteChoice;
+use App\Model\Meeting\VotingFacade;
+use App\Model\Meeting\VotingType;
 use App\Model\Municipality\Command\CreateMunicipality;
 use App\Model\Municipality\Command\UpdateMunicipalitySettings;
 use App\Model\Municipality\MunicipalityFacade;
@@ -71,6 +74,7 @@ final readonly class DemoSeeder
 		private ProjectFacade $projects,
 		private InvitationFacade $invitations,
 		private ProceedingsFacade $proceedings,
+		private VotingFacade $voting,
 		private ClockInterface $clock,
 		private string $appUrl = 'http://localhost:8080',
 	) {}
@@ -148,7 +152,13 @@ final readonly class DemoSeeder
 			['Smlouva o dílo – oprava místní komunikace', 'Výběrové řízení vyhrála firma Silnice Morava s.r.o. s nabídkou 1 840 000 Kč bez DPH.', 'Zastupitelstvo obce Neplachovice schvaluje uzavření smlouvy o dílo na opravu místní komunikace se společností Silnice Morava s.r.o. a pověřuje starostu jejím podpisem.'],
 			['Plán inventarizace majetku obce za rok 2026', null, 'Zastupitelstvo obce Neplachovice schvaluje plán inventarizace a jmenuje inventarizační komisi.'],
 		]);
-		$this->runMeeting($past->getId(), $pastDay, $pastDay->setTime(20, 10), approveMinutes: false, excused: [$persons[8]->getId()]);
+		// bod 5 = smlouva o dílo (po standardním úvodu): jeden proti, jeden se zdržel
+		$this->runMeeting($past->getId(), $pastDay, $pastDay->setTime(20, 10), approveMinutes: false, excused: [$persons[8]->getId()], exceptions: [
+			5 => [
+				$persons[6]->getId() => VoteChoice::Against,
+				$persons[4]->getId() => VoteChoice::Abstain,
+			],
+		]);
 
 		$shared = $this->meetings->create($council->getId(), new SaveMeeting(MeetingType::Regular, $today->modify('+3 weeks'), $officeRoom));
 		$this->meetings->assignOfficials($shared->getId(), new AssignOfficials(chairpersonId: $persons[0]->getId(), recorderId: $persons[7]->getId()));
@@ -199,7 +209,7 @@ final readonly class DemoSeeder
 			'Volební období 2026–2030, zastupitelstvo 9 členů, finanční a kontrolní výbor',
 			'Knihovna šablon usnesení a programu (řádné a ustavující zasedání)',
 			'Úkolníček: mateřská škola (propojená se 2 zasedáními), oprava komunikace, LED osvětlení, podnět občana',
-			'Zasedání zastupitelstva s programem: ustavující (zápis ověřen), proběhlé (1 omluvený), sdílené a v přípravě',
+			'Zasedání zastupitelstva s programem: ustavující (zápis ověřen), proběhlé (1 omluvený, odhlasované body), sdílené a v přípravě',
 			sprintf('Pozvánky na sdílené zasedání: %d e-mailů odesláno, %d neodesláno (vývoj: http://localhost:8025)', count($invitations->sent), count($invitations->notDelivered())),
 			"Portál zastupitele (Petr Novotný, sdílené zasedání): /odkaz/{$portalLink->token}",
 			'Stránka pro občany: /obec/neplachovice/podnety',
@@ -315,11 +325,13 @@ final readonly class DemoSeeder
 	 * Proběhlé zasedání: sdílení → zahájení → ukončení se skutečnými časy (případně ověření zápisu).
 	 */
 	/**
-	 * Odehraje zasedání: sdílení, docházka (omluvení + ostatní přítomni), zahájení, ukončení.
+	 * Odehraje zasedání: sdílení, docházka (omluvení + ostatní přítomni), zahájení, hlasování
+	 * o všech návrzích usnesení (všichni pro, kromě výjimek), ukončení.
 	 *
 	 * @param list<int> $excused ID omluvených členů
+	 * @param array<int, array<int, VoteChoice>> $exceptions pořadí bodu → ID osoby → volba
 	 */
-	private function runMeeting(int $meetingId, \DateTimeImmutable $startedAt, \DateTimeImmutable $endedAt, bool $approveMinutes, array $excused = []): void
+	private function runMeeting(int $meetingId, \DateTimeImmutable $startedAt, \DateTimeImmutable $endedAt, bool $approveMinutes, array $excused = [], array $exceptions = []): void
 	{
 		$this->meetings->transition($meetingId, MeetingTransition::Share);
 		foreach ($excused as $personId) {
@@ -327,9 +339,22 @@ final readonly class DemoSeeder
 		}
 
 		$this->proceedings->markAllPresent($meetingId);
-		foreach ([MeetingTransition::Start, MeetingTransition::Close] as $transition) {
-			$this->meetings->transition($meetingId, $transition);
+		$this->meetings->transition($meetingId, MeetingTransition::Start);
+		foreach ($this->meetings->get($meetingId)->getAgendaItems() as $item) {
+			if ($item->getProposedResolution() === null) {
+				continue;
+			}
+
+			$round = $this->voting->open($item->getId(), VotingType::Proposal);
+			$this->voting->allFor($round->getId());
+			foreach ($exceptions[$item->getPosition()] ?? [] as $personId => $choice) {
+				$this->voting->cast($round->getId(), $personId, $choice);
+			}
+
+			$this->voting->close($round->getId());
 		}
+
+		$this->meetings->transition($meetingId, MeetingTransition::Close);
 
 		$this->meetings->correctTimes($meetingId, $startedAt, $endedAt);
 		if ($approveMinutes) {
