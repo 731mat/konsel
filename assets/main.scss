@@ -857,6 +857,35 @@ h1, .h1, h2, .h2, h3, .h3 {
 	}
 }
 
+// --- Usnesení ---------------------------------------------------------------------
+.resolution-row {
+	display: grid;
+	grid-template-columns: 6.5rem minmax(0, 1fr) auto;
+	gap: .75rem;
+	align-items: start;
+
+	p:last-child {
+		margin-bottom: 0;
+	}
+}
+
+.resolution-number {
+	font-weight: 700;
+	color: var(--bs-primary-text-emphasis);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+@include media-breakpoint-down(sm) {
+	.resolution-row {
+		grid-template-columns: minmax(0, 1fr) auto;
+
+		.resolution-number {
+			grid-column: 1 / -1;
+		}
+	}
+}
+
 // --- Datum zasedání (dlaždice) ------------------------------------------------------
 .date-tile {
 	display: flex;

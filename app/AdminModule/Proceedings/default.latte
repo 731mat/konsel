@@ -21,6 +21,7 @@
 {varType App\Model\Meeting\VotingType[] $otherVotingTypes}
 {varType App\Model\People\Person[] $candidates}
 {varType bool $canRecordProceedings}
+{varType array<int, App\Model\Resolution\Resolution> $resolutions}
 {varType bool $canAssignOfficials}
 
 <div class="proceedings-header d-flex flex-wrap align-items-center gap-3 mb-4">
@@ -333,6 +334,8 @@
 	<div class="voting-round mb-3">
 		<div class="d-flex flex-wrap align-items-start gap-2">
 			<div class="me-auto min-w-0">{include roundTitle, round: $round}</div>
+			{var $resolution = $resolutions[$round->getId()] ?? null}
+			<span n:if="$resolution" class="badge bg-primary-subtle text-primary-emphasis">usnesení č. {$resolution->getNumber()}</span>
 			<span n:if="$result" n:class="badge, status-badge, 'bg-' . $result->tone() . '-subtle', 'text-' . $result->tone() . '-emphasis'">{$result->label($round->getType())}</span>
 		</div>
 		<div class="small mt-1">

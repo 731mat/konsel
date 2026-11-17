@@ -14,6 +14,8 @@ use App\Model\People\Command\AddMember;
 use App\Model\People\Command\SaveBody;
 use App\Model\People\MemberFunction;
 use App\Model\People\Membership;
+use App\Model\People\NumberingMask;
+use App\Model\People\NumberingScope;
 use App\Model\People\PeopleFacade;
 use App\Model\People\Term;
 use App\Model\Shared\Exception\DomainException;
@@ -23,6 +25,7 @@ use App\UI\Form\FormErrors;
 use App\UI\Form\FormFactory;
 use Nette\Application\Attributes\Requires;
 use Nette\Application\UI\Form;
+use Nette\Utils\Html;
 use Psr\Clock\ClockInterface;
 
 /**
@@ -100,6 +103,7 @@ final class MemberPresenter extends SecuredPresenter
 			'name' => $this->body->getName(),
 			'seatCount' => $this->body->getSeatCount(),
 			'numberingMask' => $this->body->getNumberingMask(),
+			'numberingScope' => $this->body->getNumberingScope()->value,
 		]);
 	}
 
@@ -199,9 +203,14 @@ final class MemberPresenter extends SecuredPresenter
 			->addRule(Form::Range, 'Počet členů musí být 1 až 99.', [1, 99]);
 		$form->addText('numberingMask', 'Číslování usnesení')
 			->setDefaultValue(Body::DefaultNumberingMask)
-			->setRequired()
-			->setMaxLength(100)
-			->setOption('description', 'Maska čísla usnesení, např. {n}/{yyyy} nebo R{n}/{yy}. Podrobnosti v nastavení usnesení.');
+			->setRequired('Zadejte masku čísla usnesení.')
+			->setMaxLength(NumberingMask::MaxLength)
+			->setHtmlAttribute('data-numbering-mask')
+			->setOption('description', Html::el()->setHtml('Proměnné: <code>{n}</code> pořadové číslo, <code>{n:3}</code> doplněné nulami, <code>{yyyy}</code>/<code>{yy}</code> rok, <code>{meeting}</code> číslo zasedání, <code>{item}</code> číslo bodu, <code>{body}</code> zkratka orgánu. Náhled: <strong data-numbering-preview></strong>'));
+		$form->addSelect('numberingScope', 'Řada čísel', array_combine(
+			array_map(static fn(NumberingScope $scope): string => $scope->value, NumberingScope::cases()),
+			array_map(static fn(NumberingScope $scope): string => $scope->label(), NumberingScope::cases()),
+		))->setDefaultValue(NumberingScope::Year->value);
 		$form->addSubmit('save', 'Uložit');
 		$form->onSuccess[] = $this->bodyFormSucceeded(...);
 
@@ -288,7 +297,7 @@ final class MemberPresenter extends SecuredPresenter
 	private function bodyFormSucceeded(Form $form): void
 	{
 		$data = $form->getValues(BodyFormData::class);
-		$command = new SaveBody(BodyType::from($data->type), $data->name, $data->seatCount, $data->numberingMask);
+		$command = new SaveBody(BodyType::from($data->type), $data->name, $data->seatCount, $data->numberingMask, NumberingScope::from($data->numberingScope));
 
 		try {
 			if ($this->body === null) {

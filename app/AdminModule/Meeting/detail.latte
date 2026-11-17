@@ -9,6 +9,7 @@
 {varType App\Model\Meeting\Meeting $meeting}
 {varType string $tab}
 {varType App\Model\Meeting\AttendanceOverview|null $attendance}
+{varType App\Model\Resolution\Resolution[] $resolutions}
 {varType array<string, string> $tabs}
 {varType App\Model\Meeting\MeetingTransition[] $transitions}
 {varType string[] $warnings}
@@ -143,6 +144,17 @@
 					</div>
 					<p class="small text-body-secondary mb-0">Na obrazovce průběhu zapíšete docházku (i pozdní příchody a odchody), hlasování a diskusi k bodům.</p>
 				</div>
+			{elseif $tab === 'resolutions' && $resolutions}
+				<ul class="list-group list-group-flush">
+					<li n:foreach="$resolutions as $resolution" class="list-group-item resolution-row">
+						<div class="resolution-number">{$resolution->getNumber()}</div>
+						<div class="min-w-0">
+							<div class="small text-body-secondary">Bod {$resolution->getAgendaItem()->getPosition()}. {$resolution->getAgendaItem()->getTitle()}</div>
+							<div class="text-break">{$resolution->getText()|nl2p}</div>
+						</div>
+						<span n:class="badge, status-badge, 'bg-' . $resolution->getStatus()->tone() . '-subtle', 'text-' . $resolution->getStatus()->tone() . '-emphasis', align-self-start">{$resolution->getStatus()->label()}</span>
+					</li>
+				</ul>
 			{elseif $tab === 'documents' && $canViewDocuments}
 				<div class="list-group list-group-flush">
 					<div n:foreach="$documentTypes as $documentType" class="list-group-item d-flex flex-wrap align-items-center gap-3 py-3">
@@ -166,7 +178,7 @@
 							Docházka, hlasování a diskuse k bodům se zaznamenávají po zahájení zasedání.
 						{case 'resolutions'}
 							<i class="bi bi-journal-check" aria-hidden="true"></i>
-							Usnesení vzniknou z hlasování o bodech programu.
+							Usnesení vzniknou přijetím hlasování o bodech programu (obrazovka Průběh) a dostanou číslo podle masky orgánu.
 						{case 'documents'}
 							<i class="bi bi-file-earmark-text" aria-hidden="true"></i>
 							Dokumenty jsou dostupné jen s oprávněním k dokumentům.

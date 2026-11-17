@@ -48,6 +48,9 @@ final class Body implements TenantOwned, Timestampable
 	#[ORM\Column(length: 100)]
 	private string $numberingMask = self::DefaultNumberingMask;
 
+	#[ORM\Column(length: 20, enumType: NumberingScope::class)]
+	private NumberingScope $numberingScope = NumberingScope::Year;
+
 	/**
 	 * @var Collection<int, Membership>
 	 */
@@ -92,14 +95,13 @@ final class Body implements TenantOwned, Timestampable
 		$this->seatCount = $seatCount;
 	}
 
-	public function changeNumberingMask(string $mask): void
+	/**
+	 * @throws ValidationException neplatná maska
+	 */
+	public function changeNumberingMask(string $mask, ?NumberingScope $scope = null): void
 	{
-		$mask = trim($mask);
-		if ($mask === '' || mb_strlen($mask) > 100 || !str_contains($mask, '{n')) {
-			throw new ValidationException('Maska číslování musí obsahovat pořadové číslo {n}.', 'numberingMask');
-		}
-
-		$this->numberingMask = $mask;
+		$this->numberingMask = (new NumberingMask($mask))->value;
+		$this->numberingScope = $scope ?? $this->numberingScope;
 	}
 
 	/**
@@ -232,6 +234,51 @@ final class Body implements TenantOwned, Timestampable
 	public function getNumberingMask(): string
 	{
 		return $this->numberingMask;
+	}
+
+	public function getMask(): NumberingMask
+	{
+		return new NumberingMask($this->numberingMask);
+	}
+
+	public function getNumberingScope(): NumberingScope
+	{
+		return $this->numberingScope;
+	}
+
+	/**
+	 * Klíč řady čísel usnesení: od kdy se čísluje znovu od 1.
+	 */
+	public function numberingScopeKey(\DateTimeInterface $date, int $meetingId): string
+	{
+		return match ($this->numberingScope) {
+			NumberingScope::Year => 'Y' . $date->format('Y'),
+			NumberingScope::Term => 'T' . $this->term->getId(),
+			NumberingScope::Meeting => 'M' . $meetingId,
+		};
+	}
+
+	/**
+	 * Zkratka orgánu do čísla usnesení: ZO, RO, u výboru iniciály názvu (Finanční výbor → FV).
+	 */
+	public function getCode(): string
+	{
+		return match ($this->type) {
+			BodyType::Council => 'ZO',
+			BodyType::Board => 'RO',
+			BodyType::Committee => self::initials($this->name),
+		};
+	}
+
+	private static function initials(string $name): string
+	{
+		$words = preg_split('~\s+~u', trim($name));
+		$words = $words === false ? [] : $words;
+		$letters = array_map(static fn(string $word): string => mb_strtoupper(mb_substr($word, 0, 1)), array_filter($words, static fn(string $word): bool => mb_strlen($word) > 2 && !in_array(mb_strtolower($word), ['obce', 'města', 'městyse'], true)));
+
+		$code = implode('', $letters);
+
+		return $code === '' ? 'V' : $code;
 	}
 
 	private function countActiveAt(\DateTimeImmutable $date): int

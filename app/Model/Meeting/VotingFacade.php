@@ -6,6 +6,8 @@ namespace App\Model\Meeting;
 
 use App\Model\People\Person;
 use App\Model\People\PersonRepository;
+use App\Model\Resolution\ResolutionRecorder;
+use App\Model\Resolution\ResolutionRepository;
 use App\Model\Shared\Exception\InvalidStateException;
 use App\Model\Shared\Exception\ValidationException;
 use App\Model\Shared\TransactionManager;
@@ -22,6 +24,8 @@ final readonly class VotingFacade
 		private PersonRepository $persons,
 		private VotingRoundRepository $rounds,
 		private ProceedingsFacade $proceedings,
+		private ResolutionRecorder $resolutionRecorder,
+		private ResolutionRepository $resolutions,
 		private TransactionManager $transaction,
 		private ClockInterface $clock,
 	) {}
@@ -85,14 +89,18 @@ final readonly class VotingFacade
 	}
 
 	/**
+	 * Ukončí hlasování; přijatý návrh, protinávrh nebo volba dostane číslo usnesení (ve stejné transakci).
+	 *
 	 * @throws InvalidStateException
 	 */
-	public function close(int $roundId): VotingResult
+	public function close(int $roundId): VotingOutcome
 	{
-		return $this->transaction->run(function () use ($roundId): VotingResult {
+		return $this->transaction->run(function () use ($roundId): VotingOutcome {
 			$round = $this->rounds->get($roundId);
+			$now = $this->clock->now();
+			$result = $round->close(VotingRule::forBody($round->getMeeting()->getBody()), $this->voters($round), $now);
 
-			return $round->close(VotingRule::forBody($round->getMeeting()->getBody()), $this->voters($round), $this->clock->now());
+			return new VotingOutcome($result, $this->resolutionRecorder->record($round, $now));
 		});
 	}
 
@@ -114,6 +122,11 @@ final readonly class VotingFacade
 		$this->transaction->run(function () use ($roundId): void {
 			$round = $this->rounds->get($roundId);
 			$round->assertDeletable();
+			$resolution = $this->resolutions->findByVotingRound($round);
+			if ($resolution !== null) {
+				throw new InvalidStateException("Hlasování už založilo usnesení č. {$resolution->getNumber()}. Nelze ho smazat, jen opravit.");
+			}
+
 			$this->rounds->remove($round);
 		});
 	}

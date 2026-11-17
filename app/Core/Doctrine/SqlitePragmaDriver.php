@@ -29,6 +29,6 @@ final class SqlitePragmaDriver extends AbstractDriverMiddleware
 			$connection->exec('PRAGMA synchronous = NORMAL');
 		}
 
-		return $connection;
+		return new SqliteImmediateConnection($connection);
 	}
 }

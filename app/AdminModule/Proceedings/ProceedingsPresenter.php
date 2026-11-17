@@ -22,6 +22,7 @@ use App\Model\Meeting\VotingFacade;
 use App\Model\Meeting\VotingRound;
 use App\Model\Meeting\VotingType;
 use App\Model\People\PeopleFacade;
+use App\Model\Resolution\ResolutionFacade;
 use App\Model\Shared\Exception\DomainException;
 use App\Model\Shared\Exception\NotFoundException;
 use App\Model\Shared\Exception\ValidationException;
@@ -45,6 +46,7 @@ final class ProceedingsPresenter extends SecuredPresenter
 		private readonly PeopleFacade $peopleFacade,
 		private readonly AgendaFacade $agendaFacade,
 		private readonly FormFactory $formFactory,
+		private readonly ResolutionFacade $resolutionFacade,
 	) {
 		parent::__construct();
 	}
@@ -77,6 +79,7 @@ final class ProceedingsPresenter extends SecuredPresenter
 		$this->template->choices = AttendanceStatus::choices();
 		$this->template->items = $meeting->getAgendaItems();
 		$this->template->rounds = $this->votingFacade->findByMeeting($meeting->getId());
+		$this->template->resolutions = $this->resolutionFacade->mapByVotingRound($meeting->getId());
 		$this->template->voters = fn(VotingRound $round): array => $this->votingFacade->voters($round);
 		$this->template->canVote = $canEdit && $meeting->getStatus() === MeetingStatus::InProgress;
 		$this->template->canRecordProceedings = $canEdit && $meeting->canRecordProceedings();
@@ -169,8 +172,9 @@ final class ProceedingsPresenter extends SecuredPresenter
 	{
 		$round = $this->ownedRound($roundId);
 		$this->runVotingChange($round->getAgendaItem()->getId(), function () use ($round): void {
-			$result = $this->votingFacade->close($round->getId());
-			$this->flashMessage("Hlasování č. {$round->getSequence()} k bodu {$round->getAgendaItem()->getPosition()}: {$result->label($round->getType())}.", $result->tone());
+			$outcome = $this->votingFacade->close($round->getId());
+			$resolution = $outcome->resolution === null ? '' : " Usnesení č. {$outcome->resolution->getNumber()}.";
+			$this->flashMessage("Hlasování č. {$round->getSequence()} k bodu {$round->getAgendaItem()->getPosition()}: {$outcome->result->label($round->getType())}.{$resolution}", $outcome->result->tone());
 		});
 	}
 

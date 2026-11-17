@@ -20,6 +20,7 @@ services:
 	- App\Model\Document\MpdfRenderer(%tempDir%/mpdf)
 	- App\Console\Demo\DemoSeeder(appUrl: %appUrl%)
 	- App\Model\Mail\MailTemplates
+	- App\Model\Resolution\ResolutionRecorder
 	- App\Console\Demo\SeedDemoCommand(productionMode: %productionMode%)
 	- App\UI\Form\FormFactory
 	- App\UI\Sign\SignInFormFactory

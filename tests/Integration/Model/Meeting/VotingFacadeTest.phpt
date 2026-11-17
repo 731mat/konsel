@@ -59,7 +59,7 @@ test('only members present at the moment of voting vote; result follows the majo
 	$proceedings->mark($meetingId, $ids['Veselý'], AttendanceStatus::Present);
 	Assert::exception(fn() => $voting->cast($round->getId(), $ids['Veselý'], VoteChoice::For), ValidationException::class, '%a%nebyl v okamžiku hlasování přítomen%a%');
 
-	Assert::same(VotingResult::Adopted, $voting->close($round->getId()), '3 pro z 5 členů orgánu = nadpoloviční většina');
+	Assert::same(VotingResult::Adopted, $voting->close($round->getId())->result, '3 pro z 5 členů orgánu = nadpoloviční většina');
 	$grouped = $voting->findByMeeting($meetingId);
 	Assert::same([$scenario->item->getId()], array_keys($grouped));
 	Assert::same([3, 1, 0, 0], [

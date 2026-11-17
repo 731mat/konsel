@@ -45,6 +45,7 @@ test('admin builds council through forms: term, body, person, member', function 
 		'name' => 'Zastupitelstvo obce Neplachovice',
 		'seatCount' => '7',
 		'numberingMask' => '{n}/{yyyy}',
+		'numberingScope' => 'year',
 	], action: 'bodyAdd', params: [
 		'term' => $term->getId(),
 	]));

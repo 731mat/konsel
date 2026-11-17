@@ -139,7 +139,7 @@ final readonly class PeopleFacade
 
 			$body = new Body($term, $command->type, $command->name, $command->seatCount);
 			if ($command->numberingMask !== null) {
-				$body->changeNumberingMask($command->numberingMask);
+				$body->changeNumberingMask($command->numberingMask, $command->numberingScope);
 			}
 
 			$this->bodies->add($body);
@@ -159,7 +159,7 @@ final readonly class PeopleFacade
 			$body->rename($command->name);
 			$body->changeSeatCount($command->seatCount);
 			if ($command->numberingMask !== null) {
-				$body->changeNumberingMask($command->numberingMask);
+				$body->changeNumberingMask($command->numberingMask, $command->numberingScope);
 			}
 		});
 	}

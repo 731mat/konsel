@@ -251,3 +251,29 @@ document.addEventListener('submit', (event) => {
 		autosave(form);
 	}
 });
+
+// Náhled čísla usnesení u masky orgánu: <input data-numbering-mask> + <strong data-numbering-preview>.
+// Ukázka = 7. usnesení, 3. zasedání, bod 4, rok 2026 (stejně jako NumberingMask::example()). Platnost hlídá server.
+function previewNumbering(input) {
+	const preview = input.closest('form')?.querySelector('[data-numbering-preview]');
+	if (!preview) {
+		return;
+	}
+	const values = { n: '7', yyyy: '2026', yy: '26', meeting: '3', item: '4', body: 'ZO' };
+	const tokens = [...input.value.matchAll(/\{([a-z]+)(?::(\d+))?\}/g)];
+	const valid = tokens.filter((t) => t[1] === 'n').length === 1 && tokens.every((t) => t[1] in values && (t[2] === undefined || t[1] === 'n'));
+	preview.textContent = valid
+		? input.value.replace(/\{([a-z]+)(?::(\d+))?\}/g, (_, name, width) => (width ? values[name].padStart(Number(width), '0') : values[name]))
+		: 'maska musí obsahovat {n} právě jednou';
+	preview.classList.toggle('text-danger', !valid);
+}
+
+document.addEventListener('input', (event) => {
+	if (event.target instanceof HTMLInputElement && event.target.matches('[data-numbering-mask]')) {
+		previewNumbering(event.target);
+	}
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+	document.querySelectorAll('[data-numbering-mask]').forEach(previewNumbering);
+});

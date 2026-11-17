@@ -13,4 +13,6 @@ final class BodyFormData
 	public int $seatCount;
 
 	public string $numberingMask;
+
+	public string $numberingScope;
 }
