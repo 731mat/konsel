@@ -21,6 +21,7 @@ final readonly class ProceedingsFacade
 		private AgendaItemRepository $items,
 		private PersonRepository $persons,
 		private AttendanceRepository $attendances,
+		private AgendaItemLockRepository $locks,
 		private TransactionManager $transaction,
 		private ClockInterface $clock,
 	) {}
@@ -80,13 +81,20 @@ final readonly class ProceedingsFacade
 	}
 
 	/**
+	 * @param ?int $userId kdo ukládá – bod nesmí mít zamčený někdo jiný (obrazovka průběhu)
 	 * @throws InvalidStateException
 	 * @throws ValidationException
+	 * @throws LockedException
 	 */
-	public function recordDiscussion(int $itemId, ?string $discussion): void
+	public function recordDiscussion(int $itemId, ?string $discussion, ?int $userId = null): void
 	{
-		$this->transaction->run(function () use ($itemId, $discussion): void {
+		$this->transaction->run(function () use ($itemId, $discussion, $userId): void {
 			$item = $this->items->get($itemId);
+			$lock = $userId === null ? null : $this->locks->findByItem($item);
+			if ($lock !== null && !$lock->isExpired($this->clock->now()) && $lock->getUser()->getId() !== $userId) {
+				throw new LockedException($lock->getUser()->getName(), $lock->getExpiresAt());
+			}
+
 			$item->getMeeting()->recordDiscussion($item, $discussion);
 		});
 	}

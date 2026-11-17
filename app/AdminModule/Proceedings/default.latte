@@ -22,9 +22,10 @@
 {varType App\Model\People\Person[] $candidates}
 {varType bool $canRecordProceedings}
 {varType array<int, App\Model\Resolution\Resolution> $resolutions}
+{varType array<int, App\Model\Meeting\AgendaItemLock> $foreignLocks}
 {varType bool $canAssignOfficials}
 
-<div class="proceedings-header d-flex flex-wrap align-items-center gap-3 mb-4">
+<div class="proceedings-header d-flex flex-wrap align-items-center gap-3 mb-4" n:attr="data-poll-url: $meeting->getStatus() === App\Model\Meeting\MeetingStatus::InProgress ? $control->link('refresh!') : null">
 	<div class="me-auto">
 		<h1 class="h3 mb-1">
 			Průběh zasedání
@@ -198,11 +199,17 @@
 			</div>
 
 			{if $canRecordProceedings}
+				{var $lock = $foreignLocks[$item->getId()] ?? null}
 				<form method="post" action="{link discussion!, itemId: $item->getId()}" class="discussion-form" data-autosave>
 					<label class="form-label small fw-semibold" for="discussion-{$item->getId()}">Diskuse do zápisu</label>
-					<textarea name="discussion" rows="3" class="form-control form-control-sm" id="discussion-{$item->getId()}" maxlength="{App\Model\Meeting\Meeting::MaxDiscussionLength}" placeholder="Kdo vystoupil a s čím, dotazy a odpovědi…">{$item->getDiscussion()}</textarea>
+					<textarea name="discussion" rows="3" class="form-control form-control-sm" id="discussion-{$item->getId()}" maxlength="{App\Model\Meeting\Meeting::MaxDiscussionLength}" placeholder="Kdo vystoupil a s čím, dotazy a odpovědi…"
+						data-lock-url="{link lock!, itemId: $item->getId()}" data-unlock-url="{link unlock!, itemId: $item->getId()}" readonly={$lock !== null}>{$item->getDiscussion()}</textarea>
 					<div class="d-flex align-items-center gap-2 mt-1">
 						<span class="small text-body-secondary" data-autosave-status aria-live="polite">{if $item->getDiscussion()}Uloženo{else}Ukládá se samo při opuštění pole{/if}</span>
+						{* Naja překresluje jen obsah snippetu – stav zámku nese vnitřní element *}
+						<span n:snippet="lock-{$item->getId()}" class="small text-warning-emphasis">
+							<span data-lock-for="discussion-{$item->getId()}" data-lock-holder="{$lock?->getUser()->getName() ?? ''}" data-discussion="{$item->getDiscussion() ?? ''}">{if $lock}<i class="bi bi-pencil-square" aria-hidden="true"></i> Upravuje {$lock->getUser()->getName()}{/if}</span>
+						</span>
 						<button type="submit" class="btn btn-sm btn-outline-secondary ms-auto">Uložit</button>
 					</div>
 				</form>

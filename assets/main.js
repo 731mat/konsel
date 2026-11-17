@@ -277,3 +277,91 @@ document.addEventListener('input', (event) => {
 document.addEventListener('DOMContentLoaded', () => {
 	document.querySelectorAll('[data-numbering-mask]').forEach(previewNumbering);
 });
+
+// Zámky diskuse na obrazovce průběhu (ADR A14): při psaní textarea[data-lock-url] drží zámek bodu
+// (obnova každých 20 s), po opuštění pole a při odchodu ze stránky ho uvolní. Cizí zámek = pole jen ke čtení.
+let heldLock = null;
+
+function lockRequest(url) {
+	return naja.makeRequest('POST', url, null, { unique: false, history: false });
+}
+
+function releaseLock() {
+	if (!heldLock) {
+		return;
+	}
+	clearInterval(heldLock.timer);
+	const url = heldLock.textarea.dataset.unlockUrl;
+	heldLock = null;
+	if (navigator.sendBeacon) {
+		navigator.sendBeacon(url);
+	} else {
+		lockRequest(url).catch(() => {});
+	}
+}
+
+document.addEventListener('focusin', (event) => {
+	const textarea = event.target instanceof HTMLTextAreaElement && event.target.dataset.lockUrl ? event.target : null;
+	if (!textarea || textarea.readOnly || heldLock?.textarea === textarea) {
+		return;
+	}
+	releaseLock();
+	lockRequest(textarea.dataset.lockUrl).then((payload) => {
+		if (payload?.lockedBy) {
+			textarea.readOnly = true;
+			textarea.blur();
+			const status = textarea.closest('form')?.querySelector('[data-autosave-status]');
+			if (status) {
+				status.textContent = `Bod právě upravuje ${payload.lockedBy}.`;
+			}
+			return;
+		}
+		if (document.activeElement === textarea) {
+			heldLock = { textarea, timer: setInterval(() => lockRequest(textarea.dataset.lockUrl).catch(() => {}), 20000) };
+		} else {
+			lockRequest(textarea.dataset.unlockUrl).catch(() => {});
+		}
+	}).catch(() => {});
+});
+
+document.addEventListener('focusout', (event) => {
+	if (heldLock && event.target === heldLock.textarea) {
+		// change (průběžné uložení) proběhne před focusout – zámek se uvolní až po odeslání textu
+		setTimeout(releaseLock, 0);
+	}
+});
+
+window.addEventListener('pagehide', releaseLock);
+
+// Stav zámků a uložený text po překreslení snippetů: <span data-lock-for="idTextarea" data-lock-holder data-discussion>.
+function applyLocks(root) {
+	root.querySelectorAll?.('[data-lock-for]').forEach((info) => {
+		const textarea = document.getElementById(info.dataset.lockFor);
+		if (!textarea || textarea === document.activeElement) {
+			return;
+		}
+		textarea.readOnly = (info.dataset.lockHolder ?? '') !== '';
+		// cizí uložený text převezmeme, jen když tu nejsou neuložené změny
+		const saved = textarea.dataset.saved ?? textarea.defaultValue;
+		const latest = info.dataset.discussion ?? '';
+		if (textarea.value === saved && latest !== saved) {
+			textarea.value = latest;
+			textarea.dataset.saved = latest;
+		}
+	});
+}
+
+naja.snippetHandler.addEventListener('afterUpdate', (event) => applyLocks(event.detail.snippet));
+
+// Průběžné obnovení obrazovky průběhu (jen viditelná karta): <element data-poll-url>.
+document.addEventListener('DOMContentLoaded', () => {
+	const poller = document.querySelector('[data-poll-url]');
+	if (!poller) {
+		return;
+	}
+	setInterval(() => {
+		if (document.visibilityState === 'visible' && !document.querySelector('.modal.show')) {
+			naja.makeRequest('GET', poller.dataset.pollUrl, null, { unique: 'poll', history: false }).catch(() => {});
+		}
+	}, 5000);
+});

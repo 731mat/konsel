@@ -12,6 +12,7 @@ use App\Model\Municipality\Municipality;
 use App\Model\Municipality\MunicipalityFacade;
 use App\Model\People\Body;
 use App\Model\People\PeopleFacade;
+use App\Model\Shared\Exception\ConcurrencyException;
 use App\Model\Shared\TenantOwned;
 use App\Model\Shared\ValueObject\StoredFile;
 use App\Model\Storage\FileStorage;
@@ -78,6 +79,19 @@ abstract class SecuredPresenter extends BasePresenter
 			if (!$user->isAllowed($allowed->resource->value, $allowed->privilege->value)) {
 				$this->error('K této stránce nemáte oprávnění.', 403);
 			}
+		}
+	}
+
+	/**
+	 * Souběžná úprava (optimistický zámek): EntityManager je zavřený, nic se nevykreslí – jen přesměrování s hláškou.
+	 */
+	public function processSignal(): void
+	{
+		try {
+			parent::processSignal();
+		} catch (ConcurrencyException $e) { // @phpstan-ignore catch.neverThrown (vzniká při flush v TransactionManager hluboko pod signálem)
+			$this->flashMessage($e->getMessage(), 'warning');
+			$this->redirect('this');
 		}
 	}
 

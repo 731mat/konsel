@@ -72,6 +72,13 @@ final class Meeting implements TenantOwned, Timestampable
 	#[ORM\Column(length: 20, enumType: MeetingStatus::class)]
 	private MeetingStatus $status = MeetingStatus::Draft;
 
+	/**
+	 * Optimistický zámek proti přepsání souběžné úpravy (ADR A14).
+	 */
+	#[ORM\Version]
+	#[ORM\Column(type: 'integer')]
+	private int $version = 1;
+
 	#[ORM\ManyToOne(targetEntity: Person::class)]
 	private ?Person $chairperson = null;
 

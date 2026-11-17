@@ -35,6 +35,13 @@ final class AgendaItem implements TenantOwned, Timestampable
 	#[ORM\Column]
 	private int $position;
 
+	/**
+	 * Optimistický zámek proti přepsání souběžné úpravy (ADR A14).
+	 */
+	#[ORM\Version]
+	#[ORM\Column(type: 'integer')]
+	private int $version = 1;
+
 	#[ORM\Column(length: 300)]
 	private string $title;
 

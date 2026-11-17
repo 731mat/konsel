@@ -9,9 +9,11 @@ use App\Core\Security\Allowed;
 use App\Core\Security\Privilege;
 use App\Core\Security\Resource;
 use App\Model\Meeting\AgendaFacade;
+use App\Model\Meeting\AgendaLockFacade;
 use App\Model\Meeting\Attendance;
 use App\Model\Meeting\AttendanceStatus;
 use App\Model\Meeting\Command\SaveAgendaItem;
+use App\Model\Meeting\LockedException;
 use App\Model\Meeting\Meeting;
 use App\Model\Meeting\MeetingFacade;
 use App\Model\Meeting\MeetingStatus;
@@ -47,6 +49,7 @@ final class ProceedingsPresenter extends SecuredPresenter
 		private readonly AgendaFacade $agendaFacade,
 		private readonly FormFactory $formFactory,
 		private readonly ResolutionFacade $resolutionFacade,
+		private readonly AgendaLockFacade $lockFacade,
 	) {
 		parent::__construct();
 	}
@@ -80,6 +83,7 @@ final class ProceedingsPresenter extends SecuredPresenter
 		$this->template->items = $meeting->getAgendaItems();
 		$this->template->rounds = $this->votingFacade->findByMeeting($meeting->getId());
 		$this->template->resolutions = $this->resolutionFacade->mapByVotingRound($meeting->getId());
+		$this->template->foreignLocks = $this->lockFacade->findForeignLocks($meeting->getId(), $this->currentUserId());
 		$this->template->voters = fn(VotingRound $round): array => $this->votingFacade->voters($round);
 		$this->template->canVote = $canEdit && $meeting->getStatus() === MeetingStatus::InProgress;
 		$this->template->canRecordProceedings = $canEdit && $meeting->canRecordProceedings();
@@ -206,7 +210,7 @@ final class ProceedingsPresenter extends SecuredPresenter
 		}
 
 		try {
-			$this->proceedingsFacade->recordDiscussion($itemId, $this->postString('discussion'));
+			$this->proceedingsFacade->recordDiscussion($itemId, $this->postString('discussion'), $this->currentUserId());
 			$this->payload->saved = true;
 			$message = null;
 		} catch (DomainException $e) {
@@ -219,6 +223,59 @@ final class ProceedingsPresenter extends SecuredPresenter
 
 		$this->flashMessage($message ?? 'Diskuse byla uložena.', $message === null ? 'success' : 'danger');
 		$this->redirect('this#bod-' . $itemId);
+	}
+
+	/**
+	 * Zámek diskuse bodu: získání a obnovení (heartbeat každých 20 s, platí 60 s).
+	 */
+	#[Allowed(Resource::Meeting, Privilege::Edit)]
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleLock(int $itemId): void
+	{
+		if ($this->requireMeeting()->findAgendaItem($itemId) === null) {
+			$this->error('Bod neexistuje.');
+		}
+
+		try {
+			$this->lockFacade->acquire($itemId, $this->currentUserId());
+			$this->payload->locked = true;
+		} catch (LockedException $e) {
+			$this->payload->lockedBy = $e->holderName;
+		}
+
+		$this->sendPayload();
+	}
+
+	/**
+	 * Uvolnění zámku po uložení nebo při odchodu ze stránky (navigator.sendBeacon).
+	 */
+	#[Allowed(Resource::Meeting, Privilege::Edit)]
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleUnlock(int $itemId): void
+	{
+		if ($this->requireMeeting()->findAgendaItem($itemId) !== null) {
+			$this->lockFacade->release($itemId, $this->currentUserId());
+		}
+
+		$this->sendPayload();
+	}
+
+	/**
+	 * Průběžné obnovení obrazovky (polling každých 5 s): docházka, hlasování a zámky bodů.
+	 */
+	public function handleRefresh(): void
+	{
+		if (!$this->isAjax()) {
+			$this->redirect('this');
+		}
+
+		$this->redrawControl('quorum');
+		$this->redrawControl('attendance');
+		$this->redrawControl('agenda');
+		foreach ($this->requireMeeting()->getAgendaItems() as $item) {
+			$this->redrawControl("voting-{$item->getId()}");
+			$this->redrawControl("lock-{$item->getId()}");
+		}
 	}
 
 	/**
@@ -418,6 +475,13 @@ final class ProceedingsPresenter extends SecuredPresenter
 		}
 
 		return $day->setTime((int) $m[1], (int) $m[2]);
+	}
+
+	private function currentUserId(): int
+	{
+		$id = $this->getUser()->getId();
+
+		return is_int($id) ? $id : $this->error('Přihlaste se.', 403);
 	}
 
 	private function requireMeeting(): Meeting

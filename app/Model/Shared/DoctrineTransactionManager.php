@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Model\Shared;
 
+use App\Model\Shared\Exception\ConcurrencyException;
 use App\Model\Shared\Exception\DomainException;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\OptimisticLockException;
 
 /**
  * Transakce use-case: flush + commit, při chybě rollback.
@@ -34,6 +36,12 @@ final readonly class DoctrineTransactionManager implements TransactionManager
 		} catch (\Throwable $e) {
 			if ($connection->isTransactionActive()) {
 				$connection->rollBack();
+			}
+
+			if ($e instanceof OptimisticLockException) {
+				$this->entityManager->close();
+
+				throw new ConcurrencyException($e);
 			}
 
 			if ($e instanceof DomainException) {

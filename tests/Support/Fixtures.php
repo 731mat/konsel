@@ -33,10 +33,11 @@ final readonly class Fixtures
 		Municipality $municipality,
 		string $email = 'jana@neplachovice.cz',
 		Role $role = Role::Editor,
+		string $name = 'Jana Nováková',
 	): User {
 		return $this->container->getByType(UserFacade::class)->create(new CreateUser(
 			email: $email,
-			name: 'Jana Nováková',
+			name: $name,
 			role: $role,
 			password: self::Password,
 			municipalityId: $municipality->getId(),
