@@ -7,7 +7,9 @@ namespace App\AdminModule\Task;
 use App\AdminModule\SecuredPresenter;
 use App\Core\Security\Allowed;
 use App\Core\Security\Privilege;
+use App\Core\Security\RequiresModule;
 use App\Core\Security\Resource;
+use App\Model\Municipality\Module;
 use App\Model\Resolution\ResolutionTask;
 use App\Model\Resolution\ResolutionTaskFacade;
 use App\Model\Resolution\TaskFilter;
@@ -21,6 +23,7 @@ use Nette\Application\Attributes\Requires;
  * Úkoly z usnesení napříč zasedáními: otevřené, moje, po termínu.
  */
 #[Allowed(Resource::Resolution)]
+#[RequiresModule(Module::ResolutionTasks)]
 final class TaskPresenter extends SecuredPresenter
 {
 	public function __construct(

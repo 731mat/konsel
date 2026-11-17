@@ -1,0 +1,35 @@
+{block title}Moduly – nastavení obce{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href="default">Nastavení</a></li>
+	<li class="breadcrumb-item active" aria-current="page">Moduly</li>
+{/block}
+
+{block content}
+{varType App\Model\Municipality\Module[] $modules}
+<h1 class="h3 mb-3">Nastavení obce</h1>
+{include '@tabs.latte', current: 'modules'}
+
+<div class="card" style="max-width: 48rem">
+	<div class="card-body">
+		<h2 class="h5">Části aplikace</h2>
+		<p class="text-body-secondary small">
+			Při postupném zavádění můžete volitelné části vypnout. Vypnutý modul zmizí z menu, přehledu, detailů i hledání,
+			jeho adresy přestanou fungovat a zastupitelé ani občané ho neuvidí. Data zůstávají uložená – po zapnutí je vše zpět.
+			Zasedání, usnesení, dokumenty a archiv jsou základ a vypnout nejdou.
+		</p>
+
+		{form modulesForm}
+			<div class="list-group mb-3">
+				<label n:foreach="$modules as $module" class="list-group-item d-flex gap-3 align-items-start py-3 form-switch">
+					<input n:name="$module->value" class="form-check-input flex-shrink-0 mt-1 ms-0" role="switch">
+					<span>
+						<span class="fw-semibold"><i class="bi bi-{$module->icon()}" aria-hidden="true"></i> {$module->label()}</span>
+						<span class="d-block small text-body-secondary">{$module->description()}</span>
+					</span>
+				</label>
+			</div>
+			<button n:name="save" class="btn btn-primary">Uložit moduly</button>
+		{/form}
+	</div>
+</div>

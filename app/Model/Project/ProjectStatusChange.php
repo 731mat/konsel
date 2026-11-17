@@ -8,7 +8,7 @@ use App\Model\Shared\IntegerId;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Záznam o změně fáze úkolu (součást časové osy).
+ * Záznam o změně fáze plánu (součást časové osy).
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'project_status_change')]

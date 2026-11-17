@@ -25,7 +25,7 @@ use App\Model\User\UserRepository;
 use Psr\Clock\ClockInterface;
 
 /**
- * Úkolníček: dlouhodobé úkoly, jejich fáze, soubory, propojení s body zasedání a vlákno událostí.
+ * Plány: dlouhodobé plány, jejich fáze, soubory, propojení s body zasedání a vlákno událostí.
  */
 final readonly class ProjectFacade
 {
@@ -107,7 +107,7 @@ final readonly class ProjectFacade
 	}
 
 	/**
-	 * Propojí bod programu s úkolem (null = zrušit propojení).
+	 * Propojí bod programu s plánem (null = zrušit propojení).
 	 */
 	public function linkAgendaItem(int $itemId, ?int $projectId): void
 	{
@@ -190,7 +190,7 @@ final readonly class ProjectFacade
 	}
 
 	/**
-	 * Body zasedání za poslední rok, které lze s úkolem propojit.
+	 * Body zasedání za poslední rok, které lze s plánem propojit.
 	 *
 	 * @return list<AgendaItem>
 	 */
@@ -205,7 +205,7 @@ final readonly class ProjectFacade
 	}
 
 	/**
-	 * Vlákno úkolu: vznik, změny fáze, body zasedání, soubory a diskuse – chronologicky.
+	 * Vlákno plánu: vznik, změny fáze, body zasedání, soubory a diskuse – chronologicky.
 	 *
 	 * @param bool $publicOnly pohled občana: jen zveřejněné komentáře, bez souborů úřadu
 	 * @return list<TimelineEntry>

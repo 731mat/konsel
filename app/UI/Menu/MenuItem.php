@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\UI\Menu;
 
 use App\Core\Security\Resource;
+use App\Model\Municipality\Module;
 
 final readonly class MenuItem
 {
@@ -23,6 +24,10 @@ final readonly class MenuItem
 		 * Nadpis skupiny v menu
 		 */
 		public string $section = 'Jednání',
+		/**
+		 * Volitelný modul obce – vypnutý modul se v menu neukáže
+		 */
+		public ?Module $module = null,
 	) {}
 
 	public function destination(): string

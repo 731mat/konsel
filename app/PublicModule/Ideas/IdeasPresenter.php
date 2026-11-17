@@ -8,6 +8,7 @@ use App\Core\Tenancy\CurrentMunicipality;
 use App\Model\Attachment\Attachment;
 use App\Model\Attachment\AttachmentFacade;
 use App\Model\Mail\NotificationFacade;
+use App\Model\Municipality\Module;
 use App\Model\Municipality\Municipality;
 use App\Model\Municipality\MunicipalityFacade;
 use App\Model\Project\Project;
@@ -22,7 +23,7 @@ use Nette\Application\Responses\FileResponse;
 use Nette\Application\UI\Form;
 
 /**
- * Veřejná stránka obce pro občany: zveřejněné úkoly (fáze, priorita, veřejné komentáře) a formulář podnětu.
+ * Veřejná stránka obce pro občany: zveřejněné plány (fáze, priorita, veřejné komentáře) a formulář podnětu.
  */
 final class IdeasPresenter extends BasePresenter
 {
@@ -52,6 +53,7 @@ final class IdeasPresenter extends BasePresenter
 
 		$this->municipality = $municipality;
 		$this->currentMunicipality->set($municipality);
+		$this->requireModule($municipality, Module::Plans);
 	}
 
 	public function renderDefault(): void
@@ -67,11 +69,11 @@ final class IdeasPresenter extends BasePresenter
 		try {
 			$project = $this->projectFacade->get($id);
 		} catch (NotFoundException) {
-			$this->error('Úkol neexistuje.');
+			$this->error('Plán neexistuje.');
 		}
 
 		if ($project->getMunicipality() !== $this->requireMunicipality() || !$project->isPublic()) {
-			$this->error('Úkol neexistuje.');
+			$this->error('Plán neexistuje.');
 		}
 
 		$this->project = $project;
@@ -90,7 +92,7 @@ final class IdeasPresenter extends BasePresenter
 	}
 
 	/**
-	 * Soubor ze zveřejněného komentáře zveřejněného úkolu.
+	 * Soubor ze zveřejněného komentáře zveřejněného plánu.
 	 */
 	public function actionFile(int $id): void
 	{

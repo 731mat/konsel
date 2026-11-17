@@ -14,6 +14,7 @@ use App\Model\Ai\AiSettings;
 use App\Model\Ai\Command\SaveAiSettings;
 use App\Model\Municipality\BrandColors;
 use App\Model\Municipality\Command\UpdateMunicipalitySettings;
+use App\Model\Municipality\Module;
 use App\Model\Shared\Exception\DomainException;
 use App\Model\Shared\Exception\ValidationException;
 use App\Model\Storage\UploadedFile;
@@ -120,6 +121,42 @@ final class SettingsPresenter extends SecuredPresenter
 			}
 
 			$this->flashMessage('Barvy obce byly uloženy.', 'success');
+			$this->redirect('this');
+		};
+
+		return $form;
+	}
+
+	public function actionModules(): void
+	{
+		$municipality = $this->requireMunicipality();
+		$defaults = [];
+		foreach (Module::cases() as $module) {
+			$defaults[$module->value] = $municipality->isModuleEnabled($module);
+		}
+
+		$this->getComponent('modulesForm')->setDefaults($defaults);
+	}
+
+	public function renderModules(): void
+	{
+		$this->template->modules = Module::cases();
+	}
+
+	protected function createComponentModulesForm(): Form
+	{
+		$form = $this->formFactory->create();
+		foreach (Module::cases() as $module) {
+			$form->addCheckbox($module->value, $module->label());
+		}
+
+		$form->addSubmit('save', 'Uložit moduly');
+		$form->onSuccess[] = function (Form $form): void {
+			/** @var array<string, bool> $values */
+			$values = $form->getValues('array');
+			$enabled = array_values(array_filter(Module::cases(), static fn(Module $module): bool => ($values[$module->value] ?? false) === true));
+			$this->municipalityFacade->changeModules($this->requireMunicipality()->getId(), $enabled);
+			$this->flashMessage('Moduly byly uloženy.', 'success');
 			$this->redirect('this');
 		};
 

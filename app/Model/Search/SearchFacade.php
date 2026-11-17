@@ -7,7 +7,7 @@ namespace App\Model\Search;
 use App\Model\Shared\TransactionManager;
 
 /**
- * Fulltextové hledání napříč zasedáními, body, usneseními, diskusemi, úkolníčkem a šablonami.
+ * Fulltextové hledání napříč zasedáními, body, usneseními, diskusemi, plánníčkem a šablonami.
  */
 final readonly class SearchFacade
 {
@@ -19,8 +19,15 @@ final readonly class SearchFacade
 		private TransactionManager $transaction,
 	) {}
 
-	public function search(int $municipalityId, string $text, ?SearchDocumentType $type = null, ?int $bodyId = null, ?int $year = null, int $page = 1): SearchResult
+	/**
+	 * @param list<SearchDocumentType> $excludedTypes
+	 */
+	public function search(int $municipalityId, string $text, ?SearchDocumentType $type = null, ?int $bodyId = null, ?int $year = null, int $page = 1, array $excludedTypes = []): SearchResult
 	{
+		if ($type !== null && in_array($type, $excludedTypes, true)) {
+			return SearchResult::empty();
+		}
+
 		return $this->index->search(new SearchQuery(
 			$municipalityId,
 			$text,
@@ -29,6 +36,7 @@ final readonly class SearchFacade
 			$year,
 			self::PageSize,
 			(max(1, $page) - 1) * self::PageSize,
+			$excludedTypes,
 		));
 	}
 

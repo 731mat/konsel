@@ -10,7 +10,7 @@ use App\Model\Meeting\AgendaItem;
 use App\Model\Resolution\Resolution;
 
 /**
- * Jedna událost ve vlákně úkolu.
+ * Jedna událost ve vlákně plánu.
  */
 final readonly class TimelineEntry
 {

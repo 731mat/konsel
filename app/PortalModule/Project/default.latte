@@ -1,9 +1,9 @@
-{block title}Úkolníček{/block}
+{block title}Plány{/block}
 
 {block content}
 {varType App\Model\Project\Project[] $projects}
-<h1 class="h3 mb-1">Úkolníček obce</h1>
-<p class="text-body-secondary">Rozpracované úkoly a záměry. U každého můžete diskutovat a přikládat soubory.</p>
+<h1 class="h3 mb-1">Plány obce</h1>
+<p class="text-body-secondary">Rozpracované plány a záměry. U každého můžete diskutovat a přikládat soubory.</p>
 <div class="row g-3">
 	<div n:foreach="$projects as $project" class="col-md-6">
 		<a n:href="detail, id: $project->getId()" class="card h-100 project-card text-reset">
@@ -15,4 +15,4 @@
 		</a>
 	</div>
 </div>
-<div n:if="!$projects" class="card"><div class="card-body empty-state"><i class="bi bi-kanban" aria-hidden="true"></i>Žádné rozpracované úkoly.</div></div>
+<div n:if="!$projects" class="card"><div class="card-body empty-state"><i class="bi bi-kanban" aria-hidden="true"></i>Žádné rozpracované plány.</div></div>

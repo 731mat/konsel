@@ -8,7 +8,7 @@
 {varType Closure $fileLink}
 <main class="mx-auto w-100" style="max-width: 52rem">
 	{include '@header.latte', municipality: $municipality}
-	<nav aria-label="Drobečková navigace"><ol class="breadcrumb mb-3"><li class="breadcrumb-item"><a n:href="default, municipality: $municipality->getSlug()">Podněty a úkoly</a></li><li class="breadcrumb-item active" aria-current="page">{$project->getTitle()|truncate: 40}</li></ol></nav>
+	<nav aria-label="Drobečková navigace"><ol class="breadcrumb mb-3"><li class="breadcrumb-item"><a n:href="default, municipality: $municipality->getSlug()">Podněty a plány</a></li><li class="breadcrumb-item active" aria-current="page">{$project->getTitle()|truncate: 40}</li></ol></nav>
 
 	<div class="d-flex flex-wrap gap-1 mb-2">
 		<span class="badge status-badge bg-{$project->getStatus()->tone()}-subtle text-{$project->getStatus()->tone()}-emphasis">{$project->getStatus()->label()}</span>

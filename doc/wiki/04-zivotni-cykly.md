@@ -29,7 +29,7 @@ stateDiagram-v2
 | Ukončeno | – | ano | opravovat | opravovat | opravovat | zápis, usnesení, výpisy; běží lhůta 10 dnů |
 | Zápis ověřen | – | – | – | – | – | vše jen ke čtení; konečný zápis a usnesení se uloží do archivu |
 
-Po ověření zápisu je zasedání **neměnné** – hlídá to přímo entita (`Meeting::isArchived()`), ne jen obrazovka: program, přílohy, diskuse u bodů, docházka, hlasování, funkce i archiv dokumentů odmítnou změnu. Ověřuje to test `ApprovedMeetingImmutabilityTest` (zkouší všechny fasády). Znovu otevřít smí jen správce obce a musí napsat **důvod** – uloží se do historie zasedání (`MeetingReopening`: kdo, kdy, z jakého stavu, proč) a je vidět v detailu zasedání. Úkoly z usnesení a propojení bodu s úkolníčkem jdou měnit i dál (nejsou součástí zápisu).
+Po ověření zápisu je zasedání **neměnné** – hlídá to přímo entita (`Meeting::isArchived()`), ne jen obrazovka: program, přílohy, diskuse u bodů, docházka, hlasování, funkce i archiv dokumentů odmítnou změnu. Ověřuje to test `ApprovedMeetingImmutabilityTest` (zkouší všechny fasády). Znovu otevřít smí jen správce obce a musí napsat **důvod** – uloží se do historie zasedání (`MeetingReopening`: kdo, kdy, z jakého stavu, proč) a je vidět v detailu zasedání. Úkoly z usnesení a propojení bodu s plány jdou měnit i dál (nejsou součástí zápisu).
 
 Smazat jde jen zasedání v přípravě. Sdílení zasedání méně než 7 dní předem zobrazí varování (§ 93 – vyvěšení na úřední desce).
 
@@ -77,7 +77,7 @@ stateDiagram-v2
     note right of Open: po termínu = otevřený úkol<br/>s termínem před dneškem
 ```
 
-## Úkol v úkolníčku (`Project`, `ProjectStatus`)
+## Plán (`Project`, `ProjectStatus`)
 
 ```mermaid
 stateDiagram-v2
@@ -141,7 +141,7 @@ V databázi je jen otisk (SHA-256) – samotný odkaz se ukáže jen při vytvo�
 ```mermaid
 stateDiagram-v2
     [*] --> Visible: napsán (úřad nebo zastupitel)
-    Visible --> PublicForCitizens: Zveřejnit občanům<br/>(jen v úkolníčku)
+    Visible --> PublicForCitizens: Zveřejnit občanům<br/>(jen u plánů)
     PublicForCitizens --> Visible: Skrýt před občany
     Visible --> Deleted: Smazat (autor, správce)
     PublicForCitizens --> Deleted

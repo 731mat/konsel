@@ -6,6 +6,7 @@ namespace App\AdminModule;
 
 use App\Core\Security\Allowed;
 use App\Core\Security\Privilege;
+use App\Core\Security\RequiresModule;
 use App\Core\Security\Resource;
 use App\Core\Tenancy\CurrentMunicipality;
 use App\Model\Municipality\Municipality;
@@ -78,6 +79,12 @@ abstract class SecuredPresenter extends BasePresenter
 			$allowed = $attribute->newInstance();
 			if (!$user->isAllowed($allowed->resource->value, $allowed->privilege->value)) {
 				$this->error('K této stránce nemáte oprávnění.', 403);
+			}
+		}
+
+		foreach ($element->getAttributes(RequiresModule::class) as $attribute) {
+			if ($this->currentMunicipality->isSet()) {
+				$this->requireModule($this->currentMunicipality->get(), $attribute->newInstance()->module);
 			}
 		}
 	}

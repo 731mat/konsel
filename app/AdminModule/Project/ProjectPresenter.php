@@ -7,12 +7,14 @@ namespace App\AdminModule\Project;
 use App\AdminModule\SecuredPresenter;
 use App\Core\Security\Allowed;
 use App\Core\Security\Privilege;
+use App\Core\Security\RequiresModule;
 use App\Core\Security\Resource;
 use App\Model\Attachment\Attachment;
 use App\Model\Attachment\AttachmentPolicy;
 use App\Model\Comment\Comment;
 use App\Model\Comment\CommentAuthorRef;
 use App\Model\Comment\CommentFacade;
+use App\Model\Municipality\Module;
 use App\Model\People\PeopleFacade;
 use App\Model\Project\Command\SaveProject;
 use App\Model\Project\Project;
@@ -29,9 +31,10 @@ use Nette\Application\Attributes\Requires;
 use Nette\Application\UI\Form;
 
 /**
- * Úkolníček – dlouhodobé úkoly a záměry obce v jednom vlákně přes všechna zasedání.
+ * Plány – dlouhodobé plány a záměry obce v jednom vlákně přes všechna zasedání.
  */
 #[Allowed(Resource::Project)]
+#[RequiresModule(Module::Plans)]
 final class ProjectPresenter extends SecuredPresenter
 {
 	private ?Project $project = null;
@@ -124,7 +127,7 @@ final class ProjectPresenter extends SecuredPresenter
 		$project = $this->project ?? $this->error();
 		try {
 			$this->projectFacade->setPublic($project->getId(), !$project->isPublic());
-			$this->flashMessage($project->isPublic() ? 'Úkol je skrytý před občany.' : 'Úkol je zveřejněný na stránce pro občany.', 'success');
+			$this->flashMessage($project->isPublic() ? 'Plán je skrytý před občany.' : 'Plán je zveřejněný na stránce pro občany.', 'success');
 		} catch (DomainException $e) {
 			$this->flashMessage($e->getMessage(), 'danger');
 		}
@@ -139,7 +142,7 @@ final class ProjectPresenter extends SecuredPresenter
 		$project = $this->project ?? $this->error();
 		$comment = $this->assertOwned($this->commentFacade->get($commentId));
 		if ($comment->getProject() !== $project) {
-			$this->error('Komentář nepatří k tomuto úkolu.');
+			$this->error('Komentář nepatří k tomuto plánu.');
 		}
 
 		$this->commentFacade->changeVisibility($comment->getId(), $public);
@@ -154,7 +157,7 @@ final class ProjectPresenter extends SecuredPresenter
 		try {
 			$comment = $this->assertOwned($this->commentFacade->get($commentId));
 			if ($comment->getProject() !== $project) {
-				$this->error('Komentář nepatří k tomuto úkolu.');
+				$this->error('Komentář nepatří k tomuto plánu.');
 			}
 
 			$this->commentFacade->deleteByUser($comment->getId(), $this->currentUserId(), $this->isAllowed(Resource::Project, Privilege::Manage));
@@ -174,7 +177,7 @@ final class ProjectPresenter extends SecuredPresenter
 		foreach ($this->projectFacade->findLinkedItems($project->getId()) as $item) {
 			if ($item->getId() === $itemId) {
 				$this->projectFacade->linkAgendaItem($itemId, null);
-				$this->flashMessage("Bod „{$item->getTitle()}“ už není propojený s úkolem.", 'success');
+				$this->flashMessage("Bod „{$item->getTitle()}“ už není propojený s plánem.", 'success');
 			}
 		}
 
@@ -195,7 +198,7 @@ final class ProjectPresenter extends SecuredPresenter
 		}
 
 		$form->addText('title', 'Název')
-			->setRequired('Zadejte název úkolu.')
+			->setRequired('Zadejte název plánu.')
 			->setMaxLength(200)
 			->setHtmlAttribute('placeholder', 'Např. Výstavba nové mateřské školy');
 		$form->addTextArea('description', 'Popis', null, 6)
@@ -208,14 +211,14 @@ final class ProjectPresenter extends SecuredPresenter
 		$form->addInteger('estimatedCost', 'Odhad nákladů (Kč)')
 			->setNullable()
 			->addRule(Form::Min, 'Náklady nemohou být záporné.', 0);
-		$form->addSubmit('save', $this->project === null ? 'Založit úkol' : 'Uložit');
+		$form->addSubmit('save', $this->project === null ? 'Založit plán' : 'Uložit');
 		$form->onSuccess[] = function (Form $form): void {
 			$data = $form->getValues(ProjectFormData::class);
 			$command = new SaveProject($data->title, $data->description, ProjectPriority::from($data->priority), $data->responsible, $data->estimatedCost);
 			try {
 				if ($this->project === null) {
 					$project = $this->projectFacade->create($this->requireMunicipality()->getId(), $command, $this->currentUserName());
-					$this->flashMessage('Úkol byl založen.', 'success');
+					$this->flashMessage('Plán byl založen.', 'success');
 				} else {
 					$this->projectFacade->update($this->project->getId(), $command);
 					$project = $this->project;
@@ -268,7 +271,7 @@ final class ProjectPresenter extends SecuredPresenter
 				return;
 			}
 
-			$this->flashMessage('Fáze úkolu byla změněna.', 'success');
+			$this->flashMessage('Fáze plánu byla změněna.', 'success');
 			$this->redirect('this');
 		};
 
@@ -306,7 +309,7 @@ final class ProjectPresenter extends SecuredPresenter
 				return;
 			}
 
-			$this->flashMessage('Bod zasedání byl propojen s úkolem.', 'success');
+			$this->flashMessage('Bod zasedání byl propojen s plánem.', 'success');
 			$this->redirect('this');
 		};
 
@@ -321,7 +324,7 @@ final class ProjectPresenter extends SecuredPresenter
 		$form->addHidden('parentId')->setNullable();
 		$form->addTextArea('body', 'Komentář', null, 3)
 			->setMaxLength(Comment::MaxHtmlLength)
-			->setHtmlAttribute('placeholder', 'Novinka, dotaz nebo informace k úkolu…');
+			->setHtmlAttribute('placeholder', 'Novinka, dotaz nebo informace k plánu…');
 		$form->addMultiUpload('files', 'Soubory')
 			->addRule(Form::MaxFileSize, 'Soubor je příliš velký.', $this->attachmentPolicy->maxSize);
 		$form->addCheckbox('publicForCitizens', 'Zveřejnit i občanům');

@@ -10,7 +10,7 @@ namespace App\Model\Search;
 final readonly class SearchDocument
 {
 	/**
-	 * @param int $targetId ID stránky, na kterou výsledek vede (bod u komentáře, úkol u diskuse v úkolníčku…)
+	 * @param int $targetId ID stránky, na kterou výsledek vede (bod u komentáře, plán u diskuse v plánech…)
 	 * @param string $context krátký popis místa („3. zasedání · Zastupitelstvo · 9. 12. 2026“)
 	 */
 	public function __construct(

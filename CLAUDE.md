@@ -58,6 +58,7 @@ make screenshots          # screenshoty stránek (desktop + mobil) do temp/scree
 - Vzhled: Bootstrap 5.3 + téma v assets/main.scss (písmo Inter a ikony jsou v buildu, žádné CDN). Stav zasedání přes `@status.latte`, datum přes `@dateTile.latte`, prázdné stavy třídou `empty-state`. Musí fungovat i tmavý režim (barvy přes `var(--bs-…)`). Po změně vzhledu zkontroluj `make screenshots`.
 - Barvy obce (Nastavení → Vzhled) přebíjejí téma za běhu: hlavní barvu nikdy natvrdo (`$primary`, `#1b5e8c`), vždy `var(--bs-primary)` / `var(--bs-primary-rgb)`, text na ní `var(--konsel-on-primary)`, doplňková `var(--konsel-accent)`. Nová komponenta Bootstrapu se zkompilovanou barvou se napojí v sekci „Barvy obce“ v main.scss.
 - Po ověření zápisu (`Meeting::isArchived()`) je zasedání neměnné. Nová změna zasedání, bodu, přílohy, komentáře u bodu, docházky nebo hlasování to musí hlídat v entitě a přibýt do `ApprovedMeetingImmutabilityTest`. Znovuotevření jen `Meeting::reopen()` s důvodem.
+- Volitelné moduly (Nastavení → Moduly): presenter modulu má `#[RequiresModule(Module::…)]`, položka menu `module:`, šablony `moduleEnabled(Module::…)`, portál a veřejná část `requireModule()`. Nová funkce patřící k modulu se musí při vypnutém modulu schovat všude.
 - Fulltext: index `search_index` (SQLite FTS5) udržuje `DoctrineSearchIndexSubscriber` sám při flushi. Nová hledaná entita = doplnit `Model/Search/SearchDocumentFactory`. Po změně indexace `search:reindex`.
 - Formátovaný text od uživatele (komentáře) = `RichText`: fasáda ho pročistí přes `HtmlSanitizer`, šablona vypisuje `|richText`, nikdy `|noescape`. Pole formuláře dostane `data-rich-editor`.
 
@@ -84,6 +85,8 @@ make screenshots          # screenshoty stránek (desktop + mobil) do temp/scree
 | Usnesení | `Resolution` |
 | Maska číslování | `NumberingMask` |
 | Úkol z usnesení | `ResolutionTask` |
+| Plán (dříve úkolníček), podnět občana | `Project` |
+| Volitelný modul obce | `Module` (`ResolutionTasks`, `Plans`) |
 | Zápis | `Minutes` |
 | Pozvánka | `Invitation` |
 | Výpis z usnesení | `ResolutionExtract` |

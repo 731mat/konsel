@@ -28,19 +28,21 @@ flowchart LR
         T28[T27–T30<br/>pozvánka, zápis, výpisy,<br/>prezenční listina, archiv verzí]
     end
     subgraph F10["Navíc"]
-        T44[T44–T47<br/>soubory v diskusi, úkolníček,<br/>podněty občanů, rozcestník,<br/>barvy obce, editor]
+        T44[T44–T47<br/>soubory v diskusi, plány,<br/>podněty občanů, rozcestník,<br/>barvy obce, editor]
     end
     T34[T34 modul rady]
     T32[T32 fulltextové<br/>hledání]
     T33[T33 archiv<br/>a neměnnost]
+    T48[T48 moduly obce,<br/>Plány]
     F0 --> F1 --> F2 --> F3 --> F4 --> F5 --> F6
     F6 --> T34
     F6 --> T32
     F6 --> T33
+    F10 --> T48
     F3 -.-> F10
 
     classDef done fill:#d1f0dc,stroke:#1e7b4a,color:#0b3d22;
-    class T00,T05,T12,T17,T21,T25,T28,T44,T34,T32,T33 done;
+    class T00,T05,T12,T17,T21,T25,T28,T44,T34,T32,T33,T48 done;
 ```
 
 **MVP (T00–T30 + T34) je hotové**: použitelný systém pro zastupitelstvo i radu – program, sdílení, pozvánky, průběh, usnesení, zápis a dokumenty v PDF a pro Word, včetně archivu uložených verzí a podepsaných originálů.
@@ -50,12 +52,12 @@ flowchart LR
 | Task | Co | Poznámka |
 |---|---|---|
 | T16b | nahrávání souborů nad 64 MB po částech | zatím limit 64 MB |
-| T31 | vlastní šablony dokumentů obce | šablony jsou v `resources/documents` |
+| T31 | vlastní šablony dokumentů obce v HTML (sandbox Latte), náhled, obnovit výchozí | rozpracované |
 | T35 | ustavující zasedání: slib členů, listina slibu | volba osob už funguje |
 | T36 | ARES – údaje obce podle IČO | |
 | T37–T38 | AI: návrhy textů bodů a usnesení, analýza příloh | napojení na OpenAI je připravené |
 | T39 | audit – kdo co změnil | |
-| T40 | přepis zvukového záznamu | |
+| T40 | přepis zvukového záznamu | odloženo |
 | T41–T43 | zveřejnění, GDPR, MySQL, nasazení | |
 
 ## Známé dluhy

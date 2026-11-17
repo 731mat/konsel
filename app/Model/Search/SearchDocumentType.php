@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Model\Search;
 
+use App\Model\Municipality\Module;
+
 /**
  * Co se dá najít. Kód slouží k sestavení jednoznačného rowid v indexu (kód × miliarda + ID entity) – neměnit.
  */
@@ -27,8 +29,8 @@ enum SearchDocumentType: string
 			self::AgendaItem => 'Bod programu',
 			self::Resolution => 'Usnesení',
 			self::ItemComment => 'Diskuse u bodu',
-			self::Project => 'Úkolníček',
-			self::ProjectComment => 'Diskuse v úkolníčku',
+			self::Project => 'Plán',
+			self::ProjectComment => 'Diskuse u plánu',
 			self::ResolutionTemplate => 'Šablona usnesení',
 			self::MeetingTemplate => 'Šablona programu',
 		};
@@ -43,6 +45,17 @@ enum SearchDocumentType: string
 			self::ItemComment, self::ProjectComment => 'chat-left-text',
 			self::Project => 'kanban',
 			self::ResolutionTemplate, self::MeetingTemplate => 'files',
+		};
+	}
+
+	/**
+	 * Volitelný modul obce, bez kterého se tento druh nehledá.
+	 */
+	public function module(): ?Module
+	{
+		return match ($this) {
+			self::Project, self::ProjectComment => Module::Plans,
+			default => null,
 		};
 	}
 

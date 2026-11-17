@@ -71,6 +71,14 @@ final class Municipality implements Timestampable
 	#[ORM\Column(length: 7, nullable: true)]
 	private ?string $accentColor = null;
 
+	/**
+	 * Vypnuté moduly (hodnoty Module), null = vše zapnuto.
+	 *
+	 * @var list<string>|null
+	 */
+	#[ORM\Column(type: 'json', nullable: true)]
+	private ?array $disabledModules = null;
+
 	public function __construct(string $name, string $slug, ?Ico $ico = null)
 	{
 		$this->name = self::validateName($name);
@@ -137,6 +145,23 @@ final class Municipality implements Timestampable
 	public function hasCustomBrandColors(): bool
 	{
 		return $this->primaryColor !== null;
+	}
+
+	public function isModuleEnabled(Module $module): bool
+	{
+		return !in_array($module->value, $this->disabledModules ?? [], true);
+	}
+
+	/**
+	 * @param list<Module> $enabled zapnuté moduly, ostatní se vypnou
+	 */
+	public function changeModules(array $enabled): void
+	{
+		$disabled = array_values(array_map(
+			static fn(Module $module): string => $module->value,
+			array_filter(Module::cases(), static fn(Module $module): bool => !in_array($module, $enabled, true)),
+		));
+		$this->disabledModules = $disabled === [] ? null : $disabled;
 	}
 
 	public function rename(string $name): void

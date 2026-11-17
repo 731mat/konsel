@@ -23,7 +23,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Komentář k bodu programu nebo k úkolu v úkolníčku. Autorem je uživatel úřadu, nebo zastupitel (Person) z portálu.
+ * Komentář k bodu programu nebo k plánu. Autorem je uživatel úřadu, nebo zastupitel (Person) z portálu.
  * Vlákna mají jednu úroveň: komentář → odpovědi. Smazání je měkké, aby vlákno dávalo smysl.
  */
 #[ORM\Entity]
@@ -57,7 +57,7 @@ final class Comment implements TenantOwned, Timestampable
 	private ?Project $project;
 
 	/**
-	 * Komentář k úkolu je vidět i občanům na veřejné stránce (o zveřejnění rozhoduje úřad).
+	 * Komentář k plánu je vidět i občanům na veřejné stránce (o zveřejnění rozhoduje úřad).
 	 */
 	#[ORM\Column]
 	private bool $publicForCitizens = false;
@@ -149,7 +149,7 @@ final class Comment implements TenantOwned, Timestampable
 	public function changeVisibility(bool $publicForCitizens): void
 	{
 		if ($this->project === null && $publicForCitizens) {
-			throw new InvalidStateException('Občanům lze zveřejnit jen komentáře v úkolníčku.');
+			throw new InvalidStateException('Občanům lze zveřejnit jen komentáře u plánů.');
 		}
 
 		$this->publicForCitizens = $publicForCitizens;

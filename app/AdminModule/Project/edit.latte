@@ -1,12 +1,12 @@
 {block title}Upravit – {$project->getTitle()}{/block}
 
 {block breadcrumbs}
-	<li class="breadcrumb-item"><a n:href="default">Úkolníček</a></li>
+	<li class="breadcrumb-item"><a n:href="default">Plány</a></li>
 	<li class="breadcrumb-item"><a n:href="detail, id: $project->getId()">{$project->getTitle()|truncate: 40}</a></li>
 	<li class="breadcrumb-item active" aria-current="page">Upravit</li>
 {/block}
 
 {block content}
 {varType App\Model\Project\Project $project}
-<h1 class="h3 mb-4">Upravit úkol</h1>
+<h1 class="h3 mb-4">Upravit plán</h1>
 <div class="card" style="max-width: 44rem"><div class="card-body">{control projectForm}</div></div>

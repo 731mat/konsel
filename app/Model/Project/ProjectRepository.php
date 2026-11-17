@@ -20,7 +20,7 @@ interface ProjectRepository
 	public function findByMunicipality(Municipality $municipality, ?ProjectStatus $status = null, bool $onlyActive = false): array;
 
 	/**
-	 * @return list<Project> zveřejněné úkoly pro občany
+	 * @return list<Project> zveřejněné plány pro občany
 	 */
 	public function findPublic(Municipality $municipality): array;
 

@@ -1,4 +1,4 @@
-{block title}Podněty a úkoly – {$municipality->getProfile()->officialName}{/block}
+{block title}Podněty a plány – {$municipality->getProfile()->officialName}{/block}
 
 {block content}
 {varType App\Model\Municipality\Municipality $municipality}
@@ -26,7 +26,7 @@
 					</div>
 				</a>
 			{else}
-				<div class="card"><div class="card-body empty-state"><i class="bi bi-kanban" aria-hidden="true"></i>Obec zatím nezveřejnila žádné úkoly.</div></div>
+				<div class="card"><div class="card-body empty-state"><i class="bi bi-kanban" aria-hidden="true"></i>Obec zatím nezveřejnila žádné plány.</div></div>
 			{/foreach}
 		</div>
 		<div class="col-lg-5">

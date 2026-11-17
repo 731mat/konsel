@@ -90,7 +90,7 @@ app/
 │   │                                ProceedingsFacade, VotingFacade, AgendaLockFacade
 │   ├── Resolution/                  Resolution, ResolutionTask, NumberingSequence, …
 │   ├── People/                      Person, Body (orgán), Term, Membership, NumberingMask
-│   ├── Project/                     Project (úkolníček), TimelineEntry
+│   ├── Project/                     Project (plány), TimelineEntry
 │   └── …                            Access, Attachment, Comment, Document, Mail, Template, User, Ai
 ├── AdminModule/<Stránka>/           XxxPresenter.php + *.latte + XxxFormData.php
 ├── PortalModule/                    portál zastupitele

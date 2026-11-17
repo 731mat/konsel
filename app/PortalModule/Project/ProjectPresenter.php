@@ -10,6 +10,7 @@ use App\Model\Attachment\AttachmentPolicy;
 use App\Model\Comment\Comment;
 use App\Model\Comment\CommentAuthorRef;
 use App\Model\Comment\CommentFacade;
+use App\Model\Municipality\Module;
 use App\Model\Project\Project;
 use App\Model\Project\ProjectFacade;
 use App\Model\Project\ProjectStatus;
@@ -25,7 +26,7 @@ use Nette\Application\Responses\FileResponse;
 use Nette\Application\UI\Form;
 
 /**
- * Úkolníček pro zastupitele: rozpracované úkoly obce a diskuse k nim.
+ * Plány obce pro zastupitele: rozpracované plány a diskuse k nim.
  */
 final class ProjectPresenter extends PortalPresenter
 {
@@ -39,6 +40,12 @@ final class ProjectPresenter extends PortalPresenter
 		private readonly FormFactory $formFactory,
 	) {
 		parent::__construct();
+	}
+
+	protected function startup(): void
+	{
+		parent::startup();
+		$this->requireModule($this->getMeeting()->getMunicipality(), Module::Plans);
 	}
 
 	public function renderDefault(): void
@@ -55,7 +62,7 @@ final class ProjectPresenter extends PortalPresenter
 		}
 
 		if ($project->getMunicipality() !== $this->getMeeting()->getMunicipality() || $project->getStatus() === ProjectStatus::Submitted) {
-			$this->error('Úkol neexistuje.');
+			$this->error('Plán neexistuje.');
 		}
 
 		$this->project = $project;
@@ -107,7 +114,7 @@ final class ProjectPresenter extends PortalPresenter
 		try {
 			$comment = $this->commentFacade->get($commentId);
 			if ($comment->getProject() !== $project) {
-				$this->error('Komentář nepatří k tomuto úkolu.');
+				$this->error('Komentář nepatří k tomuto plánu.');
 			}
 
 			$this->commentFacade->deleteByPerson($comment->getId(), $this->getMember()->getId());
@@ -126,7 +133,7 @@ final class ProjectPresenter extends PortalPresenter
 		$form->addHidden('parentId')->setNullable();
 		$form->addTextArea('body', 'Komentář', null, 3)
 			->setMaxLength(Comment::MaxHtmlLength)
-			->setHtmlAttribute('placeholder', 'Názor, dotaz nebo informace k úkolu…');
+			->setHtmlAttribute('placeholder', 'Názor, dotaz nebo informace k plánu…');
 		$form->addMultiUpload('files', 'Soubory')
 			->addRule(Form::MaxFileSize, 'Soubor je příliš velký.', $this->attachmentPolicy->maxSize);
 		$form->addSubmit('send', 'Odeslat');

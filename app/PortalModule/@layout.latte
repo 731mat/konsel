@@ -7,7 +7,7 @@
 	<div class="container gap-2" style="max-width: 1000px">
 		<a class="navbar-brand brand me-auto" n:href=":Portal:Meeting:">{include '../UI/@logo.latte'} <span>Konšel <span class="fw-normal text-body-secondary d-none d-sm-inline">· {$municipality->getName()}</span></span></a>
 		<a n:href=":Portal:Meeting:" class="btn btn-sm btn-link text-decoration-none">Zasedání</a>
-		<a n:href=":Portal:Project:" class="btn btn-sm btn-link text-decoration-none">Úkolníček</a>
+		<a n:if="moduleEnabled(App\Model\Municipality\Module::Plans)" n:href=":Portal:Project:" class="btn btn-sm btn-link text-decoration-none">Plány</a>
 		<span class="small text-body-secondary d-none d-md-inline"><i class="bi bi-person" aria-hidden="true"></i> {$member->getFullName()}</span>
 		<a n:href=":Portal:Entry:out" class="btn btn-sm btn-outline-secondary">Odhlásit</a>
 	</div>

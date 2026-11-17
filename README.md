@@ -1,6 +1,6 @@
 # Konšel
 
-Systém pro přípravu a vedení zasedání zastupitelstva a rady obce – **od programu po ověřený zápis** – s úkolníčkem dlouhodobých záměrů a stránkou pro občany.
+Systém pro přípravu a vedení zasedání zastupitelstva a rady obce – **od programu po ověřený zápis** – s plány (dlouhodobými záměry obce) a stránkou pro občany.
 
 Nette 3.3 · Doctrine ORM 3 · Latte · Bootstrap 5.3 · Vite · SQLite (později MySQL) · vše v Dockeru.
 
@@ -11,7 +11,7 @@ flowchart LR
     C --> D[Usnesení s čísly<br/>a úkoly]
     D --> E[Zápis a výpisy<br/>PDF / Word]
     E --> F[Ověřeno, archiv]
-    P[Úkolníček<br/>záměry obce] <-->|projednání na zasedání| A
+    P[Plány<br/>záměry obce] <-->|projednání na zasedání| A
     O[Občané<br/>podněty] --> P
 ```
 
@@ -38,8 +38,8 @@ Wiki je v [`doc/wiki/`](doc/wiki/) a stejné stránky se zobrazují v aplikaci v
 | Kapitola | O čem |
 |---|---|
 | [Rychlý start](doc/wiki/01-rychly-start.md) | spuštění, příkazy, demo, kde co je |
-| [Jak systém funguje](doc/wiki/02-jak-system-funguje.md) | role, zasedání krok za krokem, úkolníček a občané |
-| [Moduly a propojení](doc/wiki/03-moduly-a-propojeni.md) | mapa modulů, **úkolníček vs. úkoly z usnesení** |
+| [Jak systém funguje](doc/wiki/02-jak-system-funguje.md) | role, zasedání krok za krokem, plány a občané |
+| [Moduly a propojení](doc/wiki/03-moduly-a-propojeni.md) | mapa modulů, **plány vs. úkoly z usnesení** |
 | [Životní cykly](doc/wiki/04-zivotni-cykly.md) | stavy zasedání, hlasování, usnesení, úkolů, docházky, odkazů |
 | [Architektura](doc/wiki/05-architektura.md) | vrstvy, co se stane po kliknutí, složky, tenancy, oprávnění |
 | [Doctrine pro začátečníky](doc/wiki/06-doctrine.md) | entity, EntityManager, flush, dotazy, migrace |

@@ -1,6 +1,6 @@
 # Jak systém funguje
 
-Konšel provede obec celým životem zasedání: **program → podklady → pozvánka → průběh → usnesení → zápis → archiv**. K tomu má úkolníček pro dlouhodobé záměry a stránku pro občany.
+Konšel provede obec celým životem zasedání: **program → podklady → pozvánka → průběh → usnesení → zápis → archiv**. K tomu má plány pro dlouhodobé záměry a stránku pro občany.
 
 ## Kdo s Konšelem pracuje
 
@@ -26,8 +26,8 @@ flowchart TB
 | Správce obce | Administrace | všechno: nastavení obce, barvy, uživatelé, revokace usnesení, znovuotevření zasedání |
 | Editor | Administrace | připravuje zasedání, zapisuje docházku, hlasování a diskusi, úkoly |
 | Čtenář | Administrace | jen čte |
-| Zastupitel | Portál | čte program a podklady, stahuje dokumenty, diskutuje k bodům a v úkolníčku |
-| Občan | Veřejná stránka | vidí zveřejněné úkoly obce (fáze, priorita, veřejné komentáře), posílá podněty |
+| Zastupitel | Portál | čte program a podklady, stahuje dokumenty, diskutuje k bodům a u plánů |
+| Občan | Veřejná stránka | vidí zveřejněné plány obce (fáze, priorita, veřejné komentáře), posílá podněty |
 
 ## Zasedání od začátku do konce
 
@@ -44,7 +44,7 @@ flowchart LR
 ### 1. Příprava (stav *V přípravě*)
 - **Zasedání → Nové zasedání**: orgán, datum, místo, typ (řádné, mimořádné, ustavující).
 - Program: body ručně, ze **šablony programu**, nebo „Vložit standardní body“ (zahájení, ověřovatelé, schválení programu, diskuse, závěr). Pořadí se mění přetažením.
-- U bodu: důvodová zpráva, **návrh usnesení** (pomůže knihovna šablon usnesení), předkladatel, přílohy (PDF, Word…), propojení s úkolem z úkolníčku.
+- U bodu: důvodová zpráva, **návrh usnesení** (pomůže knihovna šablon usnesení), předkladatel, přílohy (PDF, Word…), propojení s plánem.
 - **Funkce**: předsedající, zapisovatel, ověřovatelé.
 
 ### 2. Sdílení (stav *Sdíleno*)
@@ -79,13 +79,13 @@ flowchart LR
 - Archiv ověřeného zasedání je jen pro přidávání – verze nejde smazat.
 - Menu **Archiv**: zasedání podle let a orgánů s konečným (nebo podepsaným) zápisem a usnesením na jedno kliknutí; neověřená zasedání jsou označená „čeká na ověření zápisu“ i se lhůtou.
 
-## Úkolníček a občané
+## Plány a občané
 
-- **Úkolníček** drží dlouhodobé záměry obce („postavit školu“, „oprava komunikace“) v jednom vlákně: změny fáze, diskuse, soubory a **všechna zasedání**, na kterých se o něm jednalo, včetně přijatých usnesení.
+- **Plány** drží dlouhodobé záměry obce („postavit školu“, „oprava komunikace“) v jednom vlákně: změny fáze, diskuse, soubory a **všechna zasedání**, na kterých se o něm jednalo, včetně přijatých usnesení.
 - **Občan** pošle podnět na veřejné stránce → vznikne úkol ve fázi *nový podnět* → úřad dostane e-mail → po posouzení ho může zveřejnit. Občan pak vidí fázi, prioritu a komentáře označené „vidí občané“.
 
 ## Hledání
 
-Pole **Hledat** v horní liště (nebo menu Hledat) prohledá zasedání, body programu, usnesení, diskuse, úkolníček i šablony. Na diakritice a velikosti písmen nezáleží a stačí začátek slova: „smlouva o dilo“ najde „Smlouva o dílo“, „rozpoč“ najde „rozpočtové opatření“. Výsledky jdou zúžit podle druhu, orgánu a roku a shody jsou zvýrazněné.
+Pole **Hledat** v horní liště (nebo menu Hledat) prohledá zasedání, body programu, usnesení, diskuse, plány i šablony. Na diakritice a velikosti písmen nezáleží a stačí začátek slova: „smlouva o dilo“ najde „Smlouva o dílo“, „rozpoč“ najde „rozpočtové opatření“. Výsledky jdou zúžit podle druhu, orgánu a roku a shody jsou zvýrazněné.
 
-Jak spolu úkolníček, usnesení a úkoly z usnesení souvisí, popisuje kapitola [Moduly a propojení](03-moduly-a-propojeni.md).
+Jak spolu plány, usnesení a úkoly z usnesení souvisí, popisuje kapitola [Moduly a propojení](03-moduly-a-propojeni.md).

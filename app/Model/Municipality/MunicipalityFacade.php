@@ -131,6 +131,16 @@ final readonly class MunicipalityFacade
 		});
 	}
 
+	/**
+	 * @param list<Module> $enabled
+	 */
+	public function changeModules(int $municipalityId, array $enabled): void
+	{
+		$this->transaction->run(function () use ($municipalityId, $enabled): void {
+			$this->municipalities->get($municipalityId)->changeModules($enabled);
+		});
+	}
+
 	public function removeLogo(int $municipalityId): void
 	{
 		$previous = $this->transaction->run(function () use ($municipalityId) {

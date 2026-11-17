@@ -16,7 +16,7 @@ final readonly class DoctrineProjectRepository implements ProjectRepository
 
 	public function get(int $id): Project
 	{
-		return $this->entityManager->find(Project::class, $id) ?? throw new NotFoundException('Úkol neexistuje.');
+		return $this->entityManager->find(Project::class, $id) ?? throw new NotFoundException('Plán neexistuje.');
 	}
 
 	public function findByMunicipality(Municipality $municipality, ?ProjectStatus $status = null, bool $onlyActive = false): array

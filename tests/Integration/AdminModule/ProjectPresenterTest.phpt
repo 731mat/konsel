@@ -58,7 +58,7 @@ test('editor creates project, links agenda item, changes phase and comments publ
 	Assert::contains('Projektant dodá dokumentaci v březnu.', $html);
 	Assert::contains('vidí občané', $html);
 	Assert::contains('Naléhavá priorita', $tester->render('Admin:Project'));
-	Assert::contains('Úkol: Oprava hasičské zbrojnice', $tester->render('Admin:Agenda', 'detail', [
+	Assert::contains('Plán: Oprava hasičské zbrojnice', $tester->render('Admin:Agenda', 'detail', [
 		'id' => $scenario->item->getId(),
 	]));
 });

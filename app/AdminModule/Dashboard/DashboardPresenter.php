@@ -10,6 +10,7 @@ use App\Core\Security\Privilege;
 use App\Core\Security\Resource;
 use App\Model\Meeting\Meeting;
 use App\Model\Meeting\MeetingFacade;
+use App\Model\Municipality\Module;
 use App\Model\Resolution\ResolutionTask;
 use App\Model\Resolution\ResolutionTaskFacade;
 use App\Model\Resolution\TaskFilter;
@@ -54,7 +55,8 @@ final class DashboardPresenter extends SecuredPresenter
 		$this->template->daysLeft = static fn(Meeting $meeting): int => (int) $today->diff($meeting->getMinutesDeadline() ?? $today)->format('%r%a');
 		$this->template->canCreateMeeting = $this->isAllowed(Resource::Meeting, Privilege::Edit);
 
-		$showTasks = $this->currentMunicipality->isSet() && $this->isAllowed(Resource::Resolution);
+		$showTasks = $this->currentMunicipality->isSet() && $this->isAllowed(Resource::Resolution)
+			&& $this->currentMunicipality->get()->isModuleEnabled(Module::ResolutionTasks);
 		$open = $showTasks ? $this->taskFacade->find($this->currentMunicipality->get()->getId(), TaskFilter::Open) : [];
 		$this->template->tasks = array_slice($open, 0, 5);
 		$this->template->overdueCount = count(array_filter($open, fn(ResolutionTask $task): bool => $this->taskFacade->isOverdue($task)));

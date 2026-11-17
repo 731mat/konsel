@@ -391,7 +391,7 @@ konsel/
 - prezenční listina (členové s místem pro podpis a řádky pro hosty)
 **Hotovo když:** všechny 4 dokumenty jdou stáhnout v DOCX i PDF.
 
-### [ ] T31 – Vlastní DOCX šablony obce
+### [ ] T31 – Vlastní šablony dokumentů obce (HTML, rozhodnutí vlastníka 2026-11-17: bez DOCX)
 - Nastavení → Dokumenty: nahrání vlastní šablony pro typ a orgán, kontrola, že obsahuje povinné proměnné (chybějící vypíše), náhled s demo daty, návrat k výchozí šabloně
 **Hotovo když:** nahraná šablona obce se použije místo výchozí.
 
@@ -454,7 +454,7 @@ konsel/
 - Admin: historie změn u zasedání a usnesení
 **Hotovo když:** změna hlasu je dohledatelná (kdo, kdy, z čeho na co).
 
-### [ ] T40 – Přepis audio záznamu
+### [ ] T40 – Přepis audio záznamu (odloženo vlastníkem 2026-11-17)
 - **před implementací vybrat poskytovatele STT** (preferovat zpracování v EU, diarizace, čeština) a zapsat rozhodnutí do ADR
 - `Recording` (meeting, StoredFile, status, duration), `Transcript` + `TranscriptSegment` (speakerLabel, person nullable, start, end, text)
 - asynchronní zpracování: tabulka `Job` + příkaz `jobs:work` (cron). Žádné dlouhé requesty.
@@ -521,6 +521,12 @@ konsel/
 - všechny komentáře mají WYSIWYG editor (tučné, kurzíva, podtržení, přeškrtnutí, seznamy, citace, odkaz); HTML se na serveru pročistí
 **Hotovo když:** občan z úvodní stránky dojde k úkolům obce, zastupitel se přihlásí, obec si nastaví barvy a komentář s formátováním se bezpečně zobrazí.
 
+### [x] T48 – Moduly obce a přejmenování na Plány (zadání vlastníka 2026-11-17)
+**Cíl:** Postupné nasazení – obec si vypne části, které zatím nepoužívá.
+- Nastavení → Moduly: vypínače **Úkoly z usnesení** a **Plány**; vypnutý modul zmizí z menu, přehledu, detailů, portálu, hledání i stránky pro občany, adresy vrací 404, data zůstanou
+- úkolníček se v celé aplikaci jmenuje **Plány** (v menu samostatná sekce Rozvoj obce)
+**Hotovo když:** po vypnutí obou modulů se nikde neukazují a po zapnutí je vše zpět.
+
 ---
 
 ## MVP pro vlastní obec
@@ -576,3 +582,5 @@ Vše od T32 je rozšíření, pořadí se dá upravit podle potřeby.
 - 2026-11-17 T27 (dokončení) – Engine zůstává mPDF + Latte (A11), PhpWord/Gotenberg a `DocumentDataProvider` se nedělají (data sestavuje `MeetingDocumentFacade::renderHtml`); `DocumentTemplate` = T31. Dočasný VO `GeneratedDocument` přejmenován na `RenderedDocument`. **Archiv verzí** jako entita `ArchivedDocument` (místo plánovaného `GeneratedDocument` – obsahuje i nahrané skeny): zasedání, typ, původ (`Generated` uložená verze / `Uploaded` podepsaný originál / `Final` po ověření zápisu), soubor ve `FileStorage` (`m{id}/documents`), poznámka, kdo, stav zasedání v okamžiku uložení (koncept). `DocumentArchiveFacade`: PDF se renderuje mimo transakci (SQLite zámek), nahrát jde jen skutečné PDF (MIME podle obsahu). Po ověření zápisu presenter uloží konečný zápis a usnesení; selhání ověření nevrací, jen upozorní a záložka Dokumenty nabídne „Uložit konečné verze“. Archiv ověřeného zasedání je jen pro přidávání (`assertDeletable`), mazat smí jen správce. `currentUserId()` sjednocen do `SecuredPresenter`. Formát Word se do archivu neukládá (archiv = PDF).
 - 2026-11-17 T32 – `Model/Search`: `SearchIndex` + `SqliteFtsSearchIndex` (FTS5 `unicode61 remove_diacritics 2`, migrace raw SQL jen pro SQLite – na jiné platformě `abortIf`, MySQL varianta v T42). Rowid = kód typu × 10⁹ + ID entity (rychlé přepsání). Indexace přes `DoctrineSearchIndexSubscriber` (onFlush sbírá, postFlush zapisuje – ve stejné transakci), převod entit v `SearchDocumentFactory`: zasedání, body (popis, návrh usnesení, diskuse), usnesení, komentáře u bodů i v úkolníčku (HTML jako text, smazané ne), úkolníček, šablony usnesení a programu. Kaskádově smazané řádky se z indexu mažou podle `meeting_id`/`agenda_item_id`/`project_id`; změna zasedání přeindexuje i jeho body (kontext). Dotaz: slova v uvozovkách s `*` (prefix, žádná FTS syntaxe od uživatele), jednopísmenná slova se vynechají, AND. Řazení bm25 (název ×10), šablony až na konci. Zvýraznění přes řídicí znaky → `HighlightedText` (úseky, šablona escapuje, bez `|noescape`). `Admin:Search` (filtry druh/orgán/rok, stránkování) + pole v horní liště, `search:reindex`. Obec se v SQL filtruje vždy explicitně. Přílohy (názvy, obsah PDF) se zatím neindexují.
 - 2026-11-17 T33 – Neměnnost po ověření zápisu je v entitách: `Meeting::isArchived()`, nově `Attachment::forAgendaItem/rename/changeVisibility/assertChangeable` (dřív jen ve fasádě), `Comment::delete` u bodu, `ProceedingsFacade::markAllPresent` volá `Attendance::assertRecordable` i když není co měnit, `ArchivedDocument::assertDeletable` chrání konečné verze a vše uložené po ověření i po znovuotevření. `ApprovedMeetingImmutabilityTest` zkouší 29 změn přes všechny fasády. **Znovuotevření** jen přes `Meeting::reopen($reason, $user, $clock)` (min. 10 znaků): Closed → InProgress a nově `ReopenMinutes` MinutesApproved → Closed; `transition()` reopen bez důvodu odmítne. Historie `MeetingReopening` (kdo i jménem, kdy, z/do, důvod) v detailu zasedání – to je zatím „záznam do auditu“, obecný audit T39. UI: stránka `Admin:Meeting:reopen` s formulářem místo POST tlačítka. Výjimky z neměnnosti (záměrně): úkoly z usnesení, revokace usnesení pozdějším usnesením, propojení bodu s úkolníčkem, přidání podepsaného originálu do archivu, osobní odkazy (portál je jen ke čtení). **Archiv** `Admin:Archive` (menu Archiv): rok (výchozí letošní/poslední proběhlý) × orgán (přepínač v liště), proběhlá zasedání chronologicky, platný zápis a usnesení (podepsaný originál > konečná verze), upozornění „chybí konečný zápis“ a „čeká na ověření“ se lhůtou. `data-autosubmit` místo inline JS (kvůli CSP v T43).
+- 2026-11-17 Rozhodnutí vlastníka – T31 bude v **HTML/Latte** (stejné šablony jako výchozí dokumenty, sandbox Latte), DOCX se nedělá. T40 (přepis audia) odložen.
+- 2026-11-17 T48 (zadání vlastníka, mimo pořadí) – `Model/Municipality/Module` (enum `ResolutionTasks`, `Plans`), u obce JSON `disabled_modules` (null = vše zapnuto, nové moduly jsou tedy výchozí zapnuté). Vynucení: `#[RequiresModule]` na presenterech a signálech (SecuredPresenter → 404), `BasePresenter::requireModule()` v portálu a na stránce pro občany, `MenuItem::$module`, Latte funkce `moduleEnabled()`, hledání vynechá druhy vypnutého modulu (`SearchDocumentType::module()`), formulář bodu bez výběru plánu (propojení zůstane). Vypnuté Plány skryjí i stránku pro občany a stranu „Jsem občan“ na úvodu (stojí na plánech). Úkolníček → **Plány** v UI, wiki i README (kód zůstává `Project`), v menu samostatná sekce „Rozvoj obce“. Test `ModulesTest`. Moduly jsou jen UI vrstva – fasády je nekontrolují (vypnutí není bezpečnostní hranice).

@@ -7,8 +7,10 @@ namespace App\AdminModule\Resolution;
 use App\AdminModule\SecuredPresenter;
 use App\Core\Security\Allowed;
 use App\Core\Security\Privilege;
+use App\Core\Security\RequiresModule;
 use App\Core\Security\Resource;
 use App\Model\Document\MeetingDocumentFacade;
+use App\Model\Municipality\Module;
 use App\Model\People\PeopleFacade;
 use App\Model\Resolution\Command\SaveResolutionTask;
 use App\Model\Resolution\Resolution;
@@ -85,7 +87,8 @@ final class ResolutionPresenter extends SecuredPresenter
 	{
 		$resolution = $this->requireResolution();
 		$this->template->resolution = $resolution;
-		$this->template->tasks = $this->taskFacade->findByResolution($resolution->getId());
+		$this->template->tasksEnabled = $tasksEnabled = $resolution->getMunicipality()->isModuleEnabled(Module::ResolutionTasks);
+		$this->template->tasks = $tasksEnabled ? $this->taskFacade->findByResolution($resolution->getId()) : [];
 		$this->template->isOverdue = fn(ResolutionTask $task): bool => $this->taskFacade->isOverdue($task);
 		$this->template->canEdit = $this->isAllowed(Resource::Resolution, Privilege::Edit);
 		$this->template->canViewDocuments = $this->isAllowed(Resource::Document);
@@ -119,6 +122,7 @@ final class ResolutionPresenter extends SecuredPresenter
 
 	#[Allowed(Resource::Resolution, Privilege::Edit)]
 	#[Requires(methods: 'POST', sameOrigin: true)]
+	#[RequiresModule(Module::ResolutionTasks)]
 	public function handleCompleteTask(int $taskId): void
 	{
 		$this->runTaskChange($taskId, fn() => $this->taskFacade->complete($taskId), 'Úkol je splněný.');
@@ -126,6 +130,7 @@ final class ResolutionPresenter extends SecuredPresenter
 
 	#[Allowed(Resource::Resolution, Privilege::Edit)]
 	#[Requires(methods: 'POST', sameOrigin: true)]
+	#[RequiresModule(Module::ResolutionTasks)]
 	public function handleCancelTask(int $taskId): void
 	{
 		$this->runTaskChange($taskId, fn() => $this->taskFacade->cancel($taskId), 'Úkol byl zrušen.');
@@ -133,6 +138,7 @@ final class ResolutionPresenter extends SecuredPresenter
 
 	#[Allowed(Resource::Resolution, Privilege::Edit)]
 	#[Requires(methods: 'POST', sameOrigin: true)]
+	#[RequiresModule(Module::ResolutionTasks)]
 	public function handleReopenTask(int $taskId): void
 	{
 		$this->runTaskChange($taskId, fn() => $this->taskFacade->reopen($taskId), 'Úkol je znovu otevřený.');
@@ -140,6 +146,7 @@ final class ResolutionPresenter extends SecuredPresenter
 
 	#[Allowed(Resource::Resolution, Privilege::Delete)]
 	#[Requires(methods: 'POST', sameOrigin: true)]
+	#[RequiresModule(Module::ResolutionTasks)]
 	public function handleDeleteTask(int $taskId): void
 	{
 		$this->runTaskChange($taskId, fn() => $this->taskFacade->delete($taskId), 'Úkol byl smazán.');
@@ -164,6 +171,7 @@ final class ResolutionPresenter extends SecuredPresenter
 		$form->addSubmit('add', 'Přidat úkol');
 		$form->onSuccess[] = function (Form $form) use ($resolution): void {
 			$this->requirePermission(Resource::Resolution, Privilege::Edit);
+			$this->requireModule($resolution->getMunicipality(), Module::ResolutionTasks);
 			$data = $form->getValues(TaskFormData::class);
 			try {
 				$this->taskFacade->add($resolution->getId(), new SaveResolutionTask($data->description, $data->assigneeId, $data->dueDate));

@@ -17,6 +17,7 @@ use App\Model\Meeting\AgendaItem;
 use App\Model\Meeting\Command\SaveAgendaItem;
 use App\Model\Meeting\Meeting;
 use App\Model\Meeting\MeetingFacade;
+use App\Model\Municipality\Module;
 use App\Model\People\PeopleFacade;
 use App\Model\Project\ProjectFacade;
 use App\Model\Shared\Exception\DomainException;
@@ -77,7 +78,9 @@ final class AgendaPresenter extends SecuredPresenter
 			'rapporteur' => $item->getRapporteur()?->getId(),
 			'description' => $item->getDescription(),
 			'proposedResolution' => $item->getProposedResolution(),
-			'project' => $item->getProject()?->getId(),
+			...($item->getMunicipality()->isModuleEnabled(Module::Plans) ? [
+				'project' => $item->getProject()?->getId(),
+			] : []),
 		]);
 	}
 
@@ -270,18 +273,22 @@ final class AgendaPresenter extends SecuredPresenter
 			->setHtmlAttribute('placeholder', 'Např. Rozpočtové opatření č. 5/2026');
 		$form->addSelect('rapporteur', 'Předkladatel', $persons)
 			->setPrompt('— neurčeno —');
-		$projects = [];
-		foreach ($this->projectFacade->find($meeting->getMunicipality()->getId(), onlyActive: true) as $project) {
-			$projects[$project->getId()] = $project->getTitle();
+		$plansEnabled = $meeting->getMunicipality()->isModuleEnabled(Module::Plans);
+		if ($plansEnabled) {
+			$projects = [];
+			foreach ($this->projectFacade->find($meeting->getMunicipality()->getId(), onlyActive: true) as $project) {
+				$projects[$project->getId()] = $project->getTitle();
+			}
+
+			if ($this->item?->getProject() !== null) {
+				$projects[$this->item->getProject()->getId()] = $this->item->getProject()->getTitle();
+			}
+
+			$form->addSelect('project', 'Plán', $projects)
+				->setPrompt('— bez plánu —')
+				->setOption('description', 'Bod se objeví ve vlákně plánu (např. schválení projektové dokumentace, investice).');
 		}
 
-		if ($this->item?->getProject() !== null) {
-			$projects[$this->item->getProject()->getId()] = $this->item->getProject()->getTitle();
-		}
-
-		$form->addSelect('project', 'Úkol z úkolníčku', $projects)
-			->setPrompt('— bez úkolu —')
-			->setOption('description', 'Bod se objeví ve vlákně úkolu (např. schválení projektu, investice).');
 		$form->addTextArea('description', 'Důvodová zpráva / popis', null, 8)
 			->setNullable()
 			->setOption('description', 'Prostý text, odstavce oddělte prázdným řádkem.');
@@ -290,7 +297,7 @@ final class AgendaPresenter extends SecuredPresenter
 			->setHtmlAttribute('placeholder', "{$meeting->getBody()->getName()} schvaluje …")
 			->setOption('description', 'Text, o kterém se bude hlasovat. Bod bez usnesení (např. informace, diskuse) nechte prázdný.');
 		$form->addSubmit('save', $this->item === null ? 'Přidat bod' : 'Uložit');
-		$form->onSuccess[] = function (Form $form) use ($meeting): void {
+		$form->onSuccess[] = function (Form $form) use ($meeting, $plansEnabled): void {
 			$data = $form->getValues(ItemFormData::class);
 			$command = new SaveAgendaItem($data->title, $data->description, $data->proposedResolution, $data->rapporteur);
 			try {
@@ -303,7 +310,10 @@ final class AgendaPresenter extends SecuredPresenter
 					$this->flashMessage('Změny byly uloženy.', 'success');
 				}
 
-				$this->projectFacade->linkAgendaItem($item->getId(), $data->project);
+				// při vypnutých plánech pole ve formuláři není a propojení zůstane, jak bylo
+				if ($plansEnabled) {
+					$this->projectFacade->linkAgendaItem($item->getId(), $data->project);
+				}
 			} catch (ValidationException $e) {
 				FormErrors::apply($form, $e);
 

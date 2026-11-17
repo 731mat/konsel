@@ -7,6 +7,7 @@ namespace App\Core\Latte;
 use App\Core\Security\Privilege;
 use App\Core\Security\Resource;
 use App\Core\Tenancy\CurrentMunicipality;
+use App\Model\Municipality\Module;
 use App\Model\Shared\RichText\HtmlSanitizer;
 use App\Model\Shared\RichText\RichText;
 use App\Model\Shared\ValueObject\StoredFile;
@@ -20,7 +21,7 @@ use Nette\Utils\Html;
  * Filtry a funkce Latte pro celou aplikaci.
  *
  * Filtry:  |czDate  |czDateLong  |czDateTime  |czMonth  |nl2p  |richText  |fileIcon  |initials  |genitiveBody
- * Funkce:  vite('assets/main.js'), allowed(Resource::Meeting, Privilege::Edit), brandStyle()
+ * Funkce:  vite('assets/main.js'), allowed(Resource::Meeting, Privilege::Edit), brandStyle(), moduleEnabled(Module::Plans)
  */
 final class LatteExtension extends Extension
 {
@@ -58,6 +59,7 @@ final class LatteExtension extends Extension
 			'vite' => fn(string $entry): Html => $this->viteAssets->tags($entry),
 			'allowed' => fn(Resource $resource, Privilege $privilege = Privilege::View): bool => $this->user->isAllowed($resource->value, $privilege->value),
 			'brandStyle' => $this->brandStyle(...),
+			'moduleEnabled' => $this->moduleEnabled(...),
 		];
 	}
 
@@ -71,6 +73,14 @@ final class LatteExtension extends Extension
 		}
 
 		return new LatteHtml('<style>' . BrandStyle::css($this->currentMunicipality->get()->getBrandColors()) . '</style>');
+	}
+
+	/**
+	 * Volitelný modul obce aktuálního požadavku (bez obce = zapnuto).
+	 */
+	public function moduleEnabled(Module $module): bool
+	{
+		return !$this->currentMunicipality->isSet() || $this->currentMunicipality->get()->isModuleEnabled($module);
 	}
 
 	public static function czDate(?\DateTimeInterface $date): string

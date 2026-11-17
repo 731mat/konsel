@@ -18,8 +18,8 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Úkol v úkolníčku – dlouhodobé téma („Postavit školu“), které se táhne přes více zasedání.
- * Diskuse a soubory jsou Comment/Attachment s vazbou na úkol, body programu se k úkolu propojují.
+ * Plán obce – dlouhodobé téma („Postavit školu“), které se táhne přes více zasedání.
+ * Diskuse a soubory jsou Comment/Attachment s vazbou na plán, body programu se k plánu propojují.
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'project')]
@@ -55,13 +55,13 @@ final class Project implements TenantOwned, Timestampable
 	private ?int $estimatedCost = null;
 
 	/**
-	 * Úkol je vidět na veřejné stránce obce (fáze, priorita, veřejné komentáře).
+	 * Plán je vidět na veřejné stránce obce (fáze, priorita, veřejné komentáře).
 	 */
 	#[ORM\Column]
 	private bool $public = false;
 
 	/**
-	 * Kdo úkol založil (jméno uživatele úřadu nebo občana u podnětu).
+	 * Kdo plán založil (jméno uživatele úřadu nebo občana u podnětu).
 	 */
 	#[ORM\Column(length: 200)]
 	private string $createdByName;
@@ -136,7 +136,7 @@ final class Project implements TenantOwned, Timestampable
 	public function changeStatus(ProjectStatus $status, \DateTimeImmutable $at, string $changedByName, ?string $note = null): ProjectStatusChange
 	{
 		if ($status === $this->status) {
-			throw new InvalidStateException("Úkol už je ve fázi „{$status->label()}“.");
+			throw new InvalidStateException("Plán už je ve fázi „{$status->label()}“.");
 		}
 
 		$change = new ProjectStatusChange($this, $this->status, $status, $at, $changedByName, $note);

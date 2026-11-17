@@ -6,22 +6,23 @@
 {varType App\Model\Project\Project[] $projects}
 {varType int $projectCount}
 {varType bool $portalActive}
+{varType bool $citizenSide}
 <main class="my-auto py-4">
 	<div class="text-center mx-auto mb-4 mb-lg-5" style="max-width: 44rem">
 		<div class="brand fs-4 mb-4">{include '../../UI/@logo.latte'} Konšel</div>
 		<h1 class="hero-title mb-3">Zasedání zastupitelstva bez papírování</h1>
 		<p class="lead text-body-secondary mb-0">
-			Program, podklady, hlasování, zápis i usnesení na jednom místě. A občané vidí, na čem obec pracuje.
+			Program, podklady, hlasování, zápis i usnesení na jednom místě.{if $citizenSide} A občané vidí, na čem obec pracuje.{/if}
 		</p>
 	</div>
 
 	<div class="row g-4 mx-auto" style="max-width: 64rem">
-		<div class="col-lg-6">
+		<div n:if="$citizenSide" class="col-lg-6">
 			<section class="card crossroad-card h-100" aria-labelledby="crossroad-citizen">
 				<div class="card-body p-4 p-xl-5 d-flex flex-column">
 					<div class="crossroad-icon crossroad-icon-accent mb-3"><i class="bi bi-people" aria-hidden="true"></i></div>
 					<h2 class="h4 mb-2" id="crossroad-citizen">Jsem občan</h2>
-					<p class="text-body-secondary">Podívejte se, na čem obec pracuje, v jaké fázi jsou jednotlivé úkoly a jakou mají prioritu. Máte nápad, co v obci zlepšit? Pošlete podnět.</p>
+					<p class="text-body-secondary">Podívejte se, na čem obec pracuje, v jaké fázi jsou jednotlivé plány a jakou mají prioritu. Máte nápad, co v obci zlepšit? Pošlete podnět.</p>
 
 					{if $municipality}
 						<div class="small fw-semibold text-body-secondary mb-2">{$municipality->getProfile()->officialName} – na čem se pracuje</div>
@@ -32,11 +33,11 @@
 									<span class="badge status-badge bg-{$project->getStatus()->tone()}-subtle text-{$project->getStatus()->tone()}-emphasis ms-auto">{$project->getStatus()->label()}</span>
 								</a>
 							</li>
-							<li n:if="!$projects" class="small text-body-secondary">Obec zatím nezveřejnila žádné úkoly. Můžete ale poslat první podnět.</li>
+							<li n:if="!$projects" class="small text-body-secondary">Obec zatím nezveřejnila žádné plány. Můžete ale poslat první podnět.</li>
 						</ul>
 						<div class="mt-auto d-flex flex-wrap gap-2">
 							<a class="btn btn-primary" n:href=":Public:Ideas:default, municipality: $municipality->getSlug()">
-								<i class="bi bi-kanban" aria-hidden="true"></i> Všechny úkoly{if $projectCount > count($projects)} ({$projectCount}){/if}
+								<i class="bi bi-kanban" aria-hidden="true"></i> Všechny plány{if $projectCount > count($projects)} ({$projectCount}){/if}
 							</a>
 							<a class="btn btn-outline-primary" href="{link :Public:Ideas:default, municipality: $municipality->getSlug()}#podnet">
 								<i class="bi bi-lightbulb" aria-hidden="true"></i> Poslat podnět
@@ -58,7 +59,7 @@
 			</section>
 		</div>
 
-		<div class="col-lg-6">
+		<div n:class="col-lg-6, !$citizenSide ? offset-lg-3">
 			<section class="card crossroad-card h-100" aria-labelledby="crossroad-member">
 				<div class="card-body p-4 p-xl-5 d-flex flex-column">
 					<div class="crossroad-icon mb-3"><i class="bi bi-person-badge" aria-hidden="true"></i></div>
@@ -89,7 +90,7 @@
 
 	<h2 class="crossroad-section-title text-center mt-5 mb-3">Co Konšel umí</h2>
 	<div class="row g-4 mx-auto" style="max-width: 64rem">
-		<div class="col-md-4">
+		<div n:class="$citizenSide ? col-md-4 : col-md-6">
 			<div class="card h-100 border-0">
 				<div class="card-body p-4">
 					<div class="feature-icon mb-3"><i class="bi bi-list-ol" aria-hidden="true"></i></div>
@@ -98,7 +99,7 @@
 				</div>
 			</div>
 		</div>
-		<div class="col-md-4">
+		<div n:class="$citizenSide ? col-md-4 : col-md-6">
 			<div class="card h-100 border-0">
 				<div class="card-body p-4">
 					<div class="feature-icon mb-3"><i class="bi bi-hand-index-thumb" aria-hidden="true"></i></div>
@@ -107,12 +108,12 @@
 				</div>
 			</div>
 		</div>
-		<div class="col-md-4">
+		<div n:if="$citizenSide" class="col-md-4">
 			<div class="card h-100 border-0">
 				<div class="card-body p-4">
 					<div class="feature-icon mb-3"><i class="bi bi-kanban" aria-hidden="true"></i></div>
-					<h3 class="h6">Úkoly a podněty občanů</h3>
-					<p class="small text-body-secondary mb-0">Dlouhodobé úkoly obce v jednom vlákně přes zasedání. Občané vidí fázi i prioritu a mohou posílat podněty.</p>
+					<h3 class="h6">Plány a podněty občanů</h3>
+					<p class="small text-body-secondary mb-0">Dlouhodobé plány obce v jednom vlákně přes zasedání. Občané vidí fázi i prioritu a mohou posílat podněty.</p>
 				</div>
 			</div>
 		</div>

@@ -1,7 +1,7 @@
-{block title}Úkolníček{/block}
+{block title}Plány{/block}
 
 {block breadcrumbs}
-	<li class="breadcrumb-item active" aria-current="page">Úkolníček</li>
+	<li class="breadcrumb-item active" aria-current="page">Plány</li>
 {/block}
 
 {block content}
@@ -13,11 +13,11 @@
 
 <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
 	<div class="me-auto">
-		<h1 class="h3 mb-0">Úkolníček</h1>
-		<p class="text-body-secondary mb-0">Dlouhodobé úkoly a záměry obce – od námětu přes schválení na zasedání až po dokončení.</p>
+		<h1 class="h3 mb-0">Plány</h1>
+		<p class="text-body-secondary mb-0">Dlouhodobé plány a záměry obce – od námětu přes schválení na zasedání až po dokončení.</p>
 	</div>
 	<a n:if="$currentMunicipality" n:href=":Public:Ideas:default, municipality: $currentMunicipality->getSlug()" target="_blank" rel="noopener" class="btn btn-outline-secondary"><i class="bi bi-globe" aria-hidden="true"></i> Stránka pro občany</a>
-	<a n:if="$canEdit" n:href="add" class="btn btn-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nový úkol</a>
+	<a n:if="$canEdit" n:href="add" class="btn btn-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nový plán</a>
 </div>
 
 <ul class="nav nav-pills gap-1 mb-3 small">
@@ -46,4 +46,4 @@
 		</a>
 	</div>
 </div>
-<div n:if="!$projects" class="card"><div class="card-body empty-state"><i class="bi bi-kanban" aria-hidden="true"></i>V této skupině nejsou žádné úkoly.</div></div>
+<div n:if="!$projects" class="card"><div class="card-body empty-state"><i class="bi bi-kanban" aria-hidden="true"></i>V této skupině nejsou žádné plány.</div></div>

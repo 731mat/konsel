@@ -8,7 +8,7 @@ use App\Model\People\Person;
 use App\Model\Shared\Exception\ValidationException;
 
 /**
- * Upravitelné údaje úkolu (validované).
+ * Upravitelné údaje plánu (validované).
  */
 final readonly class ProjectDetails
 {
@@ -28,7 +28,7 @@ final readonly class ProjectDetails
 	) {
 		$title = trim((string) preg_replace('~\s+~u', ' ', $title));
 		if ($title === '' || mb_strlen($title) > 200) {
-			throw new ValidationException('Název úkolu musí mít 1 až 200 znaků.', 'title');
+			throw new ValidationException('Název plánu musí mít 1 až 200 znaků.', 'title');
 		}
 
 		$description = trim(str_replace(["\r\n", "\r"], "\n", (string) $description));

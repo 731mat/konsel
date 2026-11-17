@@ -80,7 +80,7 @@ final readonly class CommentFacade
 	}
 
 	/**
-	 * Komentář k úkolu v úkolníčku.
+	 * Komentář k plánu.
 	 *
 	 * @param list<UploadedFile> $files
 	 */
@@ -98,7 +98,7 @@ final readonly class CommentFacade
 	}
 
 	/**
-	 * Zveřejnění komentáře k úkolu občanům (rozhoduje úřad).
+	 * Zveřejnění komentáře k plánu občanům (rozhoduje úřad).
 	 */
 	public function changeVisibility(int $commentId, bool $publicForCitizens): void
 	{

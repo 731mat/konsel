@@ -6,6 +6,8 @@ namespace App\UI\Menu;
 
 use App\Core\Security\Privilege;
 use App\Core\Security\Resource;
+use App\Core\Tenancy\CurrentMunicipality;
+use App\Model\Municipality\Module;
 use Nette\Application\InvalidPresenterException;
 use Nette\Application\IPresenterFactory;
 use Nette\Application\UI\Control;
@@ -21,6 +23,7 @@ final class AdminMenu extends Control
 	public function __construct(
 		private readonly User $user,
 		private readonly IPresenterFactory $presenterFactory,
+		private readonly CurrentMunicipality $currentMunicipality,
 	) {}
 
 	/**
@@ -31,11 +34,11 @@ final class AdminMenu extends Control
 		return [
 			new MenuItem('Přehled', 'Dashboard', 'house', Resource::Dashboard),
 			new MenuItem('Zasedání', 'Meeting', 'calendar-event', Resource::Meeting),
-			new MenuItem('Úkolníček', 'Project', 'kanban', Resource::Project),
 			new MenuItem('Usnesení', 'Resolution', 'journal-check', Resource::Resolution),
-			new MenuItem('Úkoly z usnesení', 'Task', 'check2-square', Resource::Resolution),
+			new MenuItem('Úkoly z usnesení', 'Task', 'check2-square', Resource::Resolution, module: Module::ResolutionTasks),
 			new MenuItem('Archiv', 'Archive', 'archive', Resource::Meeting),
 			new MenuItem('Hledat', 'Search', 'search', Resource::Meeting),
+			new MenuItem('Plány', 'Project', 'kanban', Resource::Project, 'Rozvoj obce', Module::Plans),
 			new MenuItem('Osoby a orgány', 'Member', 'people', Resource::Member, 'Správa obce'),
 			new MenuItem('Šablony', 'Template', 'files', Resource::Template, 'Správa obce'),
 			new MenuItem('Uživatelé', 'User', 'person-gear', Resource::User, 'Správa obce'),
@@ -60,6 +63,10 @@ final class AdminMenu extends Control
 	private function isVisible(MenuItem $item): bool
 	{
 		if (!$this->user->isAllowed($item->resource->value, Privilege::View->value)) {
+			return false;
+		}
+
+		if ($item->module !== null && $this->currentMunicipality->isSet() && !$this->currentMunicipality->get()->isModuleEnabled($item->module)) {
 			return false;
 		}
 

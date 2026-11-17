@@ -2,7 +2,7 @@
 {block title}{$project->getTitle()}{/block}
 
 {block breadcrumbs}
-	<li class="breadcrumb-item"><a n:href="default">Úkolníček</a></li>
+	<li class="breadcrumb-item"><a n:href="default">Plány</a></li>
 	<li class="breadcrumb-item active" aria-current="page">{$project->getTitle()|truncate: 50}</li>
 {/block}
 
@@ -38,7 +38,7 @@
 
 {* ukazatel postupu po hlavní cestě *}
 {var $step = $project->getStatus()->step()}
-<ol class="project-steps mb-4" aria-label="Fáze úkolu">
+<ol class="project-steps mb-4" aria-label="Fáze plánu">
 	<li n:foreach="$path as $phase" n:class="$step !== null && $phase->step() < $step ? done, $phase === $project->getStatus() ? current">
 		<span>{$phase->label()}</span>
 	</li>
@@ -52,7 +52,7 @@
 		</div>
 
 		<div class="card">
-			<div class="card-header"><i class="bi bi-signpost-split text-primary me-1" aria-hidden="true"></i> Vlákno úkolu</div>
+			<div class="card-header"><i class="bi bi-signpost-split text-primary me-1" aria-hidden="true"></i> Vlákno plánu</div>
 			<div class="card-body">
 				{snippet thread}
 				<div class="timeline">
@@ -61,7 +61,7 @@
 							{case 'created'}
 								<div class="timeline-item">
 									<span class="timeline-icon"><i class="bi bi-flag" aria-hidden="true"></i></span>
-									<div class="small"><strong>Úkol založen</strong> · {$project->getCreatedByName()} <span class="text-body-secondary">· {$entry->at|czDateTime}</span></div>
+									<div class="small"><strong>Plán založen</strong> · {$project->getCreatedByName()} <span class="text-body-secondary">· {$entry->at|czDateTime}</span></div>
 								</div>
 							{case 'status'}
 								{var $change = $entry->statusChange}
@@ -86,7 +86,7 @@
 										<a n:href="Agenda:detail, id: $item->getId()" class="fw-semibold">{$item->getPosition()}. {$item->getTitle()}</a>
 										{include '../../UI/Resolution/@outcome.latte', item: $item, resolutions: $entry->resolutions}
 										<form n:if="$canEdit" method="post" action="{link unlinkItem!, itemId: $item->getId()}" class="mt-1">
-											<button type="submit" class="btn btn-link btn-sm p-0 text-body-secondary text-decoration-none" data-confirm="Zrušit propojení bodu s úkolem?">Zrušit propojení</button>
+											<button type="submit" class="btn btn-link btn-sm p-0 text-body-secondary text-decoration-none" data-confirm="Zrušit propojení bodu s plánem?">Zrušit propojení</button>
 										</form>
 									</div>
 								</div>
@@ -153,7 +153,7 @@
 				{else}
 					<p class="small text-body-secondary mb-0">Za poslední rok nejsou žádné body k propojení.</p>
 				{/if}
-				<p class="small text-body-secondary mt-2 mb-0">Propojený bod (např. schválení projektu, investice) se objeví ve vlákně úkolu.</p>
+				<p class="small text-body-secondary mt-2 mb-0">Propojený bod (např. schválení projektu, investice) se objeví ve vlákně plánu.</p>
 			</div>
 		</div>
 

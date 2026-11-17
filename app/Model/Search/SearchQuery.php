@@ -16,6 +16,12 @@ final readonly class SearchQuery
 		public ?int $year = null,
 		public int $limit = 20,
 		public int $offset = 0,
+		/**
+		 * Druhy, které se nehledají (vypnutý modul obce)
+		 *
+		 * @var list<SearchDocumentType>
+		 */
+		public array $excludedTypes = [],
 	) {}
 
 	/**

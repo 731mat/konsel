@@ -1,4 +1,4 @@
-{* Štítky úkolu: {include '@badges.latte', project: $project} *}
+{* Štítky plánu: {include '@badges.latte', project: $project} *}
 {parameters App\Model\Project\Project $project}
 {var $tone = $project->getStatus()->tone()}
 <span class="badge status-badge bg-{$tone}-subtle text-{$tone}-emphasis border-{$tone}-subtle">{$project->getStatus()->label()}</span>

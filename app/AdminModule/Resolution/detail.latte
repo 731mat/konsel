@@ -8,6 +8,7 @@
 {block content}
 {varType App\Model\Resolution\Resolution $resolution}
 {varType App\Model\Resolution\ResolutionTask[] $tasks}
+{varType bool $tasksEnabled}
 {varType Closure $isOverdue}
 {varType bool $canEdit}
 {varType bool $canRevoke}
@@ -42,7 +43,7 @@
 			</div>
 		</div>
 
-		<div class="card" id="ukoly">
+		<div n:if="$tasksEnabled" class="card" id="ukoly">
 			<div class="card-header d-flex align-items-center">
 				<span class="me-auto"><i class="bi bi-check2-square" aria-hidden="true"></i> Úkoly z usnesení</span>
 				<span n:if="$tasks" class="badge text-bg-light">{count($tasks)}</span>

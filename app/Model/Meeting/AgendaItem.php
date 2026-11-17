@@ -70,7 +70,7 @@ final class AgendaItem implements TenantOwned, Timestampable
 	private bool $addedDuringMeeting = false;
 
 	/**
-	 * Úkol z úkolníčku, ke kterému bod patří (stejné téma napříč zasedáními).
+	 * Plán, ke kterému bod patří (stejné téma napříč zasedáními).
 	 */
 	#[ORM\ManyToOne(targetEntity: Project::class)]
 	#[ORM\JoinColumn(onDelete: 'SET NULL')]
@@ -133,14 +133,14 @@ final class AgendaItem implements TenantOwned, Timestampable
 	}
 
 	/**
-	 * Propojení s úkolem jde měnit kdykoli (i u proběhlého zasedání) – nejde o obsah programu.
+	 * Propojení s plánem jde měnit kdykoli (i u proběhlého zasedání) – nejde o obsah programu.
 	 *
 	 * @throws ValidationException
 	 */
 	public function linkProject(?Project $project): void
 	{
 		if ($project !== null && $project->getMunicipality() !== $this->municipality) {
-			throw new ValidationException('Úkol patří k jiné obci.', 'project');
+			throw new ValidationException('Plán patří k jiné obci.', 'project');
 		}
 
 		$this->project = $project;

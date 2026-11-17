@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Model\Project;
 
 /**
- * Fáze úkolu v úkolníčku. Hlavní cesta: námět → příprava → projekt → schváleno → realizace → hotovo.
+ * Fáze plánu. Hlavní cesta: námět → příprava → projekt → schváleno → realizace → hotovo.
  */
 enum ProjectStatus: string
 {

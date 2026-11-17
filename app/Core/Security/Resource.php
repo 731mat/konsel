@@ -20,7 +20,7 @@ enum Resource: string
 	case Member = 'member';
 
 	/**
-	 * Úkolníček (dlouhodobé úkoly, podněty občanů).
+	 * Plány (dlouhodobé plány, podněty občanů).
 	 */
 	case Project = 'project';
 	case User = 'user';

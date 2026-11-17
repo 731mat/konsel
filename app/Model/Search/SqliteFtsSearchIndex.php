@@ -76,6 +76,11 @@ final readonly class SqliteFtsSearchIndex implements SearchIndex
 			$params[] = $query->type->value;
 		}
 
+		foreach ($query->excludedTypes as $excluded) {
+			$where .= ' AND type != ?';
+			$params[] = $excluded->value;
+		}
+
 		if ($query->bodyId !== null) {
 			$where .= ' AND body_id = ?';
 			$params[] = $query->bodyId;

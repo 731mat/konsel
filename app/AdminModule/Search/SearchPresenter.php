@@ -47,11 +47,16 @@ final class SearchPresenter extends SecuredPresenter
 			}
 		}
 
-		$result = $this->searchFacade->search($municipalityId, $q, $selectedType, isset($bodies[$bodyId ?? 0]) ? $bodyId : null, $year, $page);
+		$municipality = $this->requireMunicipality();
+		$excluded = array_values(array_filter(
+			SearchDocumentType::cases(),
+			static fn(SearchDocumentType $t): bool => $t->module() !== null && !$municipality->isModuleEnabled($t->module()),
+		));
+		$result = $this->searchFacade->search($municipalityId, $q, $selectedType, isset($bodies[$bodyId ?? 0]) ? $bodyId : null, $year, $page, $excluded);
 
 		$this->template->q = $q;
 		$this->template->result = $result;
-		$this->template->types = SearchDocumentType::cases();
+		$this->template->types = array_values(array_filter(SearchDocumentType::cases(), static fn(SearchDocumentType $t): bool => !in_array($t, $excluded, true)));
 		$this->template->selectedType = $selectedType;
 		$this->template->bodies = $bodies;
 		$this->template->selectedBody = $bodyId;

@@ -26,7 +26,7 @@ test('wiki pages from doc/wiki are readable for every role, with diagrams and li
 	$modules = $tester->render('Admin:Help', 'default', [
 		'page' => '03-moduly-a-propojeni',
 	]);
-	Assert::contains('Úkolníček vs. Úkoly z usnesení', $modules);
+	Assert::contains('Plány vs. Úkoly z usnesení', $modules);
 	Assert::contains('<code class="language-mermaid">', $modules, 'diagram vykreslí Mermaid v prohlížeči');
 	Assert::contains('href="/admin/help?page=04-zivotni-cykly"', $modules, 'odkazy mezi stránkami vedou do aplikace');
 

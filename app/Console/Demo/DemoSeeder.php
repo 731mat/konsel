@@ -234,7 +234,7 @@ final readonly class DemoSeeder
 			'Uživatelé (heslo ' . self::Password . '): spravce@, editor@, ctenar@, superadmin@demo.konsel.test',
 			'Volební období 2026–2030, zastupitelstvo 9 členů, finanční a kontrolní výbor',
 			'Knihovna šablon usnesení a programu (řádné a ustavující zasedání)',
-			'Úkolníček: mateřská škola (propojená se 2 zasedáními), oprava komunikace, LED osvětlení, podnět občana',
+			'Plány: mateřská škola (propojená se 2 zasedáními), oprava komunikace, LED osvětlení, podnět občana',
 			'Zasedání zastupitelstva s programem: ustavující (zápis ověřen, konečné verze v archivu), proběhlé (1 omluvený, odhlasované body), sdílené a v přípravě',
 			'Usnesení s čísly (1–10/2026) a úkoly z usnesení, jeden po termínu',
 			sprintf('Pozvánky na sdílené zasedání: %d e-mailů odesláno, %d neodesláno (vývoj: http://localhost:8025)', count($invitations->sent), count($invitations->notDelivered())),
@@ -258,7 +258,7 @@ final readonly class DemoSeeder
 	}
 
 	/**
-	 * Úkolníček: úkoly v různých fázích propojené s body zasedání, diskuse a veřejné komentáře.
+	 * Plány obce v různých fázích propojené s body zasedání, diskuse a veřejné komentáře.
 	 *
 	 * @param list<\App\Model\People\Person> $persons
 	 */
