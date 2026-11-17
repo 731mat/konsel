@@ -110,6 +110,10 @@ final class VotingRound implements TenantOwned
 			throw new InvalidStateException('Hlasovat lze jen během zasedání – nejdřív ho zahajte.');
 		}
 
+		if ($item->hasSubItems()) {
+			throw new InvalidStateException('Bod má podbody – hlasuje se o každém podbodu zvlášť.');
+		}
+
 		if (!$quorum->isReached()) {
 			throw new InvalidStateException("Orgán není usnášeníschopný (přítomno {$quorum->present} z {$quorum->members}, potřeba {$quorum->required}), hlasovat nelze.");
 		}

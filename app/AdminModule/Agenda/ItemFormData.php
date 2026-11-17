@@ -12,6 +12,8 @@ final class ItemFormData
 
 	public ?int $project = null;
 
+	public ?int $parent = null;
+
 	public ?string $description = null;
 
 	public ?string $proposedResolution = null;

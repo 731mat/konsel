@@ -83,7 +83,7 @@
 											· {$entry->at|czDate}
 											{include '../Meeting/@status.latte', status: $item->getMeeting()->getStatus()}
 										</div>
-										<a n:href="Agenda:detail, id: $item->getId()" class="fw-semibold">{$item->getPosition()}. {$item->getTitle()}</a>
+										<a n:href="Agenda:detail, id: $item->getId()" class="fw-semibold">{$item->getNumber()}. {$item->getTitle()}</a>
 										{include '../../UI/Resolution/@outcome.latte', item: $item, resolutions: $entry->resolutions}
 										<form n:if="$canEdit" method="post" action="{link unlinkItem!, itemId: $item->getId()}" class="mt-1">
 											<button type="submit" class="btn btn-link btn-sm p-0 text-body-secondary text-decoration-none" data-confirm="Zrušit propojení bodu s plánem?">Zrušit propojení</button>

@@ -1,0 +1,45 @@
+{* Vzor obce Neplachovice: usnesení ve tvaru „19/2/1 – Schvaluje: …“, podbody jednoho bodu pohromadě,
+   účast členů a občanů, podpis starosty a místostarosty. Použijte v Nastavení → Dokumenty → Usnesení. *}
+{layout '@layout.latte'}
+
+{block content}
+<div n:if="$draft" style="text-align: center; color: #b42318; font-weight: bold; letter-spacing: 2pt; margin-bottom: 6pt;">KONCEPT – ZASEDÁNÍ PROBÍHÁ</div>
+<h1 style="text-transform: none; letter-spacing: 0; font-size: 16pt;">Usnesení</h1>
+<p style="text-align: center; font-weight: bold; border-bottom: 1pt solid #1f2937; padding-bottom: 4pt; margin-bottom: 16pt;">
+	z {$meeting->getTitle()} {$meeting->getBody()->getCode()}, konaného dne {$meeting->getScheduledAt()|czDate}, {$meeting->getPlace()}
+</p>
+
+{var $previous = null}
+{foreach $resolutions as $resolution}
+	{* mezera mezi body – podbody (stejné pořadové číslo) zůstávají pohromadě *}
+	<div n:if="$previous !== null && $resolution->getSequence() !== $previous" style="height: 10pt"></div>
+	<p style="margin: 0 0 3pt 0;">
+		<strong>{$resolution->getNumber()} –{if $resolution->getLeadVerb()} {$resolution->getLeadVerb()}:{/if}</strong>
+		{$resolution->getTextWithoutVerb()|breakLines}
+		<span n:if="$resolution->getStatus() !== App\Model\Resolution\ResolutionStatus::Adopted" class="muted">({$resolution->getStatus()->label()}{if $resolution->getStatusNote()}: {$resolution->getStatusNote()}{/if})</span>
+	</p>
+	{var $previous = $resolution->getSequence()}
+{else}
+	<p class="muted">Na zasedání nebylo přijato žádné usnesení.</p>
+{/foreach}
+
+{var $present = $attendance->quorum->present}
+{var $guests = $meeting->getGuestCount()}
+<p style="margin-top: 18pt;">
+	<strong>Účast: {$present} {$present === 1 ? 'člen' : ($present < 5 ? 'členové' : 'členů')} zastupitelstva</strong>
+	{if $guests}<br><strong style="padding-left: 36pt;">{$guests} {$guests === 1 ? 'občan' : ($guests < 5 ? 'občané' : 'občanů')}</strong>{/if}
+</p>
+
+<table class="signature" width="100%">
+	<tr>
+		<td width="50%" align="center">
+			<br><br>…………………………………………<br>
+			{$mayor?->getFullName() ?? ''}, starosta
+		</td>
+		<td width="50%" align="center">
+			<br><br>…………………………………………<br>
+			{$deputy?->getFullName() ?? ''}, místostarosta
+		</td>
+	</tr>
+</table>
+{/block}

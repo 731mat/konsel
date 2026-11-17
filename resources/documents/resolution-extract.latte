@@ -11,7 +11,7 @@
 <p style="text-align: center" class="muted">konaného dne {$meeting->getScheduledAt()|czDateLong} – {$meeting->getPlace()}</p>
 
 <h3>Usnesení č. {$resolution->getNumber()}</h3>
-<div class="muted small">k bodu {$resolution->getAgendaItem()->getPosition()}. {$resolution->getAgendaItem()->getTitle()}</div>
+<div class="muted small">k bodu {$resolution->getAgendaItem()->getNumber()}. {$resolution->getAgendaItem()->getTitle()}</div>
 <div class="resolution">{$resolution->getText()|breakLines}</div>
 <p n:if="$round" class="small">
 	Výsledek hlasování: pro {$round->count(App\Model\Meeting\VoteChoice::For)}, proti {$round->count(App\Model\Meeting\VoteChoice::Against)}, zdržel se {$round->count(App\Model\Meeting\VoteChoice::Abstain)}

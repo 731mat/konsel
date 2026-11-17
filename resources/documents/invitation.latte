@@ -28,9 +28,11 @@
 <h3>Navržený program</h3>
 {var $items = $meeting->getAgendaItems()}
 {if $items}
-	<ol class="program">
-		<li n:foreach="$items as $item">{$item->getTitle()}</li>
-	</ol>
+	<table class="program">
+		<tr n:foreach="$items as $item" n:class="$item->isSubItem() ? sub">
+			<td class="number">{$item->getNumber()}.</td><td>{$item->getTitle()}</td>
+		</tr>
+	</table>
 {else}
 	<p class="muted">Program bude doplněn.</p>
 {/if}

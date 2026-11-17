@@ -77,26 +77,32 @@
 			{if $tab === 'program'}
 				{snippet program}
 					{var $items = $meeting->getAgendaItems()}
+					{var $topCount = count(array_filter($items, fn($i) => !$i->isSubItem()))}
 					<ol n:if="$items" class="list-group list-group-flush agenda-list" data-sortable-url={$canEditProgram ? $presenter->link('reorder!') : null}>
-						<li n:foreach="$items as $item" class="list-group-item d-flex align-items-start gap-3 py-3" data-id="{$item->getId()}">
+						<li n:foreach="$items as $item" n:class="list-group-item, d-flex, align-items-start, gap-3, py-3, $item->isSubItem() ? agenda-subitem" data-id="{$item->getId()}">
+							{var $siblingPosition = $item->isSubItem() ? $item->getSubNumber() : $item->getTopNumber()}
+							{var $siblingCount = $item->isSubItem() ? count($meeting->getSubItems($item->getParent())) : $topCount}
 							<span n:if="$canEditProgram" class="drag-handle" title="Přetáhněte pro změnu pořadí"><i class="bi bi-grip-vertical" aria-hidden="true"></i></span>
-							<span class="agenda-number">{$item->getPosition()}.</span>
+							<span class="agenda-number">{$item->getNumber()}.</span>
 							<div class="me-auto min-w-0">
 								<a n:href="Agenda:detail, id: $item->getId()" class="fw-semibold">{$item->getTitle()}</a>
 								<span n:if="$item->isAddedDuringMeeting()" class="badge bg-info-subtle text-info-emphasis ms-1">doplněno na zasedání</span>
 								<div class="small text-body-secondary d-flex flex-wrap gap-3 mt-1">
 									<span n:if="$item->getRapporteur()"><i class="bi bi-person" aria-hidden="true"></i> {$item->getRapporteur()->getFullName()}</span>
-									<span n:if="$item->getProposedResolution()"><i class="bi bi-journal-check" aria-hidden="true"></i> návrh usnesení</span>
+									<span n:if="$item->getProposedResolution() && !$item->hasSubItems()"><i class="bi bi-journal-check" aria-hidden="true"></i> návrh usnesení</span>
+									{var $subCount = count($meeting->getSubItems($item))}
+									<span n:if="$subCount"><i class="bi bi-diagram-2" aria-hidden="true"></i> {$subCount} {$subCount < 5 ? 'podbody' : 'podbodů'} – hlasuje se o každém zvlášť</span>
 									<span n:if="$item->getProject()"><i class="bi bi-kanban" aria-hidden="true"></i> {$item->getProject()->getTitle()|truncate: 40}</span>
 									<span n:if="$commentCounts[$item->getId()] ?? 0"><i class="bi bi-chat-left-text" aria-hidden="true"></i> {$commentCounts[$item->getId()]}</span>
 									<span n:if="$attachmentCounts[$item->getId()] ?? 0"><i class="bi bi-paperclip" aria-hidden="true"></i> {$attachmentCounts[$item->getId()]} {$attachmentCounts[$item->getId()] === 1 ? 'příloha' : ($attachmentCounts[$item->getId()] < 5 ? 'přílohy' : 'příloh')}</span>
 								</div>
 							</div>
 							<div n:if="$canEditProgram" class="d-flex gap-1 flex-shrink-0">
-								<form n:if="!$iterator->first" method="post" action="{link moveItem!, itemId: $item->getId(), position: $item->getPosition() - 1}" class="ajax">
+								<a n:if="!$item->isSubItem()" n:href="Agenda:add, meeting: $meeting->getId(), parent: $item->getId()" class="btn btn-sm btn-light" title="Přidat podbod"><i class="bi bi-plus-lg" aria-hidden="true"></i><span class="visually-hidden">Přidat podbod</span></a>
+								<form n:if="$siblingPosition > 1" method="post" action="{link moveItem!, itemId: $item->getId(), position: $siblingPosition - 1}" class="ajax">
 									<button type="submit" class="btn btn-sm btn-light" title="Posunout nahoru"><i class="bi bi-arrow-up" aria-hidden="true"></i><span class="visually-hidden">Nahoru</span></button>
 								</form>
-								<form n:if="!$iterator->last" method="post" action="{link moveItem!, itemId: $item->getId(), position: $item->getPosition() + 1}" class="ajax">
+								<form n:if="$siblingPosition < $siblingCount" method="post" action="{link moveItem!, itemId: $item->getId(), position: $siblingPosition + 1}" class="ajax">
 									<button type="submit" class="btn btn-sm btn-light" title="Posunout dolů"><i class="bi bi-arrow-down" aria-hidden="true"></i><span class="visually-hidden">Dolů</span></button>
 								</form>
 							</div>
@@ -143,7 +149,7 @@
 					<li n:foreach="$resolutions as $resolution" class="list-group-item resolution-row">
 						<div class="resolution-number">{$resolution->getNumber()}</div>
 						<div class="min-w-0">
-							<div class="small text-body-secondary">Bod {$resolution->getAgendaItem()->getPosition()}. {$resolution->getAgendaItem()->getTitle()}</div>
+							<div class="small text-body-secondary">Bod {$resolution->getAgendaItem()->getNumber()}. {$resolution->getAgendaItem()->getTitle()}</div>
 							<div class="text-break">{$resolution->getText()|nl2p}</div>
 						</div>
 						<span n:class="badge, status-badge, 'bg-' . $resolution->getStatus()->tone() . '-subtle', 'text-' . $resolution->getStatus()->tone() . '-emphasis', align-self-start">{$resolution->getStatus()->label()}</span>

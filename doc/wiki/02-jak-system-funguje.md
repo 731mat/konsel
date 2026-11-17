@@ -44,6 +44,7 @@ flowchart LR
 ### 1. Příprava (stav *V přípravě*)
 - **Zasedání → Nové zasedání**: orgán, datum, místo, typ (řádné, mimořádné, ustavující).
 - Program: body ručně, ze **šablony programu**, nebo „Vložit standardní body“ (zahájení, ověřovatelé, schválení programu, diskuse, závěr). Pořadí se mění přetažením.
+- **Podbody**: tlačítkem + u bodu přidáte podbod (např. 26 Nájemní bydlení → 26.1 schválení projektu, 26.2 dodavatele, 26.3 peněz). O každém podbodu se hlasuje zvlášť a má vlastní usnesení; bod s podbody sám hlasování nemá. Podbody se při přesunu drží pod svým bodem.
 - U bodu: důvodová zpráva, **návrh usnesení** (pomůže knihovna šablon usnesení), předkladatel, přílohy (PDF, Word…), propojení s plánem.
 - **Funkce**: předsedající, zapisovatel, ověřovatelé.
 
@@ -65,6 +66,8 @@ flowchart LR
 
 ### 5. Usnesení
 - Přijaté hlasování o návrhu, protinávrhu nebo volbě vytvoří **usnesení s číslem** podle masky orgánu (např. `{n}/{yyyy}` → `9/2026`).
+- S podbody: maska `{n}/{meeting}[/{sub}]` dá `26/2/1`, `26/2/2`… (všechna usnesení jednoho bodu sdílejí pořadové číslo) a u bodu bez podbodů `22/2` – část v hranatých závorkách se vypíše jen u podbodu. Tak čísluje demo (vzor obce Neplachovice).
+- Zavádíte Konšel v průběhu období? V Osoby a orgány → Upravit orgán nastavte **pokračovat od čísla** (např. 27).
 - K usnesení se přidávají **úkoly z usnesení** (kdo, do kdy). Úkoly po termínu se zvýrazní na přehledu.
 
 ### 6. Zápis (stav *Ukončeno*)

@@ -9,6 +9,8 @@ use App\Model\Attachment\AttachmentFacade;
 use App\Model\Comment\CommentAuthorRef;
 use App\Model\Comment\CommentFacade;
 use App\Model\Document\DocumentArchiveFacade;
+use App\Model\Document\DocumentTemplateFacade;
+use App\Model\Document\DocumentTemplateType;
 use App\Model\Document\MeetingDocumentType;
 use App\Model\Mail\InvitationFacade;
 use App\Model\Meeting\AgendaFacade;
@@ -31,6 +33,7 @@ use App\Model\People\Command\AddMember;
 use App\Model\People\Command\SaveBody;
 use App\Model\People\Command\SavePerson;
 use App\Model\People\MemberFunction;
+use App\Model\People\NumberingScope;
 use App\Model\People\PeopleFacade;
 use App\Model\Project\Command\SaveProject;
 use App\Model\Project\ProjectFacade;
@@ -83,6 +86,7 @@ final readonly class DemoSeeder
 		private ResolutionFacade $resolutions,
 		private ResolutionTaskFacade $tasks,
 		private DocumentArchiveFacade $archive,
+		private DocumentTemplateFacade $documentTemplates,
 		private ClockInterface $clock,
 		private string $appUrl = 'http://localhost:8080',
 	) {}
@@ -111,7 +115,8 @@ final readonly class DemoSeeder
 		$this->users->create(new CreateUser('ctenar@demo.konsel.test', 'Karel Čtenář', Role::Reader, self::Password, $municipalityId));
 
 		$term = $this->people->createTerm($municipalityId, '2026–2030', new \DateTimeImmutable('2026-10-03'), new \DateTimeImmutable('2030-10-02'));
-		$council = $this->people->createBody($term->getId(), new SaveBody(BodyType::Council, 'Zastupitelstvo obce Neplachovice', 9));
+		// číslování jako v Neplachovicích: pořadí bodu ve volebním období / zasedání / podbod („26/2/3“, bez podbodů „22/2“)
+		$council = $this->people->createBody($term->getId(), new SaveBody(BodyType::Council, 'Zastupitelstvo obce Neplachovice', 9, '{n}/{meeting}[/{sub}]', NumberingScope::Term));
 		$finance = $this->people->createBody($term->getId(), new SaveBody(BodyType::Committee, 'Finanční výbor', 3));
 		$control = $this->people->createBody($term->getId(), new SaveBody(BodyType::Committee, 'Kontrolní výbor', 3));
 
@@ -155,35 +160,74 @@ final readonly class DemoSeeder
 		// Další zasedání se vztahují k dnešku, aby demo vždy ukazovalo proběhlé, sdílené i připravované zasedání.
 		$today = $this->clock->now()->setTime(18, 0);
 		$pastDay = max($constituentDay->modify('+14 days'), $today->modify('-5 days'))->setTime(18, 0);
-		$past = $this->meetings->create($council->getId(), new SaveMeeting(MeetingType::Regular, $pastDay, $officeRoom));
+		$past = $this->meetings->create($council->getId(), new SaveMeeting(MeetingType::Regular, $pastDay, 'Kulturní místnost obecního úřadu'));
 		$this->meetings->assignOfficials($past->getId(), new AssignOfficials($persons[0]->getId(), $persons[7]->getId(), $persons[4]->getId(), $persons[5]->getId()));
-		$this->program($past->getId(), [
-			['Rozpočtové opatření č. 4/2026', 'Navýšení výdajů na opravu chodníku o 120 000 Kč, kryto vyššími daňovými příjmy.', 'Zastupitelstvo obce Neplachovice schvaluje rozpočtové opatření č. 4/2026 dle přílohy.'],
-			['Smlouva o dílo – oprava místní komunikace', 'Výběrové řízení vyhrála firma Silnice Morava s.r.o. s nabídkou 1 840 000 Kč bez DPH.', 'Zastupitelstvo obce Neplachovice schvaluje uzavření smlouvy o dílo na opravu místní komunikace se společností Silnice Morava s.r.o. a pověřuje starostu jejím podpisem.'],
-			['Plán inventarizace majetku obce za rok 2026', null, 'Zastupitelstvo obce Neplachovice schvaluje plán inventarizace a jmenuje inventarizační komisi.'],
+		// Vzor obce Neplachovice (usnesení z 2. zasedání): body s podbody, o každém podbodu se hlasuje zvlášť,
+		// čísla usnesení „{n}/{meeting}[/{sub}]“ navazují na ustavující zasedání (zde od 19). Jména osob jsou smyšlená.
+		$this->resolutions->setNextNumber($council->getId(), 19);
+		$this->structuredProgram($past->getId(), [
+			['Zahájení, program, návrhová komise a ověřovatelé', null, null, [
+				['Schválení programu', null, 'Schvaluje – program jednání 2. zasedání ZO'],
+				['Volba návrhové komise', null, "Schvaluje – návrhovou komisi ve složení: {$persons[2]->getFullName()}, {$persons[6]->getFullName()}"],
+				['Určení ověřovatelů zápisu', null, "Schvaluje – ověřovatele zápisu ve složení: {$persons[4]->getFullName()}, {$persons[5]->getFullName()}"],
+			]],
+			['Kontrola usnesení a zpráva kontrolního výboru', null, null, [
+				['Kontrola usnesení z ustavujícího zasedání', null, "Bere na vědomí: kontrolu usnesení z 1. ustavujícího zasedání ZO dne {$constituentDay->format('j. n. Y')} – nebyly uloženy úkoly"],
+				['Zápis kontrolního výboru', null, 'Bere na vědomí: zápis kontrolního výboru'],
+			]],
+			['Organizační záležitosti', null, null, [
+				['Organizační řád zastupitelstva', 'Návrh organizačního řádu byl zastupitelům rozeslán s pozvánkou.', 'Schvaluje: organizační řád zastupitelstva obce pro období 2026–2030'],
+				['Zřízení komisí', null, 'Bere na vědomí: rozhodnutí starosty obce č. 1/2026 o zřízení komisí, jmenování předsedů a členů a stanovení náplně jejich činnosti a organizačních pravidel'],
+			]],
+			['Vyhrazení kompetencí zastupitelstva', null, 'Schvaluje: vyhrazení jednotlivých kompetencí zastupitelstva a starosty obce', []],
+			['Občanské obřady', null, null, [
+				['Pověření k přijímání projevu vůle snoubenců', null, 'Pověřuje: Ing. Jana Dvořáka, starostu obce, a Marii Svobodovou, místostarostku obce, k přijímání projevu vůle, že snoubenci spolu vstupují do manželství u OÚ Neplachovice v souladu s ust. § 657 odst. 1 zák. č. 89/2012 Sb., občanský zákoník, ve spojení s ustanovením § 11a odst. 1 písm. b) zák. č. 301/2000 Sb., o matrikách a o změně některých souvisejících zákonů, ve znění pozdějších předpisů'],
+				['Užívání závěsného znaku', null, 'Stanoví: aby v souladu s ustanovením § 108 odst. 2 zákona č. 128/2000 Sb., o obcích, ve znění pozdějších předpisů užívali při občanských obřadech u OÚ Neplachovice závěsný znak se státním znakem ČR starosta a místostarostka'],
+			]],
+			['Člen školské rady za zřizovatele', null, 'Schvaluje: člena školské rady Základní školy a Mateřské školy Neplachovice, příspěvková organizace, za zřizovatele Mgr. Lenku Černou', []],
+			['Rozpočet obce', null, null, [
+				['Čerpání rozpočtu za 1–10/2026', null, 'Schvaluje: čerpání rozpočtu za období 1–10/2026'],
+				['Rozpočtové opatření č. 9/2026', 'Navýšení výdajů na opravu chodníku o 120 000 Kč, kryto vyššími daňovými příjmy.', 'Schvaluje: rozpočtové opatření č. 9/2026 v předloženém znění'],
+			]],
+			['Dostupné nájemní bydlení', "Obec připravuje přestavbu budovy bývalé mateřské školy na bytový dům s dostupnými nájemními byty.\n\nŽádost bude podána do výzvy SFPI Dostupné nájemní bydlení 2.0.", null, [
+				['Žádost o dotaci na budovu bývalé MŠ', null, 'Schvaluje: v rámci projektu „Dostupné nájemní bydlení v obci Neplachovice“ požádat o dotaci nejdříve na budovu bývalé mateřské školy'],
+				['Příkazní smlouva s RRAVM', 'Poradenské, analytické a konzultační služby pro zpracování žádosti o podporu.', 'Schvaluje: příkazní smlouvu mezi obcí a RRAVM na poradenské, analytické a konzultační služby pro zpracování žádosti o podporu k projektu zaměřeného na „Přestavbu školy na bytový dům – Neplachovice“, který bude předložen do „SFPI – výzvy Dostupné nájemní bydlení 2.0“, případně výzvy s obdobným názvem'],
+				['Zahájení přípravy žádosti', null, 'Schvaluje: zahájení kroků, které budou vést k podání žádosti o dotaci v rámci projektu Dostupného nájemního bydlení (příprava veřejné zakázky, zpracování podkladů pro žádost)'],
+			]],
+			['Diskuse', null, null, []],
+			['Závěr', null, null, []],
 		]);
-		// bod 5 = smlouva o dílo (po standardním úvodu): jeden proti, jeden se zdržel
+		// podbod 8.2 = příkazní smlouva: jeden proti, jeden se zdržel
 		$this->runMeeting($past->getId(), $pastDay, $pastDay->setTime(20, 10), approveMinutes: false, excused: [$persons[8]->getId()], exceptions: [
-			5 => [
+			'8.2' => [
 				$persons[6]->getId() => VoteChoice::Against,
 				$persons[4]->getId() => VoteChoice::Abstain,
 			],
 		], discussions: [
-			4 => 'Starosta vysvětlil, že vyšší daňové příjmy pokryjí opravu chodníku v ulici Za Školou.',
-			5 => "Pan Veselý se ptal, proč obec nevybrala levnější nabídku. Starosta odpověděl, že druhá nabídka nesplnila kvalifikaci.\n\nPan Procházka upozornil na nutnost dozoru stavby; starosta přislíbil technický dozor investora.",
-		], guestCount: 6);
+			'7.2' => 'Starosta vysvětlil, že vyšší daňové příjmy pokryjí opravu chodníku v ulici Za Školou.',
+			'8.2' => "Pan Veselý se ptal, proč obec nevybrala jiného poradce. Starosta odpověděl, že RRAVM má s výzvou SFPI zkušenosti z okolních obcí.\n\nPan Procházka upozornil na termíny výzvy; starosta přislíbil harmonogram do příštího zasedání.",
+		], guestCount: 2);
 
 		// úkoly z usnesení proběhlého zasedání (jeden po termínu, aby bylo vidět zvýraznění)
 		foreach ($this->resolutions->findByMeeting($past->getId()) as $resolution) {
-			match ($resolution->getAgendaItem()->getPosition()) {
-				5 => [
-					$this->tasks->add($resolution->getId(), new SaveResolutionTask('Podepsat smlouvu o dílo se Silnice Morava s.r.o.', $persons[0]->getId(), $today->modify('-2 days'))),
+			match ($resolution->getAgendaItem()->getNumber()) {
+				'8.2' => [
+					$this->tasks->add($resolution->getId(), new SaveResolutionTask('Podepsat příkazní smlouvu s RRAVM', $persons[0]->getId(), $today->modify('-2 days'))),
 					$this->tasks->add($resolution->getId(), new SaveResolutionTask('Zveřejnit smlouvu v registru smluv', $persons[1]->getId(), $today->modify('+20 days'))),
 				],
-				6 => $this->tasks->add($resolution->getId(), new SaveResolutionTask('Provést inventarizaci majetku a předat zprávu zastupitelstvu', null, new \DateTimeImmutable('2027-01-31'))),
+				'8.3' => $this->tasks->add($resolution->getId(), new SaveResolutionTask('Připravit podklady pro veřejnou zakázku na projektovou dokumentaci', null, new \DateTimeImmutable('2027-01-31'))),
 				default => null,
 			};
 		}
+
+		// vzor dokumentu „Usnesení“ ve formátu obce (19/2/1 – Schvaluje: …, účast, podpisy)
+		$this->documentTemplates->save(
+			$municipalityId,
+			DocumentTemplateType::Resolutions,
+			null,
+			(string) file_get_contents(__DIR__ . '/../../../resources/documents/samples/resolutions-neplachovice.latte'),
+			$admin->getId(),
+		);
 
 		$shared = $this->meetings->create($council->getId(), new SaveMeeting(MeetingType::Regular, $today->modify('+3 weeks'), $officeRoom));
 		$this->meetings->assignOfficials($shared->getId(), new AssignOfficials(chairpersonId: $persons[0]->getId(), recorderId: $persons[7]->getId()));
@@ -244,6 +288,21 @@ final readonly class DemoSeeder
 	}
 
 	/**
+	 * Program s podbody (bez standardního úvodu – úvod je v programu jako bod s podbody).
+	 *
+	 * @param list<array{string, ?string, ?string, list<array{string, ?string, ?string}>}> $items [název, popis, návrh usnesení, podbody]
+	 */
+	private function structuredProgram(int $meetingId, array $items): void
+	{
+		foreach ($items as [$title, $description, $resolution, $subItems]) {
+			$item = $this->agenda->addItem($meetingId, new SaveAgendaItem($title, $description, $resolution));
+			foreach ($subItems as [$subTitle, $subDescription, $subResolution]) {
+				$this->agenda->addItem($meetingId, new SaveAgendaItem($subTitle, $subDescription, $subResolution), $item->getId());
+			}
+		}
+	}
+
+	/**
 	 * Program: zadané body + standardní úvod (zahájení, ověřovatelé, schválení programu) a závěr.
 	 *
 	 * @param list<array{string, ?string, ?string}> $items [název, popis, návrh usnesení]
@@ -288,11 +347,20 @@ final readonly class DemoSeeder
 		), 'Jana Správcová');
 		$this->projects->changeStatus($road->getId(), ProjectStatus::Approved, 'Jana Správcová', 'Smlouva o dílo schválena zastupitelstvem');
 		$this->projects->changeStatus($road->getId(), ProjectStatus::InProgress, 'Jana Správcová');
+		// plán propojený s bodem s podbody – ve vlákně plánu jsou všechna tři usnesení (26/2/1–3)
+		$housing = $this->projects->create($municipalityId, new SaveProject(
+			'Dostupné nájemní bydlení – přestavba bývalé mateřské školy',
+			'Přestavba budovy bývalé MŠ na bytový dům s dostupnými nájemními byty, dotace SFPI.',
+			ProjectPriority::High,
+			$persons[0]->getId(),
+		), 'Jana Správcová', ProjectStatus::Preparation);
 		foreach ($this->meetings->get($pastMeetingId)->getAgendaItems() as $item) {
-			if (strpos($item->getTitle(), 'Smlouva o dílo') === 0) {
-				$this->projects->linkAgendaItem($item->getId(), $road->getId());
+			if ($item->getTitle() === 'Dostupné nájemní bydlení') {
+				$this->projects->linkAgendaItem($item->getId(), $housing->getId());
 			}
 		}
+
+		$this->projects->setPublic($housing->getId(), true);
 
 		$this->comments->addToProject($road->getId(), CommentAuthorRef::user($adminId), 'Stavba začne v pondělí, ulice bude 3 týdny průjezdná jen jedním pruhem.', publicForCitizens: true);
 		$this->projects->setPublic($road->getId(), true);
@@ -356,8 +424,8 @@ final readonly class DemoSeeder
 	 * o všech návrzích usnesení (všichni pro, kromě výjimek), ukončení.
 	 *
 	 * @param list<int> $excused ID omluvených členů
-	 * @param array<int, array<int, VoteChoice>> $exceptions pořadí bodu → ID osoby → volba
-	 * @param array<int, string> $discussions pořadí bodu → shrnutí diskuse
+	 * @param array<string, array<int, VoteChoice>> $exceptions číslo bodu („5“, „8.2“) → ID osoby → volba
+	 * @param array<string, string> $discussions číslo bodu → shrnutí diskuse
 	 */
 	private function runMeeting(
 		int $meetingId,
@@ -377,17 +445,17 @@ final readonly class DemoSeeder
 		$this->proceedings->markAllPresent($meetingId);
 		$this->meetings->transition($meetingId, MeetingTransition::Start);
 		foreach ($this->meetings->get($meetingId)->getAgendaItems() as $item) {
-			if ($item->getProposedResolution() === null) {
+			if ($item->getProposedResolution() === null || $item->hasSubItems()) {
 				continue;
 			}
 
-			if (isset($discussions[$item->getPosition()])) {
-				$this->proceedings->recordDiscussion($item->getId(), $discussions[$item->getPosition()]);
+			if (isset($discussions[$item->getNumber()])) {
+				$this->proceedings->recordDiscussion($item->getId(), $discussions[$item->getNumber()]);
 			}
 
 			$round = $this->voting->open($item->getId(), VotingType::Proposal);
 			$this->voting->allFor($round->getId());
-			foreach ($exceptions[$item->getPosition()] ?? [] as $personId => $choice) {
+			foreach ($exceptions[$item->getNumber()] ?? [] as $personId => $choice) {
 				$this->voting->cast($round->getId(), $personId, $choice);
 			}
 

@@ -32,8 +32,19 @@ final class AgendaItem implements TenantOwned, Timestampable
 	#[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
 	private Meeting $meeting;
 
+	/**
+	 * Pořadí v celém programu (podbody hned za svým bodem). Číslo pro zobrazení dává getNumber().
+	 */
 	#[ORM\Column]
 	private int $position;
+
+	/**
+	 * Nadřazený bod – podbod se hlasuje samostatně (např. 26.1 schválení projektu, 26.2 dodavatele).
+	 * Jen jedna úroveň.
+	 */
+	#[ORM\ManyToOne(targetEntity: self::class)]
+	#[ORM\JoinColumn(onDelete: 'CASCADE')]
+	private ?self $parent = null;
 
 	/**
 	 * Optimistický zámek proti přepsání souběžné úpravy (ADR A14).
@@ -79,12 +90,80 @@ final class AgendaItem implements TenantOwned, Timestampable
 	/**
 	 * @internal použijte Meeting::addAgendaItem()
 	 */
-	public function __construct(Meeting $meeting, int $position, AgendaItemContent $content)
+	public function __construct(Meeting $meeting, int $position, AgendaItemContent $content, ?self $parent = null)
 	{
 		$this->municipality = $meeting->getMunicipality();
 		$this->meeting = $meeting;
 		$this->position = $position;
+		$this->parent = $parent;
 		$this->changeContent($content);
+	}
+
+	/**
+	 * @internal použijte Meeting::changeAgendaItemParent()
+	 */
+	public function changeParent(?self $parent): void
+	{
+		$this->parent = $parent;
+	}
+
+	public function getParent(): ?self
+	{
+		return $this->parent;
+	}
+
+	public function isSubItem(): bool
+	{
+		return $this->parent !== null;
+	}
+
+	/**
+	 * Bod má podbody – hlasuje se o nich, ne o bodu samotném.
+	 */
+	public function hasSubItems(): bool
+	{
+		return $this->meeting->getSubItems($this) !== [];
+	}
+
+	/**
+	 * Číslo bodu v programu: „5“, podbod „5.2“.
+	 */
+	public function getNumber(): string
+	{
+		return $this->parent === null ? (string) $this->getTopNumber() : "{$this->getTopNumber()}.{$this->getSubNumber()}";
+	}
+
+	/**
+	 * Pořadí hlavního bodu (u podbodu pořadí jeho bodu).
+	 */
+	public function getTopNumber(): int
+	{
+		$top = 0;
+		foreach ($this->meeting->getAgendaItems() as $item) {
+			if ($item->parent === null) {
+				$top++;
+			}
+
+			if ($item === $this) {
+				return $top;
+			}
+		}
+
+		return $top;
+	}
+
+	/**
+	 * Pořadí podbodu v rámci bodu (null u hlavního bodu).
+	 */
+	public function getSubNumber(): ?int
+	{
+		if ($this->parent === null) {
+			return null;
+		}
+
+		$index = array_search($this, $this->meeting->getSubItems($this->parent), true);
+
+		return is_int($index) ? $index + 1 : null;
 	}
 
 	/**

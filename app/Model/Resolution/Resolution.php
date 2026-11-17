@@ -20,7 +20,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'resolution')]
-#[ORM\UniqueConstraint(columns: ['body_id', 'scope_key', 'sequence'])]
+#[ORM\UniqueConstraint(columns: ['body_id', 'scope_key', 'sequence', 'sub_number'])]
 #[ORM\UniqueConstraint(columns: ['voting_round_id'])]
 final class Resolution implements TenantOwned
 {
@@ -61,6 +61,12 @@ final class Resolution implements TenantOwned
 	#[ORM\Column(length: 50)]
 	private string $scopeKey;
 
+	/**
+	 * Číslo podbodu u masky s {sub} (0 = usnesení k hlavnímu bodu nebo maska bez podbodů).
+	 */
+	#[ORM\Column]
+	private int $subNumber = 0;
+
 	#[ORM\Column(type: 'text')]
 	private string $text;
 
@@ -79,8 +85,9 @@ final class Resolution implements TenantOwned
 	/**
 	 * @internal vzniká přes ResolutionRecorder (číslo přiděluje NumberingSequenceRepository)
 	 */
-	public function __construct(VotingRound $round, string $number, int $sequence, string $scopeKey, string $text, \DateTimeImmutable $adoptedAt)
+	public function __construct(VotingRound $round, string $number, int $sequence, string $scopeKey, string $text, \DateTimeImmutable $adoptedAt, int $subNumber = 0)
 	{
+		$this->subNumber = $subNumber;
 		$this->municipality = $round->getMunicipality();
 		$this->meeting = $round->getMeeting();
 		$this->body = $round->getMeeting()->getBody();
@@ -120,6 +127,27 @@ final class Resolution implements TenantOwned
 
 		$this->status = ResolutionStatus::Revoked;
 		$this->statusNote = $note;
+	}
+
+	public function getSubNumber(): int
+	{
+		return $this->subNumber;
+	}
+
+	/**
+	 * Úvodní sloveso usnesení („Schvaluje“, „Bere na vědomí“…), je-li text ve tvaru „Schvaluje: …“ nebo „Schvaluje – …“.
+	 */
+	public function getLeadVerb(): ?string
+	{
+		return ResolutionText::split($this->text)[0];
+	}
+
+	/**
+	 * Text bez úvodního slovesa (nebo celý text).
+	 */
+	public function getTextWithoutVerb(): string
+	{
+		return ResolutionText::split($this->text)[1];
 	}
 
 	public function getStatusNote(): ?string

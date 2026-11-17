@@ -42,6 +42,14 @@ Archivní verze dokumentů (Dokumenty → Archiv) se změnou šablony nemění.
 
 Seznam údajů, které má konkrétní dokument k dispozici, je v editoru vpravo.
 
+## Vzory
+
+V `resources/documents/samples/` jsou hotové šablony obcí ke zkopírování do editoru:
+
+| Soubor | Co to je |
+|---|---|
+| `resolutions-neplachovice.latte` | Usnesení ve formátu obce Neplachovice: „19/2/1 – **Schvaluje:** …“, podbody jednoho bodu pohromadě, účast členů a občanů, podpis starosty a místostarosty. Demo ho má nastavené. |
+
 ## Kontrola při uložení
 
 - **Povinné náležitosti** – např. zápis musí obsahovat přítomné (`$attendance`), pořad jednání, hlasování a usnesení (§ 95 zákona o obcích), pozvánka datum, místo a program (§ 93). Chybějící se vypíší.

@@ -24,7 +24,7 @@
 		<p class="text-body-secondary mb-0">
 			{$resolution->getBody()->getName()} ·
 			<a n:href="Meeting:detail, id: $resolution->getMeeting()->getId(), tab: resolutions" class="link-secondary">{$resolution->getMeeting()->getTitle()}, {$resolution->getMeeting()->getScheduledAt()|czDate}</a>
-			· bod {$resolution->getAgendaItem()->getPosition()}. {$resolution->getAgendaItem()->getTitle()}
+			· bod {$resolution->getAgendaItem()->getNumber()}. {$resolution->getAgendaItem()->getTitle()}
 		</p>
 	</div>
 	<div n:if="$canViewDocuments" class="d-flex gap-2">

@@ -54,15 +54,17 @@
 </table>
 
 <h3>Program</h3>
-<ol class="program">
-	<li n:foreach="$meeting->getAgendaItems() as $item">{$item->getTitle()}{if $item->isAddedDuringMeeting()} <span class="muted">(doplněno na zasedání)</span>{/if}</li>
-</ol>
+<table class="program">
+	<tr n:foreach="$meeting->getAgendaItems() as $item" n:class="$item->isSubItem() ? sub">
+		<td class="number">{$item->getNumber()}.</td><td>{$item->getTitle()}{if $item->isAddedDuringMeeting()} <span class="muted">(doplněno na zasedání)</span>{/if}</td>
+	</tr>
+</table>
 
 <h3>Průběh jednání</h3>
 {foreach $meeting->getAgendaItems() as $item}
 	{var $itemRounds = $rounds[$item->getId()] ?? []}
 	<div class="item">
-		<h3 style="color: #1f2937">{$item->getPosition()}. {$item->getTitle()}</h3>
+		<h3 style="color: #1f2937">{$item->getNumber()}. {$item->getTitle()}</h3>
 		<div n:if="$item->getRapporteur()" class="muted small">Předkladatel: {$item->getRapporteur()->getFullName()}</div>
 
 		{if $item->getDiscussion()}

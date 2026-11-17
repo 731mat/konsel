@@ -33,6 +33,33 @@ final readonly class DoctrineNumberingSequenceRepository implements NumberingSeq
 		) === 1;
 	}
 
+	public function current(Body $body, string $scopeKey): int
+	{
+		$value = $this->entityManager->getConnection()->fetchOne(
+			'SELECT last_value FROM numbering_sequence WHERE body_id = ? AND scope_key = ?',
+			[$body->getId(), $scopeKey],
+		);
+
+		return is_numeric($value) ? (int) $value : 0;
+	}
+
+	public function set(Body $body, string $scopeKey, int $lastValue): void
+	{
+		$connection = $this->entityManager->getConnection();
+		$updated = $connection->executeStatement(
+			'UPDATE numbering_sequence SET last_value = ? WHERE body_id = ? AND scope_key = ?',
+			[$lastValue, $body->getId(), $scopeKey],
+		);
+		if ($updated === 0) {
+			$connection->insert('numbering_sequence', [
+				'municipality_id' => $body->getMunicipality()->getId(),
+				'body_id' => $body->getId(),
+				'scope_key' => $scopeKey,
+				'last_value' => $lastValue,
+			]);
+		}
+	}
+
 	/**
 	 * Samotné přidělení nad DBAL spojením (používá i test souběhu ve dvou procesech).
 	 */

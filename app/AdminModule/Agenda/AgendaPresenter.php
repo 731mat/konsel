@@ -54,11 +54,20 @@ final class AgendaPresenter extends SecuredPresenter
 		parent::__construct();
 	}
 
+	/**
+	 * @param ?int $parent nový bod jako podbod tohoto bodu
+	 */
 	#[Allowed(Resource::Agenda, Privilege::Edit)]
-	public function actionAdd(int $meeting): void
+	public function actionAdd(int $meeting, ?int $parent = null): void
 	{
-		$this->meeting = $this->loadMeeting($meeting);
-		$this->assertProgramEditable($this->meeting);
+		$this->meeting = $loaded = $this->loadMeeting($meeting);
+		$this->assertProgramEditable($loaded);
+		$parentItem = $parent === null ? null : $loaded->findAgendaItem($parent);
+		if ($parentItem !== null && !$parentItem->isSubItem()) {
+			$this->getComponent('itemForm')->setDefaults([
+				'parent' => $parentItem->getId(),
+			]);
+		}
 	}
 
 	public function renderAdd(): void
@@ -78,6 +87,7 @@ final class AgendaPresenter extends SecuredPresenter
 			'rapporteur' => $item->getRapporteur()?->getId(),
 			'description' => $item->getDescription(),
 			'proposedResolution' => $item->getProposedResolution(),
+			'parent' => $item->getParent()?->getId(),
 			...($item->getMunicipality()->isModuleEnabled(Module::Plans) ? [
 				'project' => $item->getProject()?->getId(),
 			] : []),
@@ -273,6 +283,21 @@ final class AgendaPresenter extends SecuredPresenter
 			->setHtmlAttribute('placeholder', 'Např. Rozpočtové opatření č. 5/2026');
 		$form->addSelect('rapporteur', 'Předkladatel', $persons)
 			->setPrompt('— neurčeno —');
+
+		// podbod jde vložit jen pod hlavní bod; bod, který sám má podbody, podbodem být nemůže
+		$parents = [];
+		foreach ($meeting->getAgendaItems() as $candidate) {
+			if (!$candidate->isSubItem() && $candidate !== $this->item) {
+				$parents[$candidate->getId()] = "{$candidate->getNumber()}. {$candidate->getTitle()}";
+			}
+		}
+
+		$parentSelect = $form->addSelect('parent', 'Podbod bodu', $parents)
+			->setPrompt('— hlavní bod programu —')
+			->setOption('description', 'O každém podbodu se hlasuje zvlášť a má vlastní návrh usnesení (např. 26.1 schválení projektu, 26.2 dodavatele).');
+		if ($this->item?->hasSubItems() === true) {
+			$parentSelect->setDisabled()->setOption('description', 'Bod má podbody, sám podbodem být nemůže.');
+		}
 		$plansEnabled = $meeting->getMunicipality()->isModuleEnabled(Module::Plans);
 		if ($plansEnabled) {
 			$projects = [];
@@ -302,11 +327,14 @@ final class AgendaPresenter extends SecuredPresenter
 			$command = new SaveAgendaItem($data->title, $data->description, $data->proposedResolution, $data->rapporteur);
 			try {
 				if ($this->item === null) {
-					$item = $this->agendaFacade->addItem($meeting->getId(), $command);
+					$item = $this->agendaFacade->addItem($meeting->getId(), $command, $data->parent);
 					$this->flashMessage("Bod „{$item->getTitle()}“ byl přidán do programu.", 'success');
 				} else {
 					$this->agendaFacade->updateItem($this->item->getId(), $command);
 					$item = $this->item;
+					if (!$this->item->hasSubItems() && $data->parent !== $this->item->getParent()?->getId()) {
+						$this->agendaFacade->changeParent($this->item->getId(), $data->parent);
+					}
 					$this->flashMessage('Změny byly uloženy.', 'success');
 				}
 

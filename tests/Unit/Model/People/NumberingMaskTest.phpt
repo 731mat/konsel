@@ -71,3 +71,18 @@ test('body code and numbering scope key', function () use ($date): void {
 	Assert::exception(fn() => $council->changeNumberingMask('bez čísla'), ValidationException::class);
 	Assert::same(NumberingScope::Meeting, $council->getNumberingScope(), 'neplatná maska nic nezmění');
 });
+
+test('sub-item number and optional part (style 26/2/3, 22/2)', function () use ($date): void {
+	$mask = new NumberingMask('{n}/{meeting}[/{sub}]');
+
+	Assert::true($mask->usesSub());
+	Assert::same('26/2/3', $mask->format(26, $date, 2, 8, 'ZO', 3));
+	Assert::same('22/2', $mask->format(22, $date, 2, 4, 'ZO'));
+	Assert::same('7/3/2 (bez podbodů 7/3)', $mask->example());
+	Assert::same('ZO-7-', (new NumberingMask('{body}-{n}-{sub}'))->format(7, $date, 3, 4, 'ZO'), '{sub} mimo závorky bez podbodu = prázdné');
+	Assert::false((new NumberingMask('{n}/{yyyy}'))->usesSub());
+
+	foreach (['{n}/[{sub}', '{n}]/{sub}', '{n}[[/{sub}]]'] as $invalid) {
+		Assert::exception(fn() => new NumberingMask($invalid), ValidationException::class, null);
+	}
+});

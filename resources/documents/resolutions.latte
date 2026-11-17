@@ -15,7 +15,7 @@
 {foreach $resolutions as $resolution}
 	<div class="item">
 		<h3>Usnesení č. {$resolution->getNumber()}{if $resolution->getStatus() !== App\Model\Resolution\ResolutionStatus::Adopted} <span class="muted">({$resolution->getStatus()->label()})</span>{/if}</h3>
-		<div class="muted small">k bodu {$resolution->getAgendaItem()->getPosition()}. {$resolution->getAgendaItem()->getTitle()}</div>
+		<div class="muted small">k bodu {$resolution->getAgendaItem()->getNumber()}. {$resolution->getAgendaItem()->getTitle()}</div>
 		<div class="resolution">{$resolution->getText()|breakLines}</div>
 		{var $round = $resolution->getVotingRound()}
 		<div n:if="$round" class="small muted">

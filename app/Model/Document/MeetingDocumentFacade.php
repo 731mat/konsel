@@ -88,6 +88,7 @@ final readonly class MeetingDocumentFacade
 		if ($type === MeetingDocumentType::Resolutions) {
 			$params += [
 				'resolutions' => $this->resolutions->findByMeeting($meeting->getId()),
+				'attendance' => $this->proceedings->attendance($meeting->getId()),
 				'deputy' => $this->findMember($meeting, MemberFunction::DeputyMayor),
 				'draft' => $meeting->getStatus() === MeetingStatus::InProgress,
 			];

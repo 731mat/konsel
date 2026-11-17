@@ -115,7 +115,7 @@ final class SearchDocumentFactory
 			$item->getMunicipality()->getId(),
 			$item->getTitle(),
 			self::join([$item->getDescription(), $item->getProposedResolution(), $item->getDiscussion()]),
-			"{$item->getPosition()}. bod · " . self::meetingContext($meeting),
+			"{$item->getNumber()}. bod · " . self::meetingContext($meeting),
 			meetingId: $meeting->getId(),
 			agendaItemId: $item->getId(),
 			projectId: $item->getProject()?->getId(),

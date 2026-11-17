@@ -9,4 +9,13 @@
 {block content}
 {varType App\Model\People\Body $body}
 <h1 class="h3 mb-4">Upravit orgán</h1>
-<div class="card" style="max-width: 40rem"><div class="card-body">{control bodyForm}</div></div>
+{varType int|null $nextNumber}
+<div class="card mb-4" style="max-width: 40rem"><div class="card-body">{control bodyForm}</div></div>
+
+<div n:if="$nextNumber !== null" class="card" style="max-width: 40rem">
+	<div class="card-header fw-semibold">Navázat číslování usnesení</div>
+	<div class="card-body">
+		<p class="small text-body-secondary">Zavádíte Konšel v průběhu volebního období nebo roku? Nastavte, jakým pořadovým číslem má pokračovat řada usnesení. Už vydaná usnesení se nepřečíslují.</p>
+		{control nextNumberForm}
+	</div>
+</div>

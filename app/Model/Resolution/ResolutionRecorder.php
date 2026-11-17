@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Model\Resolution;
 
+use App\Model\Meeting\AgendaItem;
+use App\Model\Meeting\Meeting;
 use App\Model\Meeting\VotingResult;
 use App\Model\Meeting\VotingRound;
 use App\Model\Meeting\VotingType;
@@ -27,7 +29,11 @@ final readonly class ResolutionRecorder
 		$existing = $this->resolutions->findByVotingRound($round);
 		if ($round->getResult() !== VotingResult::Adopted || !self::foundsResolution($round->getType())) {
 			if ($existing !== null) {
-				$this->sequences->release($existing->getBody(), $existing->getScopeKey(), $existing->getSequence());
+				// pořadové číslo uvolnit, jen když ho nesdílí jiné usnesení téhož bodu (maska s {sub})
+				if ($this->sharingSequence($existing) === []) {
+					$this->sequences->release($existing->getBody(), $existing->getScopeKey(), $existing->getSequence());
+				}
+
 				$this->resolutions->remove($existing);
 			}
 
@@ -43,14 +49,59 @@ final readonly class ResolutionRecorder
 
 		$meeting = $round->getMeeting();
 		$body = $meeting->getBody();
+		$mask = $body->getMask();
+		$item = $round->getAgendaItem();
+		$group = $item->getParent() ?? $item;
 		$scopeKey = $body->numberingScopeKey($meeting->getScheduledAt(), $meeting->getId());
-		$sequence = $this->sequences->next($body, $scopeKey);
-		$number = $body->getMask()->format($sequence, $meeting->getScheduledAt(), $meeting->getNumber(), $round->getAgendaItem()->getPosition(), $body->getCode());
 
-		$resolution = new Resolution($round, $number, $sequence, $scopeKey, $text, $now);
+		$sequence = null;
+		$sub = 0;
+		if ($mask->usesSub()) {
+			// usnesení bodu a jeho podbodů sdílejí pořadové číslo, liší se číslem podbodu
+			$sub = $item->getSubNumber() ?? 0;
+			$used = [];
+			foreach ($this->groupResolutions($meeting, $group) as $other) {
+				if ($other->getScopeKey() === $scopeKey) {
+					$sequence = $other->getSequence();
+					$used[] = $other->getSubNumber();
+				}
+			}
+
+			// více usnesení k bodu bez podbodů (např. volba více osob) – další dostane pořadí podbodu
+			while (in_array($sub, $used, true)) {
+				$sub = max($used) + 1;
+			}
+		}
+
+		$sequence ??= $this->sequences->next($body, $scopeKey);
+		$number = $mask->format($sequence, $meeting->getScheduledAt(), $meeting->getNumber(), $group->getTopNumber(), $body->getCode(), $sub === 0 ? null : $sub);
+
+		$resolution = new Resolution($round, $number, $sequence, $scopeKey, $text, $now, $sub);
 		$this->resolutions->add($resolution);
 
 		return $resolution;
+	}
+
+	/**
+	 * @return list<Resolution> usnesení k bodu a jeho podbodům
+	 */
+	private function groupResolutions(Meeting $meeting, AgendaItem $group): array
+	{
+		return array_values(array_filter(
+			$this->resolutions->findByMeeting($meeting),
+			static fn(Resolution $resolution): bool => ($resolution->getAgendaItem()->getParent() ?? $resolution->getAgendaItem()) === $group,
+		));
+	}
+
+	/**
+	 * @return list<Resolution> jiná usnesení se stejným pořadovým číslem
+	 */
+	private function sharingSequence(Resolution $resolution): array
+	{
+		return array_values(array_filter(
+			$this->resolutions->findByMeeting($resolution->getMeeting()),
+			static fn(Resolution $other): bool => $other !== $resolution && $other->getScopeKey() === $resolution->getScopeKey() && $other->getSequence() === $resolution->getSequence(),
+		));
 	}
 
 	public static function foundsResolution(VotingType $type): bool

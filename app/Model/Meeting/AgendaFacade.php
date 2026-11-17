@@ -31,9 +31,28 @@ final readonly class AgendaFacade
 	 * @throws InvalidStateException zasedání už začalo
 	 * @throws ValidationException
 	 */
-	public function addItem(int $meetingId, SaveAgendaItem $command): AgendaItem
+	/**
+	 * @param ?int $parentId bod, pod který se vloží jako podbod
+	 */
+	public function addItem(int $meetingId, SaveAgendaItem $command, ?int $parentId = null): AgendaItem
 	{
-		return $this->transaction->run(fn(): AgendaItem => $this->meetings->get($meetingId)->addAgendaItem($this->content($command)));
+		return $this->transaction->run(function () use ($meetingId, $command, $parentId): AgendaItem {
+			$meeting = $this->meetings->get($meetingId);
+
+			return $meeting->addAgendaItem($this->content($command), parent: $this->parent($meeting, $parentId));
+		});
+	}
+
+	/**
+	 * Bod jako podbod jiného bodu (null = hlavní bod).
+	 */
+	public function changeParent(int $itemId, ?int $parentId): void
+	{
+		$this->transaction->run(function () use ($itemId, $parentId): void {
+			$item = $this->items->get($itemId);
+			$meeting = $item->getMeeting();
+			$meeting->changeAgendaItemParent($item, $this->parent($meeting, $parentId));
+		});
 	}
 
 	/**
@@ -41,9 +60,13 @@ final readonly class AgendaFacade
 	 *
 	 * @param ?int $position pozice nového bodu; null = na konec
 	 */
-	public function addItemDuringMeeting(int $meetingId, SaveAgendaItem $command, ?int $position = null): AgendaItem
+	public function addItemDuringMeeting(int $meetingId, SaveAgendaItem $command, ?int $position = null, ?int $parentId = null): AgendaItem
 	{
-		return $this->transaction->run(fn(): AgendaItem => $this->meetings->get($meetingId)->addAgendaItemDuringMeeting($this->content($command), $position));
+		return $this->transaction->run(function () use ($meetingId, $command, $position, $parentId): AgendaItem {
+			$meeting = $this->meetings->get($meetingId);
+
+			return $meeting->addAgendaItemDuringMeeting($this->content($command), $position, $this->parent($meeting, $parentId));
+		});
 	}
 
 	public function updateItem(int $itemId, SaveAgendaItem $command): void
@@ -62,9 +85,11 @@ final readonly class AgendaFacade
 		$files = $this->transaction->run(function () use ($itemId): array {
 			$item = $this->items->get($itemId);
 			$files = [];
-			foreach ($this->attachments->findAllForAgendaItem($item) as $attachment) {
-				$files[] = $attachment->getFile();
-				$this->attachments->remove($attachment);
+			foreach ([$item, ...$item->getMeeting()->getSubItems($item)] as $removed) {
+				foreach ($this->attachments->findAllForAgendaItem($removed) as $attachment) {
+					$files[] = $attachment->getFile();
+					$this->attachments->remove($attachment);
+				}
 			}
 
 			$item->getMeeting()->removeAgendaItem($item);
@@ -138,5 +163,17 @@ final readonly class AgendaFacade
 			$command->proposedResolution,
 			$command->rapporteurId === null ? null : $this->persons->get($command->rapporteurId),
 		);
+	}
+
+	/**
+	 * @throws ValidationException bod nepatří k zasedání
+	 */
+	private function parent(Meeting $meeting, ?int $parentId): ?AgendaItem
+	{
+		if ($parentId === null) {
+			return null;
+		}
+
+		return $meeting->findAgendaItem($parentId) ?? throw new ValidationException('Nadřazený bod nepatří k tomuto zasedání.', 'parent');
 	}
 }

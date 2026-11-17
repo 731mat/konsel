@@ -1,4 +1,4 @@
-{block title}{$item->getPosition()}. {$item->getTitle()}{/block}
+{block title}{$item->getNumber()}. {$item->getTitle()}{/block}
 
 {block content}
 {varType App\Model\Meeting\Meeting $meeting}
@@ -13,11 +13,11 @@
 <nav aria-label="Drobečková navigace">
 	<ol class="breadcrumb mb-3">
 		<li class="breadcrumb-item"><a n:href="default">{$meeting->getTitle()|firstUpper}</a></li>
-		<li class="breadcrumb-item active" aria-current="page">Bod {$item->getPosition()}</li>
+		<li class="breadcrumb-item active" aria-current="page">Bod {$item->getNumber()}</li>
 	</ol>
 </nav>
 
-<h1 class="h3 mb-1">{$item->getPosition()}. {$item->getTitle()}</h1>
+<h1 class="h3 mb-1">{$item->getNumber()}. {$item->getTitle()}</h1>
 <p class="text-body-secondary" n:if="$item->getRapporteur()"><i class="bi bi-person" aria-hidden="true"></i> Předkládá {$item->getRapporteur()->getFullName()}</p>
 
 <div class="d-flex flex-column gap-4 mt-3">
@@ -60,8 +60,8 @@
 	{/snippet}
 
 	<div class="d-flex justify-content-between">
-		<a n:if="$previous" n:href="item, id: $previous->getId()" class="btn btn-outline-secondary"><i class="bi bi-chevron-left" aria-hidden="true"></i> {$previous->getPosition()}. {$previous->getTitle()|truncate: 30}</a>
+		<a n:if="$previous" n:href="item, id: $previous->getId()" class="btn btn-outline-secondary"><i class="bi bi-chevron-left" aria-hidden="true"></i> {$previous->getNumber()}. {$previous->getTitle()|truncate: 30}</a>
 		<span n:if="!$previous"></span>
-		<a n:if="$next" n:href="item, id: $next->getId()" class="btn btn-outline-secondary">{$next->getPosition()}. {$next->getTitle()|truncate: 30} <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+		<a n:if="$next" n:href="item, id: $next->getId()" class="btn btn-outline-secondary">{$next->getNumber()}. {$next->getTitle()|truncate: 30} <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
 	</div>
 </div>

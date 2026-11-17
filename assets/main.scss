@@ -1265,3 +1265,19 @@ h1, .h1, h2, .h2, h3, .h3 {
 	overflow-x: auto;
 	line-height: 1.5;
 }
+
+// podbod programu (26.1, 26.2…) – odsazený pod svým bodem
+.agenda-subitem {
+	padding-left: 2.75rem;
+	background: rgba(var(--bs-primary-rgb), .02);
+
+	.agenda-number {
+		font-size: .85em;
+		color: var(--bs-secondary-color);
+	}
+}
+
+.proceedings-subitem {
+	margin-left: 1.5rem;
+	border-left: 3px solid var(--bs-primary-border-subtle);
+}

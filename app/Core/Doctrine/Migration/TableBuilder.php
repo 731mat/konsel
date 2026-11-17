@@ -256,6 +256,24 @@ final class TableBuilder
 	}
 
 	/**
+	 * Unikátní index nad sloupci existující tabulky (pro alterTable), pojmenovaný jako v ORM.
+	 *
+	 * @param non-empty-string $table
+	 * @param non-empty-string $column
+	 * @param non-empty-string ...$columns
+	 */
+	public static function uniqueIndexFor(string $table, string $column, string ...$columns): Index
+	{
+		$all = [$column, ...array_values($columns)];
+
+		return Index::editor()
+			->setUnquotedName(self::generateIdentifier($table, 'uniq', $all))
+			->setType(IndexType::UNIQUE)
+			->setUnquotedColumnNames(...$all)
+			->create();
+	}
+
+	/**
 	 * Index a cizí klíč pro nový sloupec v existující tabulce (pro alterTable), pojmenované jako v ORM.
 	 *
 	 * @param non-empty-string $table

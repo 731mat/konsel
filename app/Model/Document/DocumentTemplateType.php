@@ -114,7 +114,8 @@ enum DocumentTemplateType: string
 				'$draft' => 'true = zasedání probíhá (koncept)',
 			],
 			self::Resolutions => [
-				'$resolutions' => 'usnesení zasedání (getNumber(), getText(), getStatus(), getVotingRound())',
+				'$resolutions' => 'usnesení zasedání (getNumber(), getText(), getLeadVerb() „Schvaluje“, getTextWithoutVerb(), getSequence() – stejné u podbodů jednoho bodu, getStatus(), getVotingRound())',
+				'$attendance' => 'docházka: quorum->present (počet přítomných členů)',
 				'$deputy' => 'místostarosta nebo null',
 				'$draft' => 'true = zasedání probíhá (koncept)',
 			],

@@ -6,10 +6,13 @@ namespace App\Model\Resolution;
 
 use App\Model\Meeting\MeetingRepository;
 use App\Model\Municipality\MunicipalityRepository;
+use App\Model\People\BodyRepository;
+use App\Model\People\NumberingScope;
 use App\Model\Shared\Exception\InvalidStateException;
 use App\Model\Shared\Exception\NotFoundException;
 use App\Model\Shared\Exception\ValidationException;
 use App\Model\Shared\TransactionManager;
+use Psr\Clock\ClockInterface;
 
 /**
  * Usnesení – čtení (vznikají při hlasování, viz VotingFacade::close()).
@@ -20,8 +23,47 @@ final readonly class ResolutionFacade
 		private ResolutionRepository $resolutions,
 		private MeetingRepository $meetings,
 		private MunicipalityRepository $municipalities,
+		private BodyRepository $bodies,
+		private NumberingSequenceRepository $sequences,
 		private TransactionManager $transaction,
+		private ClockInterface $clock,
 	) {}
+
+	/**
+	 * Pořadové číslo, které dostane příští usnesení orgánu v aktuální řadě (null = řada po zasedáních).
+	 */
+	public function getNextNumber(int $bodyId): ?int
+	{
+		$body = $this->bodies->get($bodyId);
+		if ($body->getNumberingScope() === NumberingScope::Meeting) {
+			return null;
+		}
+
+		return $this->sequences->current($body, $body->numberingScopeKey($this->clock->now(), 0)) + 1;
+	}
+
+	/**
+	 * Navázání na dosavadní (papírovou) řadu: příští usnesení dostane pořadové číslo $next.
+	 *
+	 * @throws ValidationException
+	 */
+	public function setNextNumber(int $bodyId, int $next): void
+	{
+		$this->transaction->run(function () use ($bodyId, $next): void {
+			$body = $this->bodies->get($bodyId);
+			if ($body->getNumberingScope() === NumberingScope::Meeting) {
+				throw new ValidationException('Řada čísel začíná na každém zasedání od 1, navázat nejde.', 'nextNumber');
+			}
+
+			$scopeKey = $body->numberingScopeKey($this->clock->now(), 0);
+			$current = $this->sequences->current($body, $scopeKey);
+			if ($next <= $current || $next > 100_000) {
+				throw new ValidationException("Příští číslo musí být větší než poslední přidělené ({$current}) – už vydaná usnesení se nepřečíslují.", 'nextNumber');
+			}
+
+			$this->sequences->set($body, $scopeKey, $next - 1);
+		});
+	}
 
 	/**
 	 * @return list<Resolution>

@@ -99,3 +99,48 @@ test('item of another meeting is rejected', function (): void {
 	Assert::exception(fn() => $meeting->removeAgendaItem($foreignItem), InvalidStateException::class);
 	Assert::exception(fn() => $meeting->moveAgendaItem($foreignItem, 1), InvalidStateException::class);
 });
+
+/**
+ * @return list<string> čísla a názvy bodů v pořadí programu
+ */
+function numbered(Meeting $meeting): array
+{
+	return array_map(static fn(AgendaItem $item): string => $item->getNumber() . ' ' . $item->getTitle(), $meeting->getAgendaItems());
+}
+
+test('sub-items stay with their item when the program changes', function (): void {
+	$meeting = agendaMeeting();
+	$housing = $meeting->addAgendaItem(new AgendaItemContent('Nájemní bydlení'));
+	$budget = $meeting->addAgendaItem(new AgendaItemContent('Rozpočet'));
+	$project = $meeting->addAgendaItem(new AgendaItemContent('Schválení projektu'), parent: $housing);
+	$supplier = $meeting->addAgendaItem(new AgendaItemContent('Schválení dodavatele'), parent: $housing);
+	$money = $meeting->addAgendaItem(new AgendaItemContent('Schválení peněz'), parent: $housing);
+
+	Assert::same(['1 Nájemní bydlení', '1.1 Schválení projektu', '1.2 Schválení dodavatele', '1.3 Schválení peněz', '2 Rozpočet'], numbered($meeting));
+	Assert::true($housing->hasSubItems());
+	Assert::false($project->hasSubItems());
+	Assert::same(2, $supplier->getSubNumber());
+	Assert::same(1, $supplier->getTopNumber());
+
+	$meeting->moveAgendaItem($budget, 1);
+	Assert::same(['1 Rozpočet', '2 Nájemní bydlení', '2.1 Schválení projektu', '2.2 Schválení dodavatele', '2.3 Schválení peněz'], numbered($meeting), 'bod se přesune i s podbody');
+
+	$meeting->moveAgendaItem($money, 1);
+	Assert::same(['1 Rozpočet', '2 Nájemní bydlení', '2.1 Schválení peněz', '2.2 Schválení projektu', '2.3 Schválení dodavatele'], numbered($meeting), 'podbod se přesouvá v rámci bodu');
+
+	// přetažení myší: podbod hozený na konec seznamu zůstane u svého bodu
+	$items = $meeting->getAgendaItems();
+	(new ReflectionMethod($meeting, 'renumberAgenda'))->invoke($meeting, [$items[0], $items[1], $items[3], $items[4], $items[2]]);
+	Assert::same(['1 Rozpočet', '2 Nájemní bydlení', '2.1 Schválení projektu', '2.2 Schválení dodavatele', '2.3 Schválení peněz'], numbered($meeting));
+
+	$meeting->changeAgendaItemParent($budget, $housing);
+	Assert::same(['1 Nájemní bydlení', '1.1 Schválení projektu', '1.2 Schválení dodavatele', '1.3 Schválení peněz', '1.4 Rozpočet'], numbered($meeting));
+	$meeting->changeAgendaItemParent($budget, null);
+	Assert::same(['1 Nájemní bydlení', '1.1 Schválení projektu', '1.2 Schválení dodavatele', '1.3 Schválení peněz', '2 Rozpočet'], numbered($meeting), 'z podbodu hlavní bod hned za blokem');
+
+	Assert::exception(fn() => $meeting->addAgendaItem(new AgendaItemContent('Vnořený'), parent: $project), ValidationException::class, 'Podbod lze vložit jen pod hlavní bod programu (podbody nemají další podbody).');
+	Assert::exception(fn() => $meeting->changeAgendaItemParent($housing, $budget), ValidationException::class, 'Bod s podbody nemůže být podbodem jiného bodu.');
+
+	$meeting->removeAgendaItem($housing);
+	Assert::same(['1 Rozpočet'], numbered($meeting), 'smazání bodu smaže i podbody');
+});

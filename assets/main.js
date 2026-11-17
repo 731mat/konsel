@@ -270,8 +270,6 @@ document.addEventListener('submit', (event) => {
 	}
 });
 
-// Náhled čísla usnesení u masky orgánu: <input data-numbering-mask> + <strong data-numbering-preview>.
-// Ukázka = 7. usnesení, 3. zasedání, bod 4, rok 2026 (stejně jako NumberingMask::example()). Platnost hlídá server.
 // editor šablon: Tab vloží tabulátor místo přechodu na další pole
 document.addEventListener('keydown', (event) => {
 	const field = event.target;
@@ -291,6 +289,9 @@ document.addEventListener('change', (event) => {
 	}
 });
 
+// Náhled čísla usnesení u masky orgánu: <input data-numbering-mask> + <strong data-numbering-preview>.
+// Ukázka = 7. usnesení, 3. zasedání, bod 4, rok 2026 (stejně jako NumberingMask::example()). Platnost hlídá server.
+// S {sub} ukáže číslo s podbodem 2 i bez podbodů; část v [ ] se vypíše jen s podbodem.
 function previewNumbering(input) {
 	const preview = input.closest('form')?.querySelector('[data-numbering-preview]');
 	if (!preview) {
@@ -298,10 +299,20 @@ function previewNumbering(input) {
 	}
 	const values = { n: '7', yyyy: '2026', yy: '26', meeting: '3', item: '4', body: 'ZO' };
 	const tokens = [...input.value.matchAll(/\{([a-z]+)(?::(\d+))?\}/g)];
-	const valid = tokens.filter((t) => t[1] === 'n').length === 1 && tokens.every((t) => t[1] in values && (t[2] === undefined || t[1] === 'n'));
-	preview.textContent = valid
-		? input.value.replace(/\{([a-z]+)(?::(\d+))?\}/g, (_, name, width) => (width ? values[name].padStart(Number(width), '0') : values[name]))
-		: 'maska musí obsahovat {n} právě jednou';
+	const valid = tokens.filter((t) => t[1] === 'n').length === 1
+		&& tokens.every((t) => (t[1] in values || t[1] === 'sub') && (t[2] === undefined || t[1] === 'n'))
+		&& !/[[\]]/.test(input.value.replace(/\[[^[\]]*\]/g, ''));
+	const render = (sub) => input.value
+		.replace(/\[([^[\]]*)\]/g, (_, inner) => (inner.includes('{sub}') && sub === null ? '' : inner))
+		.replace(/\{([a-z]+)(?::(\d+))?\}/g, (_, name, width) => {
+			if (name === 'sub') {
+				return sub ?? '';
+			}
+			return width ? values[name].padStart(Number(width), '0') : values[name];
+		});
+	preview.textContent = !valid
+		? 'maska musí obsahovat {n} právě jednou (a spárované [ ])'
+		: (input.value.includes('{sub}') ? `${render('2')} (bez podbodů ${render(null)})` : render(null));
 	preview.classList.toggle('text-danger', !valid);
 }
 

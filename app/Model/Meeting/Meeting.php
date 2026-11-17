@@ -242,11 +242,11 @@ final class Meeting implements TenantOwned, Timestampable
 	 * @throws InvalidStateException
 	 * @throws ValidationException
 	 */
-	public function addAgendaItem(AgendaItemContent $content, ?int $position = null): AgendaItem
+	public function addAgendaItem(AgendaItemContent $content, ?int $position = null, ?AgendaItem $parent = null): AgendaItem
 	{
 		$this->assertProgramEditable();
 
-		return $this->insertAgendaItem($content, $position);
+		return $this->insertAgendaItem($content, $position, $parent);
 	}
 
 	/**
@@ -256,13 +256,13 @@ final class Meeting implements TenantOwned, Timestampable
 	 * @throws InvalidStateException zasedání neprobíhá
 	 * @throws ValidationException
 	 */
-	public function addAgendaItemDuringMeeting(AgendaItemContent $content, ?int $position = null): AgendaItem
+	public function addAgendaItemDuringMeeting(AgendaItemContent $content, ?int $position = null, ?AgendaItem $parent = null): AgendaItem
 	{
 		if ($this->status !== MeetingStatus::InProgress) {
 			throw new InvalidStateException('Bod lze doplnit do programu jen během zasedání.');
 		}
 
-		$item = $this->insertAgendaItem($content, $position);
+		$item = $this->insertAgendaItem($content, $position, $parent);
 		$item->markAddedDuringMeeting();
 
 		return $item;
@@ -357,11 +357,64 @@ final class Meeting implements TenantOwned, Timestampable
 	{
 		$this->assertProgramEditable();
 		$this->assertOwnsItem($item);
+		foreach ($this->getSubItems($item) as $subItem) {
+			$this->agendaItems->removeElement($subItem);
+		}
+
 		$this->agendaItems->removeElement($item);
 		$this->renumberAgenda($this->getAgendaItems());
 	}
 
 	/**
+	 * Z bodu udělá podbod jiného bodu (nebo naopak hlavní bod, $parent = null).
+	 *
+	 * @throws InvalidStateException
+	 * @throws ValidationException
+	 */
+	public function changeAgendaItemParent(AgendaItem $item, ?AgendaItem $parent): void
+	{
+		$this->assertProgramEditable();
+		$this->assertOwnsItem($item);
+		if ($parent === $item->getParent()) {
+			return;
+		}
+
+		if ($parent !== null) {
+			$this->assertValidParent($parent, $item);
+			if ($this->getSubItems($item) !== []) {
+				throw new ValidationException('Bod s podbody nemůže být podbodem jiného bodu.', 'parent');
+			}
+		}
+
+		$oldParent = $item->getParent();
+		$item->changeParent($parent);
+		// nový podbod na konec bloku svého bodu, z podbodu nový hlavní bod hned za blok původního bodu
+		$items = array_values(array_filter($this->getAgendaItems(), static fn(AgendaItem $i): bool => $i !== $item));
+		$index = $parent === null && $oldParent !== null ? array_search($oldParent, $items, true) : false;
+		if (is_int($index)) {
+			array_splice($items, $index + 1, 0, [$item]);
+		} else {
+			$items[] = $item;
+		}
+
+		$this->renumberAgenda($items);
+	}
+
+	/**
+	 * @return list<AgendaItem> podbody bodu v pořadí
+	 */
+	public function getSubItems(AgendaItem $parent): array
+	{
+		return array_values(array_filter($this->getAgendaItems(), static fn(AgendaItem $item): bool => $item->getParent() === $parent));
+	}
+
+	/**
+	 * @throws InvalidStateException
+	 */
+	/**
+	 * Přesun mezi sourozenci: hlavní bod mezi hlavními body (i s podbody), podbod v rámci svého bodu.
+	 *
+	 * @param int $position nové pořadí mezi sourozenci (1 = první)
 	 * @throws InvalidStateException
 	 */
 	public function moveAgendaItem(AgendaItem $item, int $position): void
@@ -369,10 +422,14 @@ final class Meeting implements TenantOwned, Timestampable
 		$this->assertProgramEditable();
 		$this->assertOwnsItem($item);
 
-		$items = array_values(array_filter($this->getAgendaItems(), static fn(AgendaItem $i): bool => $i !== $item));
-		$position = max(1, min($position, count($items) + 1));
-		array_splice($items, $position - 1, 0, [$item]);
-		$this->renumberAgenda($items);
+		$siblings = array_values(array_filter(
+			$this->getAgendaItems(),
+			static fn(AgendaItem $i): bool => $i !== $item && $i->getParent() === $item->getParent(),
+		));
+		$position = max(1, min($position, count($siblings) + 1));
+		array_splice($siblings, $position - 1, 0, [$item]);
+		$others = array_values(array_filter($this->getAgendaItems(), static fn(AgendaItem $i): bool => $i->getParent() !== $item->getParent()));
+		$this->renumberAgenda([...$siblings, ...$others]);
 	}
 
 	/**
@@ -720,18 +777,38 @@ final class Meeting implements TenantOwned, Timestampable
 		return $this->endedAt;
 	}
 
-	private function insertAgendaItem(AgendaItemContent $content, ?int $position): AgendaItem
+	private function insertAgendaItem(AgendaItemContent $content, ?int $position, ?AgendaItem $parent = null): AgendaItem
 	{
 		$this->assertRapporteur($content);
+		if ($parent !== null) {
+			$this->assertValidParent($parent);
+		}
 
 		$items = $this->getAgendaItems();
+		if ($parent !== null) {
+			// podbod na konec bloku svého bodu
+			$subItems = $this->getSubItems($parent);
+			$position = ($subItems === [] ? $parent : $subItems[count($subItems) - 1])->getPosition() + 1;
+		}
+
 		$position = $position === null ? count($items) + 1 : max(1, min($position, count($items) + 1));
-		$item = new AgendaItem($this, $position, $content);
+		$item = new AgendaItem($this, $position, $content, $parent);
 		array_splice($items, $position - 1, 0, [$item]);
 		$this->agendaItems->add($item);
 		$this->renumberAgenda($items);
 
 		return $item;
+	}
+
+	/**
+	 * @throws ValidationException
+	 */
+	private function assertValidParent(AgendaItem $parent, ?AgendaItem $child = null): void
+	{
+		$this->assertOwnsItem($parent);
+		if ($parent === $child || $parent->getParent() !== null) {
+			throw new ValidationException('Podbod lze vložit jen pod hlavní bod programu (podbody nemají další podbody).', 'parent');
+		}
 	}
 
 	private function assertProceedingsRecordable(): void
@@ -751,11 +828,28 @@ final class Meeting implements TenantOwned, Timestampable
 	}
 
 	/**
+	 * Očísluje program: hlavní body v pořadí, jak přišly, a za každým jeho podbody (v jejich pořadí).
+	 * Podbod tak nikdy neutrhne od svého bodu, ať se seznam přeskládá jakkoli.
+	 *
 	 * @param list<AgendaItem> $items v požadovaném pořadí
 	 */
 	private function renumberAgenda(array $items): void
 	{
-		foreach ($items as $index => $item) {
+		$ordered = [];
+		foreach ($items as $top) {
+			if ($top->getParent() !== null) {
+				continue;
+			}
+
+			$ordered[] = $top;
+			foreach ($items as $item) {
+				if ($item->getParent() === $top) {
+					$ordered[] = $item;
+				}
+			}
+		}
+
+		foreach ($ordered as $index => $item) {
 			if ($item->getPosition() !== $index + 1) {
 				$item->moveTo($index + 1);
 			}

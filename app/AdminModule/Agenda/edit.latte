@@ -3,7 +3,7 @@
 {block breadcrumbs}
 	<li class="breadcrumb-item"><a n:href="Meeting:">Zasedání</a></li>
 	<li class="breadcrumb-item"><a n:href="Meeting:detail, id: $meeting->getId()">{$meeting->getTitle()}</a></li>
-	<li class="breadcrumb-item"><a n:href="detail, id: $item->getId()">{$item->getPosition()}. {$item->getTitle()|truncate: 40}</a></li>
+	<li class="breadcrumb-item"><a n:href="detail, id: $item->getId()">{$item->getNumber()}. {$item->getTitle()|truncate: 40}</a></li>
 	<li class="breadcrumb-item active" aria-current="page">Upravit</li>
 {/block}
 
@@ -11,5 +11,5 @@
 {varType App\Model\Meeting\AgendaItem $item}
 {varType App\Model\Meeting\Meeting $meeting}
 {varType array $resolutionTemplates}
-<h1 class="h3 mb-4">Upravit bod {$item->getPosition()}</h1>
+<h1 class="h3 mb-4">Upravit bod {$item->getNumber()}</h1>
 {include '@form.latte', meeting: $meeting, resolutionTemplates: $resolutionTemplates}

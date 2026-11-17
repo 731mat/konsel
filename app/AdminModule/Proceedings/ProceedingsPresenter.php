@@ -178,7 +178,7 @@ final class ProceedingsPresenter extends SecuredPresenter
 		$this->runVotingChange($round->getAgendaItem()->getId(), function () use ($round): void {
 			$outcome = $this->votingFacade->close($round->getId());
 			$resolution = $outcome->resolution === null ? '' : " Usnesení č. {$outcome->resolution->getNumber()}.";
-			$this->flashMessage("Hlasování č. {$round->getSequence()} k bodu {$round->getAgendaItem()->getPosition()}: {$outcome->result->label($round->getType())}.{$resolution}", $outcome->result->tone());
+			$this->flashMessage("Hlasování č. {$round->getSequence()} k bodu {$round->getAgendaItem()->getNumber()}: {$outcome->result->label($round->getType())}.{$resolution}", $outcome->result->tone());
 		});
 	}
 
@@ -424,7 +424,7 @@ final class ProceedingsPresenter extends SecuredPresenter
 		$meeting = $this->requireMeeting();
 		$positions = [];
 		foreach ($meeting->getAgendaItems() as $item) {
-			$positions[$item->getPosition()] = "před bod {$item->getPosition()}. {$item->getTitle()}";
+			$positions[$item->getPosition()] = "před bod {$item->getNumber()}. {$item->getTitle()}";
 		}
 
 		$form = $this->formFactory->create();
@@ -456,7 +456,7 @@ final class ProceedingsPresenter extends SecuredPresenter
 				return;
 			}
 
-			$this->flashMessage("Bod „{$item->getTitle()}“ byl doplněn do programu jako {$item->getPosition()}. bod.", 'success');
+			$this->flashMessage("Bod „{$item->getTitle()}“ byl doplněn do programu jako {$item->getNumber()}. bod.", 'success');
 			$this->redirect('this#bod-' . $item->getId());
 		};
 

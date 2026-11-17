@@ -110,3 +110,50 @@ test('rejected vote has no resolution; correcting an adopted vote to rejected re
 	$voting->allFor($proposal->getId());
 	Assert::same('1/2026', $voting->close($proposal->getId())->resolution?->getNumber(), 'uvolněné číslo se použije znovu');
 });
+
+test('sub-items: resolutions of one item share the number and differ by the sub-item (26/2/1, 26/2/2, 22/2)', function (): void {
+	[$container, $scenario, $voting] = bootNumbering();
+	$people = $container->getByType(PeopleFacade::class);
+	$body = $scenario->meeting->getBody();
+	$people->updateBody($body->getId(), new SaveBody($body->getType(), $body->getName(), 5, '{n}/{meeting}[/{sub}]', NumberingScope::Term));
+	$agenda = $container->getByType(App\Model\Meeting\AgendaFacade::class);
+	$meetingId = $scenario->meeting->getId();
+	$housing = $agenda->addItem($meetingId, new App\Model\Meeting\Command\SaveAgendaItem('Dostupné nájemní bydlení'));
+	$project = $agenda->addItem($meetingId, new App\Model\Meeting\Command\SaveAgendaItem('Žádost o dotaci'), $housing->getId());
+	$contract = $agenda->addItem($meetingId, new App\Model\Meeting\Command\SaveAgendaItem('Příkazní smlouva'), $housing->getId());
+	startedMeeting($container, $scenario);
+
+	$adopt = static function (int $itemId, string $text) use ($voting): ?string {
+		$round = $voting->open($itemId, VotingType::Proposal, $text);
+		$voting->allFor($round->getId());
+
+		return $voting->close($round->getId())->resolution?->getNumber();
+	};
+
+	Assert::same('1/1', $adopt($scenario->item->getId(), 'Schvaluje: rozpočet.'), 'bod bez podbodů');
+	Assert::same('2/1/2', $adopt($contract->getId(), 'Schvaluje: příkazní smlouvu.'), 'podbody sdílejí číslo bodu, liší se podbodem');
+	Assert::same('2/1/1', $adopt($project->getId(), 'Schvaluje: požádat o dotaci.'));
+	Assert::exception(fn() => $voting->open($housing->getId(), VotingType::Proposal, 'Celý bod'), InvalidStateException::class, 'Bod má podbody – hlasuje se o každém podbodu zvlášť.');
+
+	// opravené hlasování (nepřijato → přijato) dostane stejné číslo, sdílené pořadí se neuvolní
+	$resolutions = $container->getByType(ResolutionFacade::class);
+	$byNumber = [];
+	foreach ($resolutions->findByMeeting($meetingId) as $resolution) {
+		$byNumber[$resolution->getNumber()] = $resolution;
+	}
+
+	Assert::same(['1/1', '2/1/1', '2/1/2'], array_keys($byNumber), 'řazení podle čísla a podbodu');
+	$contractRound = $byNumber['2/1/2']->getVotingRound();
+	assert($contractRound !== null);
+	$voting->reopen($contractRound->getId());
+	foreach ($voting->voters($contractRound) as $voter) {
+		$voting->cast($contractRound->getId(), $voter->getId(), VoteChoice::Against);
+	}
+	Assert::null($voting->close($contractRound->getId())->resolution);
+	Assert::same(['1/1', '2/1/1'], array_map(static fn($r) => $r->getNumber(), $resolutions->findByMeeting($meetingId)));
+	$voting->reopen($contractRound->getId());
+	$voting->allFor($contractRound->getId());
+	Assert::same('2/1/2', $voting->close($contractRound->getId())->resolution?->getNumber());
+
+	Assert::same('Schvaluje', $resolutions->findByMeeting($meetingId)[1]->getLeadVerb());
+});

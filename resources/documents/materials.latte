@@ -15,7 +15,7 @@
 
 {foreach $meeting->getAgendaItems() as $item}
 	<div class="item">
-		<h3>{$item->getPosition()}. {$item->getTitle()}</h3>
+		<h3>{$item->getNumber()}. {$item->getTitle()}</h3>
 		<div n:if="$item->getRapporteur()" class="muted small">Předkládá: {$item->getRapporteur()->getFullName()}</div>
 		{if $item->getDescription()}
 			{$item->getDescription()|nl2p}

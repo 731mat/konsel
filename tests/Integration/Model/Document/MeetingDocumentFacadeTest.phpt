@@ -47,7 +47,7 @@ test('invitation contains legal notice, date, place, program and mayor', functio
 	Assert::contains('§ 93 odst. 1 zákona č. 128/2000 Sb.', $html);
 	Assert::contains('1. zasedání Zastupitelstva obce Neplachovice', $html);
 	Assert::contains('středa 9. prosince 2026 v 18:00 hodin', $html);
-	Assert::contains('<li>Rozpočet na rok 2027</li>', $html);
+	Assert::match('%A%<td class="number">%d%.</td><td>Rozpočet na rok 2027</td>%A%', $html);
 	Assert::contains('Ing. Jan Dvořák', $html);
 	Assert::contains('Vyvěšeno na úřední desce', $html);
 });

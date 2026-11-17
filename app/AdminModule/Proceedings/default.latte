@@ -140,9 +140,9 @@
 		{if $round->isOpen()}{var $openRound = $round}{/if}
 		{if !$round->isOpen() && $round->getType()->decidesItem() && $round->getResult() === App\Model\Meeting\VotingResult::Adopted}{var $decided = true}{/if}
 	{/foreach}
-	<section class="card proceedings-item mb-3" id="bod-{$item->getId()}">
+	<section n:class="card, proceedings-item, mb-3, $item->isSubItem() ? proceedings-subitem" id="bod-{$item->getId()}">
 		<div class="card-header d-flex align-items-center gap-2">
-			<span class="agenda-number">{$item->getPosition()}.</span>
+			<span class="agenda-number">{$item->getNumber()}.</span>
 			<span class="me-auto">{$item->getTitle()}</span>
 			<span n:if="$item->isAddedDuringMeeting()" class="badge bg-info-subtle text-info-emphasis">doplněno na zasedání</span>
 		</div>
@@ -162,7 +162,9 @@
 				{/if}
 			{/foreach}
 
-			{if $canVote && !$openRound}
+			{if $item->hasSubItems()}
+				<p class="small text-body-secondary mb-0"><i class="bi bi-diagram-2" aria-hidden="true"></i> O bodu se hlasuje po podbodech níže.</p>
+			{elseif $canVote && !$openRound}
 				<div class="d-flex flex-wrap align-items-center gap-2">
 					<form n:if="$item->getProposedResolution() && !$decided" method="post" action="{link openVoting!, itemId: $item->getId()}" class="ajax">
 						<input type="hidden" name="type" value="proposal">

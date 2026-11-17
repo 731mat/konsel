@@ -219,7 +219,13 @@ final readonly class ProjectFacade
 		}
 
 		foreach ($this->agendaItems->findByProject($project) as $item) {
-			$entries[] = TimelineEntry::agenda($item, $this->resolutions->findByAgendaItem($item));
+			// bod s podbody: usnesení jsou u podbodů
+			$resolutions = [];
+			foreach ([$item, ...$item->getMeeting()->getSubItems($item)] as $resolved) {
+				$resolutions = [...$resolutions, ...$this->resolutions->findByAgendaItem($resolved)];
+			}
+
+			$entries[] = TimelineEntry::agenda($item, $resolutions);
 		}
 
 		if (!$publicOnly) {

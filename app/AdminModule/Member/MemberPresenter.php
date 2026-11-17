@@ -18,6 +18,7 @@ use App\Model\People\NumberingMask;
 use App\Model\People\NumberingScope;
 use App\Model\People\PeopleFacade;
 use App\Model\People\Term;
+use App\Model\Resolution\ResolutionFacade;
 use App\Model\Shared\Exception\DomainException;
 use App\Model\Shared\Exception\NotFoundException;
 use App\Model\Shared\Exception\ValidationException;
@@ -42,6 +43,7 @@ final class MemberPresenter extends SecuredPresenter
 
 	public function __construct(
 		private readonly PeopleFacade $peopleFacade,
+		private readonly ResolutionFacade $resolutionFacade,
 		private readonly FormFactory $formFactory,
 		private readonly ClockInterface $clock,
 	) {
@@ -109,7 +111,41 @@ final class MemberPresenter extends SecuredPresenter
 
 	public function renderBodyEdit(): void
 	{
-		$this->template->body = $this->body;
+		$body = $this->body ?? $this->error();
+		$this->template->body = $body;
+		$this->template->nextNumber = $this->resolutionFacade->getNextNumber($body->getId());
+	}
+
+	/**
+	 * Navázání číslování usnesení na dosavadní řadu (při zavedení Konšela v průběhu období).
+	 */
+	protected function createComponentNextNumberForm(): Form
+	{
+		$this->requirePermission(Resource::Member, Privilege::Edit);
+		$body = $this->body ?? $this->error();
+		$form = $this->formFactory->create();
+		$form->addInteger('nextNumber', 'Příští usnesení dostane pořadové číslo')
+			->setRequired('Zadejte číslo.')
+			->addRule(Form::Min, 'Číslo musí být kladné.', 1)
+			->setDefaultValue($this->resolutionFacade->getNextNumber($body->getId()))
+			->setOption('description', 'Např. když obec přechází na Konšel na 3. zasedání a poslední usnesení mělo pořadové číslo 26, zadejte 27.');
+		$form->addSubmit('save', 'Nastavit');
+		$form->onSuccess[] = function (Form $form) use ($body): void {
+			/** @var array{nextNumber: int} $values */
+			$values = $form->getValues('array');
+			try {
+				$this->resolutionFacade->setNextNumber($body->getId(), $values['nextNumber']);
+			} catch (ValidationException $e) {
+				FormErrors::apply($form, $e);
+
+				return;
+			}
+
+			$this->flashMessage("Příští usnesení dostane pořadové číslo {$values['nextNumber']}.", 'success');
+			$this->redirect('this');
+		};
+
+		return $form;
 	}
 
 	#[Allowed(Resource::Member, Privilege::Edit)]
@@ -206,7 +242,7 @@ final class MemberPresenter extends SecuredPresenter
 			->setRequired('Zadejte masku čísla usnesení.')
 			->setMaxLength(NumberingMask::MaxLength)
 			->setHtmlAttribute('data-numbering-mask')
-			->setOption('description', Html::el()->setHtml('Proměnné: <code>{n}</code> pořadové číslo, <code>{n:3}</code> doplněné nulami, <code>{yyyy}</code>/<code>{yy}</code> rok, <code>{meeting}</code> číslo zasedání, <code>{item}</code> číslo bodu, <code>{body}</code> zkratka orgánu. Náhled: <strong data-numbering-preview></strong>'));
+			->setOption('description', Html::el()->setHtml('Proměnné: <code>{n}</code> pořadové číslo, <code>{n:3}</code> doplněné nulami, <code>{yyyy}</code>/<code>{yy}</code> rok, <code>{meeting}</code> číslo zasedání, <code>{item}</code> číslo bodu, <code>{sub}</code> číslo podbodu, <code>{body}</code> zkratka orgánu. Část v <code>[ ]</code> se vypíše jen u podbodu, např. <code>{n}/{meeting}[/{sub}]</code> → 26/2/3 a 22/2. Náhled: <strong data-numbering-preview></strong>'));
 		$form->addSelect('numberingScope', 'Řada čísel', array_combine(
 			array_map(static fn(NumberingScope $scope): string => $scope->value, NumberingScope::cases()),
 			array_map(static fn(NumberingScope $scope): string => $scope->label(), NumberingScope::cases()),

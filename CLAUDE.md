@@ -74,6 +74,7 @@ make screenshots          # screenshoty stránek (desktop + mobil) do temp/scree
 | Uživatel úřadu | `User` |
 | Zasedání / schůze | `Meeting` |
 | Bod programu | `AgendaItem` |
+| Podbod (26.1, hlasuje se zvlášť) | `AgendaItem::$parent`, číslo `getNumber()` (ne `getPosition()`) |
 | Předkladatel | `rapporteur` |
 | Návrh usnesení | `proposedResolution` |
 | Příloha | `Attachment` |

@@ -285,7 +285,7 @@ final class ProjectPresenter extends SecuredPresenter
 		$items = [];
 		foreach ($this->projectFacade->findLinkableItems($project->getId()) as $item) {
 			$meeting = $item->getMeeting();
-			$items[$meeting->getTitle() . ' · ' . $meeting->getScheduledAt()->format('j. n. Y')][$item->getId()] = "{$item->getPosition()}. {$item->getTitle()}";
+			$items[$meeting->getTitle() . ' · ' . $meeting->getScheduledAt()->format('j. n. Y')][$item->getId()] = "{$item->getNumber()}. {$item->getTitle()}";
 		}
 
 		$form = $this->formFactory->create();

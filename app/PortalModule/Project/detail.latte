@@ -53,7 +53,7 @@
 											· {$entry->at|czDate}
 											{include '../../AdminModule/Meeting/@status.latte', status: $item->getMeeting()->getStatus()}
 										</div>
-										<span class="fw-semibold">{$item->getPosition()}. {$item->getTitle()}</span>
+										<span class="fw-semibold">{$item->getNumber()}. {$item->getTitle()}</span>
 										{include '../../UI/Resolution/@outcome.latte', item: $item, resolutions: $entry->resolutions}
 									</div>
 								</div>
