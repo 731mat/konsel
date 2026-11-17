@@ -8,6 +8,13 @@
 		</button>
 		<a class="navbar-brand brand me-auto" n:href=":Admin:Dashboard:">{include '../UI/@logo.latte'} Konšel</a>
 
+		<form n:if="$currentMunicipality" action="{plink :Admin:Search:}" method="get" class="navbar-search d-none d-md-block" role="search">
+			<label for="navbar-search" class="visually-hidden">Hledat</label>
+			<i class="bi bi-search" aria-hidden="true"></i>
+			<input type="search" id="navbar-search" name="q" class="form-control form-control-sm" placeholder="Hledat…" value="{$presenter->getName() === 'Admin:Search' ? ($presenter->getParameter('q') ?? '') : ''}">
+		</form>
+		<a n:if="$currentMunicipality" n:href=":Admin:Search:" class="btn btn-sm btn-link text-body d-md-none" title="Hledat"><i class="bi bi-search" aria-hidden="true"></i><span class="visually-hidden">Hledat</span></a>
+
 		<div n:if="count($switchBodies ?? []) > 1" class="dropdown">
 			<button class="btn btn-sm btn-outline-secondary dropdown-toggle body-switcher" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Orgán, za který se zobrazují seznamy">
 				<i class="bi bi-diagram-3" aria-hidden="true"></i>

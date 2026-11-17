@@ -1,0 +1,96 @@
+{block title}{if $q !== ''}Hledání: {$q}{else}Hledání{/if}{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item active" aria-current="page">Hledání</li>
+{/block}
+
+{define highlighted, App\Model\Search\HighlightedText $text}{foreach $text->segments as [$segment, $mark]}{if $mark}<mark>{$segment}</mark>{else}{$segment}{/if}{/foreach}{/define}
+
+{block content}
+{varType string $q}
+{varType App\Model\Search\SearchResult $result}
+{varType App\Model\Search\SearchDocumentType[] $types}
+{varType App\Model\Search\SearchDocumentType|null $selectedType}
+{varType array<int, string> $bodies}
+{varType int|null $selectedBody}
+{varType int[] $years}
+{varType int|null $selectedYear}
+{varType int $page}
+{varType int $pages}
+{varType Closure $hitLink}
+
+<div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+	<h1 class="h3 mb-0 me-auto">Hledání</h1>
+	<span n:if="$q !== ''" class="text-body-secondary small">
+		{$result->total} {$result->total === 1 ? 'výsledek' : ($result->total >= 2 && $result->total <= 4 ? 'výsledky' : 'výsledků')}
+	</span>
+</div>
+
+<form method="get" action="{link default}" class="card card-body mb-4 py-3" role="search">
+	<div class="row g-2 align-items-end">
+		<div class="col-md-4">
+			<label for="search-q" class="form-label small text-body-secondary mb-1">Hledat v zasedáních, bodech, usneseních, diskusích, úkolníčku a šablonách</label>
+			<input type="search" id="search-q" name="q" value="{$q}" class="form-control form-control-sm" placeholder="např. smlouva o dílo, rozpočet" autofocus>
+		</div>
+		<div class="col-6 col-md-2">
+			<label for="search-type" class="form-label small text-body-secondary mb-1">Druh</label>
+			<select id="search-type" name="type" class="form-select form-select-sm">
+				<option value="">vše</option>
+				<option n:foreach="$types as $type" value="{$type->value}" selected={$selectedType === $type}>{$type->label()}</option>
+			</select>
+		</div>
+		<div class="col-6 col-md-2">
+			<label for="search-body" class="form-label small text-body-secondary mb-1">Orgán</label>
+			<select id="search-body" name="body" class="form-select form-select-sm">
+				<option value="">všechny</option>
+				<option n:foreach="$bodies as $id => $name" value="{$id}" selected={$selectedBody === $id}>{$name}</option>
+			</select>
+		</div>
+		<div class="col-6 col-md-2">
+			<label for="search-year" class="form-label small text-body-secondary mb-1">Rok</label>
+			<select id="search-year" name="year" class="form-select form-select-sm">
+				<option value="">všechny</option>
+				<option n:foreach="$years as $year" value="{$year}" selected={$selectedYear === $year}>{$year}</option>
+			</select>
+		</div>
+		<div class="col-6 col-md-2">
+			<button type="submit" class="btn btn-sm btn-primary w-100"><i class="bi bi-search" aria-hidden="true"></i> Hledat</button>
+		</div>
+	</div>
+	<p class="small text-body-secondary mb-0 mt-2">Na diakritice ani velikosti písmen nezáleží („smlouva o dilo“ najde „Smlouva o dílo“). Stačí i začátek slova („rozpoč“).</p>
+</form>
+
+<div class="card">
+	{if $result->hits}
+		<ul class="list-group list-group-flush">
+			<li n:foreach="$result->hits as $hit" class="list-group-item list-group-item-action search-hit position-relative">
+				<div class="d-flex gap-3">
+					<i class="bi bi-{$hit->type->icon()} fs-5 text-body-secondary" aria-hidden="true"></i>
+					<div class="min-w-0">
+						<a href="{$hitLink($hit)}" class="stretched-link text-reset fw-semibold">{include highlighted, text: $hit->title}</a>
+						<div class="small text-body-secondary">{$hit->type->label()} · {$hit->context}</div>
+						<div n:if="$hit->snippet->segments" class="small text-break mt-1">{include highlighted, text: $hit->snippet}</div>
+					</div>
+				</div>
+			</li>
+		</ul>
+	{elseif $q === ''}
+		<div class="card-body empty-state">
+			<i class="bi bi-search" aria-hidden="true"></i>
+			Zadejte, co hledáte – třeba název smlouvy, jméno firmy nebo číslo pozemku.
+		</div>
+	{else}
+		<div class="card-body empty-state">
+			<i class="bi bi-search" aria-hidden="true"></i>
+			Pro „{$q}“ se nic nenašlo. Zkuste jiné nebo kratší slovo, případně zrušte filtr.
+		</div>
+	{/if}
+</div>
+
+<nav n:if="$pages > 1" aria-label="Stránkování výsledků" class="mt-3">
+	<ul class="pagination pagination-sm justify-content-center">
+		<li n:class="page-item, $page <= 1 ? disabled"><a class="page-link" n:href="this, page: $page - 1">Předchozí</a></li>
+		<li class="page-item disabled"><span class="page-link">{$page} / {$pages}</span></li>
+		<li n:class="page-item, $page >= $pages ? disabled"><a class="page-link" n:href="this, page: $page + 1">Další</a></li>
+	</ul>
+</nav>

@@ -81,6 +81,7 @@ Konzolové příkazy (`make console ARGS="…"`):
 | `user:create` | založení uživatele úřadu |
 | `app:encryption-key` | vygeneruje šifrovací klíč (pro API klíč OpenAI) |
 | `locks:cleanup` | smaže vypršelé zámky bodů (do cronu) |
+| `search:reindex` | postaví fulltextový index znovu z dat (index se jinak aktualizuje sám) |
 
 ## Kde co je
 

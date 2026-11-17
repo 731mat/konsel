@@ -116,6 +116,7 @@ flowchart TB
 | Dokumenty | `Document` | Dokumenty u zasedání, výpis u usnesení | PDF přes mPDF, verze pro Word |
 | Archiv dokumentů | `Document` (ArchivedDocument) | Dokumenty → Archiv dokumentů | uložené verze PDF, konečný zápis po ověření, podepsané skeny; po ověření jen přidávat |
 | AI | `Ai` | Nastavení → Umělá inteligence | napojení na OpenAI (klíč šifrovaně) |
+| Hledání | `Search` | Hledat (menu a pole v horní liště) | fulltext bez diakritiky v zasedáních, bodech, usneseních, diskusích, úkolníčku a šablonách |
 | Nápověda | – (`doc/wiki`) | Nápověda | tato wiki |
 
 ## Tři vstupy do aplikace

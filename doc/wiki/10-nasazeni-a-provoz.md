@@ -30,7 +30,8 @@ flowchart LR
     A[git pull] --> B["composer install --no-dev"]
     B --> C["npm ci && npm run build<br/>(www/assets)"]
     C --> D["bin/console migrations:migrate"]
-    D --> E["smazat temp/cache"]
+    D --> D2["bin/console search:reindex<br/>(jen když se změnila indexace)"]
+    D2 --> E["smazat temp/cache"]
     E --> F[hotovo]
 ```
 

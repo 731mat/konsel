@@ -36,8 +36,9 @@ final readonly class ResolutionScenario
 
 	/**
 	 * @param list<string> $proposals znění návrhů (každý jako samostatný bod, všichni pro)
+	 * @param (\Closure(MeetingScenario): void)|null $beforeStart úpravy programu před sdílením a zahájením
 	 */
-	public static function create(Container $container, array $proposals = ['Zastupitelstvo schvaluje rozpočet na rok 2027.']): self
+	public static function create(Container $container, array $proposals = ['Zastupitelstvo schvaluje rozpočet na rok 2027.'], ?\Closure $beforeStart = null): self
 	{
 		$scenario = MeetingScenario::create($container);
 		$people = $container->getByType(PeopleFacade::class);
@@ -52,6 +53,10 @@ final readonly class ResolutionScenario
 		$items = [$scenario->item];
 		foreach (array_slice($proposals, 1) as $i => $text) {
 			$items[] = $agenda->addItem($scenario->meeting->getId(), new SaveAgendaItem('Bod ' . ($i + 2)));
+		}
+
+		if ($beforeStart !== null) {
+			$beforeStart($scenario);
 		}
 
 		$meetings = $container->getByType(MeetingFacade::class);

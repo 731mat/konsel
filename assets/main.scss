@@ -209,6 +209,39 @@ h1, .h1, h2, .h2, h3, .h3 {
 	backdrop-filter: saturate(180%) blur(8px);
 }
 
+.navbar-search {
+	position: relative;
+	width: min(22rem, 32vw);
+
+	.bi {
+		position: absolute;
+		left: .65rem;
+		top: 50%;
+		transform: translateY(-50%);
+		color: var(--bs-secondary-color);
+		pointer-events: none;
+	}
+
+	.form-control {
+		padding-left: 2rem;
+		background-color: var(--bs-tertiary-bg);
+		border-color: transparent;
+
+		&:focus {
+			background-color: var(--bs-body-bg);
+			border-color: var(--bs-primary);
+		}
+	}
+}
+
+// zvýrazněná shoda ve výsledcích hledání
+.search-hit mark {
+	padding: 0 .1em;
+	border-radius: .2em;
+	background: rgba(var(--bs-warning-rgb), .35);
+	color: inherit;
+}
+
 .app-sidebar {
 	width: var(--konsel-sidebar-width);
 	flex-shrink: 0;

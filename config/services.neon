@@ -21,6 +21,9 @@ services:
 	- App\Console\Demo\DemoSeeder(appUrl: %appUrl%)
 	- App\Model\Mail\MailTemplates
 	- App\Model\Resolution\ResolutionRecorder
+	- App\Model\Search\SqliteFtsSearchIndex
+	- App\Model\Search\DoctrineSearchSource
+	- App\Model\Search\DoctrineSearchIndexSubscriber
 	- App\Console\Demo\SeedDemoCommand(productionMode: %productionMode%)
 	- App\UI\Form\FormFactory
 	- App\UI\Sign\SignInFormFactory

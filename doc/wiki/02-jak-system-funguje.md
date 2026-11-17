@@ -82,4 +82,8 @@ flowchart LR
 - **Úkolníček** drží dlouhodobé záměry obce („postavit školu“, „oprava komunikace“) v jednom vlákně: změny fáze, diskuse, soubory a **všechna zasedání**, na kterých se o něm jednalo, včetně přijatých usnesení.
 - **Občan** pošle podnět na veřejné stránce → vznikne úkol ve fázi *nový podnět* → úřad dostane e-mail → po posouzení ho může zveřejnit. Občan pak vidí fázi, prioritu a komentáře označené „vidí občané“.
 
+## Hledání
+
+Pole **Hledat** v horní liště (nebo menu Hledat) prohledá zasedání, body programu, usnesení, diskuse, úkolníček i šablony. Na diakritice a velikosti písmen nezáleží a stačí začátek slova: „smlouva o dilo“ najde „Smlouva o dílo“, „rozpoč“ najde „rozpočtové opatření“. Výsledky jdou zúžit podle druhu, orgánu a roku a shody jsou zvýrazněné.
+
 Jak spolu úkolníček, usnesení a úkoly z usnesení souvisí, popisuje kapitola [Moduly a propojení](03-moduly-a-propojeni.md).

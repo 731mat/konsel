@@ -147,6 +147,30 @@ Pravidla:
 - `make console ARGS="migrations:diff"` vygeneruje návrh – slouží jen jako předloha.
 - Test `DatabaseSchemaTest` ověří, že migrace vytvoří přesně to, co popisují entity.
 
+## Události: fulltextový index
+
+Doctrine při `flush()` vyvolá události, na které se dá navěsit kód (tzv. subscriber). Konšel tak udržuje **fulltextový index** – nikdo na něj nemusí v fasádách myslet:
+
+```mermaid
+sequenceDiagram
+    participant F as Fasáda
+    participant EM as EntityManager
+    participant S as DoctrineSearchIndexSubscriber
+    participant IX as search_index (FTS5)
+    F->>EM: změní bod / usnesení / komentář
+    F->>EM: flush() (v TransactionManager::run)
+    EM->>S: onFlush – co se vkládá, mění, maže
+    EM->>EM: INSERT / UPDATE / DELETE
+    EM->>S: postFlush
+    S->>IX: přepíše záznamy (SearchDocumentFactory)
+    Note over F,IX: vše v jedné transakci – při chybě se vrátí i index
+```
+
+- Co se indexuje a kam výsledek vede, určuje `app/Model/Search/SearchDocumentFactory.php`. **Nová hledaná entita** = přidat ji tam (třída, typ, název, obsah).
+- Tabulka `search_index` je virtuální tabulka SQLite FTS5 (`unicode61 remove_diacritics 2` – „dilo“ najde „dílo“). Migrace je výjimka z pravidla „žádné raw SQL“ a schema diff ji ignoruje (`SchemaAssetsFilter`).
+- Smaže-li databáze řádky kaskádou (body smazaného zasedání), subscriber je z indexu smaže podle `meeting_id`, `agenda_item_id`, `project_id`.
+- Po změně pravidel indexace nebo nasazení na existující data: `make console ARGS="search:reindex"`.
+
 ## SQLite
 
 Vývoj i první provoz běží na **SQLite** (jeden soubor `var/database.sqlite`). Nastavení v `SqlitePragmaMiddleware`: cizí klíče zapnuté, WAL režim, čekání na zámek 5 s a transakce `BEGIN IMMEDIATE` (zápisy se seřadí za sebe místo chyby „database is locked“). Přechod na MySQL bude změna konfigurace v `config/doctrine.neon` – migrace jsou napsané nezávisle na databázi.
