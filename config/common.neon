@@ -3,6 +3,17 @@ parameters:
 	encryptionKey: ''
 	# Maximální velikost jedné přílohy (bajty); u běžného nahrávání omezuje i upload_max_filesize v php.ini
 	attachmentMaxSize: 67108864
+	# Veřejná adresa aplikace (odkazy v e-mailech z konzole, např. demo data)
+	appUrl: 'http://localhost:8080'
+	# Odesílatel e-mailů (jméno odesílatele je obec); v produkci přepsat v local.neon
+	mailFrom: 'noreply@konsel.matyho.cz'
+	# SMTP – výchozí je Mailpit z docker compose; v produkci přepsat v local.neon
+	smtp:
+		host: mailpit
+		port: 1025
+		username: ''
+		password: ''
+		encryption: null
 
 
 application:
@@ -17,6 +28,16 @@ latte:
 	strictParsing: yes
 	extensions:
 		- App\Core\Latte\LatteExtension
+
+
+mail:
+	smtp: true
+	host: %smtp.host%
+	port: %smtp.port%
+	username: %smtp.username%
+	password: %smtp.password%
+	encryption: %smtp.encryption%
+	timeout: 15
 
 
 # Příznak Secure u cookies řídí http.cookieSecure (výchozí auto = podle HTTPS). V sekci session by 'auto' znamenalo vždy true.

@@ -172,12 +172,12 @@
 
 		<div n:if="$canEdit" class="card">
 			<div class="card-body d-flex align-items-center gap-3">
-				<i class="bi bi-link-45deg fs-3 text-primary" aria-hidden="true"></i>
+				<i class="bi bi-envelope-paper fs-3 text-primary" aria-hidden="true"></i>
 				<div class="me-auto small">
-					<div class="fw-semibold">Odkazy pro zastupitele</div>
-					<div class="text-body-secondary">Program, podklady a diskuse bez přihlašování.</div>
+					<div class="fw-semibold">Pozvánky a odkazy</div>
+					<div class="text-body-secondary">Pozvánka e-mailem s osobním odkazem – program, podklady a diskuse bez přihlašování.</div>
 				</div>
-				<a n:href="links, id: $meeting->getId()" class="btn btn-sm btn-outline-primary">Spravovat</a>
+				<a n:href="links, id: $meeting->getId()" class="btn btn-sm btn-outline-primary">{$meeting->getStatus()->isPlanning() ? 'Rozeslat' : 'Spravovat'}</a>
 			</div>
 		</div>
 

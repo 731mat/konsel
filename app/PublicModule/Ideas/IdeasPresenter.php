@@ -7,6 +7,7 @@ namespace App\PublicModule\Ideas;
 use App\Core\Tenancy\CurrentMunicipality;
 use App\Model\Attachment\Attachment;
 use App\Model\Attachment\AttachmentFacade;
+use App\Model\Mail\NotificationFacade;
 use App\Model\Municipality\Municipality;
 use App\Model\Municipality\MunicipalityFacade;
 use App\Model\Project\Project;
@@ -33,6 +34,7 @@ final class IdeasPresenter extends BasePresenter
 		private readonly MunicipalityFacade $municipalityFacade,
 		private readonly ProjectFacade $projectFacade,
 		private readonly AttachmentFacade $attachmentFacade,
+		private readonly NotificationFacade $notificationFacade,
 		private readonly CurrentMunicipality $currentMunicipality,
 		private readonly FormFactory $formFactory,
 	) {
@@ -147,7 +149,7 @@ final class IdeasPresenter extends BasePresenter
 			}
 
 			try {
-				$this->projectFacade->submitProposal(
+				$project = $this->projectFacade->submitProposal(
 					$this->requireMunicipality()->getId(),
 					$data->name,
 					$data->email,
@@ -161,6 +163,9 @@ final class IdeasPresenter extends BasePresenter
 				return;
 			}
 
+			$this->notificationFacade->notifyNewProposal($project->getId(), $this->link('//:Admin:Project:detail', [
+				'id' => $project->getId(),
+			]));
 			$this->flashMessage('Děkujeme! Podnět jsme přijali. Obecní úřad ho posoudí a po zveřejnění ho uvidíte v seznamu.', 'success');
 			$this->redirect('this');
 		};

@@ -12,7 +12,7 @@ Nette 3.3 + Doctrine ORM 3, SQLite (později MySQL). Produkce: konsel.matyho.cz.
 **Vše běží v Dockeru. Na hostiteli (Mac) nic neinstaluj: žádný brew, lokální PHP ani npm.** Chybějící nástroj patří do docker/ nebo compose.yaml.
 
 ```
-make up / down / build    # kontejnery (app = PHP 8.4 + Apache na http://localhost:8080)
+make up / down / build    # kontejnery (app = PHP 8.4 + Apache na http://localhost:8080, Mailpit na http://localhost:8025)
 make sh                   # shell v app kontejneru
 make composer ARGS="…"    # composer v kontejneru
 make console ARGS="…"     # bin/console (migrations:*, orm:*, app:seed-demo, user:create, …)

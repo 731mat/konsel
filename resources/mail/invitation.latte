@@ -1,0 +1,30 @@
+{layout '@layout.latte'}
+{varType App\Model\Meeting\Meeting $meeting}
+{varType App\Model\People\Person $person}
+{varType string $url}
+{varType DateTimeImmutable $expiresAt}
+{varType App\Model\Meeting\AgendaItem[] $items}
+
+{block title}Pozvánka – {$meeting->getTitle()}{/block}
+
+{block content}
+<p style="margin:0 0 14px;">Dobrý den, {$person->getFullName()},</p>
+<p style="margin:0 0 14px;">
+	zveme Vás na <strong>{$meeting->getTitle()} {$meeting->getBody()->getName()|genitiveBody}</strong>, které se koná
+	<strong>{$meeting->getScheduledAt()|czDateLong} v {$meeting->getScheduledAt()->format('G:i')}</strong>
+	v místě <strong>{$meeting->getPlace()}</strong>.
+</p>
+<p style="margin:0;">Podklady k jednotlivým bodům, přílohy a diskusi najdete ve svém portálu zastupitele:</p>
+
+{include button, url: $url, label: 'Otevřít podklady k zasedání'}
+
+<p style="margin:0 0 8px; font-weight:bold;">Navržený program</p>
+<ol style="margin:0 0 18px; padding-left:22px;">
+	<li n:foreach="$items as $item" style="margin-bottom:4px;">{$item->getTitle()}</li>
+</ol>
+
+<p style="margin:0 0 6px; font-size:13px; color:#64748b;">Pozvánku v PDF najdete v příloze.</p>
+<p style="margin:0; font-size:13px; color:#64748b;">
+	Odkaz je osobní – prosíme, nepřeposílejte ho. Platí do {$expiresAt|czDate}. Pokud tlačítko nefunguje, zkopírujte adresu do prohlížeče:<br>
+	<a href="{$url}" style="color:#64748b; word-break:break-all;">{$url}</a>
+</p>

@@ -3,3 +3,13 @@ parameters:
 	# Šifrovací klíč pro API klíče v DB (vygenerujte: make console ARGS="app:encryption-key").
 	# Po nasazení ho neměňte – uložené klíče by nešlo dešifrovat.
 	encryptionKey: ''
+
+	# Produkce: veřejná adresa a SMTP server obce / poskytovatele
+	# appUrl: 'https://konsel.matyho.cz'
+	# mailFrom: 'noreply@konsel.matyho.cz'
+	# smtp:
+	# 	host: smtp.example.cz
+	# 	port: 587
+	# 	username: '…'
+	# 	password: '…'
+	# 	encryption: tls

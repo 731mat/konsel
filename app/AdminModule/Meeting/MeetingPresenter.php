@@ -14,6 +14,7 @@ use App\Model\Attachment\AttachmentFacade;
 use App\Model\Comment\CommentFacade;
 use App\Model\Document\MeetingDocumentFacade;
 use App\Model\Document\MeetingDocumentType;
+use App\Model\Mail\InvitationFacade;
 use App\Model\Meeting\AgendaFacade;
 use App\Model\Meeting\Command\AssignOfficials;
 use App\Model\Meeting\Command\SaveMeeting;
@@ -60,6 +61,11 @@ final class MeetingPresenter extends SecuredPresenter
 	 */
 	private array $issuedTokens = [];
 
+	/**
+	 * Proč se odkazy ukazují: 'created' (jen vytvořené), 'undelivered' (e-mail neodešel).
+	 */
+	private string $issuedReason = 'created';
+
 	public function __construct(
 		private readonly MeetingFacade $meetingFacade,
 		private readonly AgendaFacade $agendaFacade,
@@ -67,6 +73,7 @@ final class MeetingPresenter extends SecuredPresenter
 		private readonly CommentFacade $commentFacade,
 		private readonly MeetingDocumentFacade $documentFacade,
 		private readonly AccessFacade $accessFacade,
+		private readonly InvitationFacade $invitationFacade,
 		private readonly TemplateFacade $templateFacade,
 		private readonly PeopleFacade $peopleFacade,
 		private readonly FormFactory $formFactory,
@@ -212,6 +219,9 @@ final class MeetingPresenter extends SecuredPresenter
 		$this->template->tokens = $this->accessFacade->findByMeeting($meeting->getId());
 		$this->template->members = $meeting->getBody()->getMembersAt($meeting->getScheduledAt());
 		$this->template->issuedTokens = $this->issuedTokens;
+		$this->template->issuedReason = $this->issuedReason;
+		$this->template->mailLog = $this->invitationFacade->findLog($meeting->getId());
+		$this->template->canInvite = $meeting->getStatus()->isPlanning();
 		$this->template->portalLink = fn(IssuedToken $issued): string => $this->link('//:Portal:Entry:', [
 			'token' => $issued->token,
 		]);
@@ -233,6 +243,56 @@ final class MeetingPresenter extends SecuredPresenter
 		}
 
 		// odkazy se ukážou jen teď (v DB je jen hash) – stránka se proto nepřesměruje
+		$this->getHttpResponse()->setHeader('Cache-Control', 'no-store');
+	}
+
+	/**
+	 * Rozeslání pozvánek e-mailem (zasedání v přípravě se zároveň sdílí). Neodeslané odkazy se ukážou na stránce.
+	 */
+	#[Allowed(Resource::Meeting, Privilege::Edit)]
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleSendInvitations(?int $personId = null): void
+	{
+		$meeting = $this->meeting ?? $this->error();
+		try {
+			if ($personId === null && $meeting->getStatus() === MeetingStatus::Draft) {
+				foreach ($this->meetingFacade->transition($meeting->getId(), MeetingTransition::Share) as $warning) {
+					$this->flashMessage($warning, 'warning');
+				}
+			}
+
+			$result = $this->invitationFacade->send(
+				$meeting->getId(),
+				fn(string $token): string => $this->link('//:Portal:Entry:', [
+					'token' => $token,
+				]),
+				$personId,
+			);
+		} catch (DomainException $e) {
+			$this->flashMessage($e->getMessage(), 'danger');
+			$this->redirect('this');
+		}
+
+		if ($result->sent !== []) {
+			$this->flashMessage(count($result->sent) === 1
+				? "Pozvánka byla odeslána ({$result->sent[0]->accessToken->getPerson()->getFullName()})."
+				: 'Pozvánky byly odeslány ' . count($result->sent) . ' členům.', 'success');
+		}
+
+		if ($result->withoutEmail !== []) {
+			$this->flashMessage('Bez e-mailu: ' . implode(', ', array_map(static fn(IssuedToken $t): string => $t->accessToken->getPerson()->getFullName(), $result->withoutEmail)) . '. Předejte jim odkaz níže.', 'warning');
+		}
+
+		if ($result->failed !== []) {
+			$this->flashMessage('Nepodařilo se odeslat: ' . implode(', ', array_map(static fn(IssuedToken $t): string => $t->accessToken->getPerson()->getFullName(), $result->failed)) . '. Důvod je v přehledu odeslaných e-mailů, odkaz najdete níže.', 'danger');
+		}
+
+		if ($result->notDelivered() === []) {
+			$this->redirect('this');
+		}
+
+		$this->issuedTokens = $result->notDelivered();
+		$this->issuedReason = 'undelivered';
 		$this->getHttpResponse()->setHeader('Cache-Control', 'no-store');
 	}
 

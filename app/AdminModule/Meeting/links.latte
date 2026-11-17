@@ -1,9 +1,9 @@
-{block title}Odkazy pro zastupitele – {$meeting->getTitle()}{/block}
+{block title}Pozvánky a odkazy – {$meeting->getTitle()}{/block}
 
 {block breadcrumbs}
 	<li class="breadcrumb-item"><a n:href="default">Zasedání</a></li>
 	<li class="breadcrumb-item"><a n:href="detail, id: $meeting->getId()">{$meeting->getTitle()}</a></li>
-	<li class="breadcrumb-item active" aria-current="page">Odkazy pro zastupitele</li>
+	<li class="breadcrumb-item active" aria-current="page">Pozvánky a odkazy</li>
 {/block}
 
 {block content}
@@ -13,21 +13,40 @@
 {varType App\Model\Access\IssuedToken[] $issuedTokens}
 {varType Closure $portalLink}
 {varType DateTimeImmutable $now}
+{varType string $issuedReason}
+{varType App\Model\Mail\MailLog[] $mailLog}
+{varType bool $canInvite}
+{var $draft = $meeting->getStatus() === App\Model\Meeting\MeetingStatus::Draft}
 
 <div class="d-flex flex-wrap align-items-start gap-3 mb-4">
 	<div class="me-auto">
-		<h1 class="h3 mb-1">Odkazy pro zastupitele</h1>
+		<h1 class="h3 mb-1">Pozvánky a odkazy</h1>
 		<p class="text-body-secondary mb-0">{$meeting->getTitle()} · {$meeting->getBody()->getName()} · {$meeting->getScheduledAt()|czDateTime}</p>
 	</div>
-	<form method="post" action="{link issueLinks!}">
-		<button type="submit" class="btn btn-primary" data-confirm={$tokens ? 'Vytvořit nové odkazy všem členům? Dosavadní odkazy přestanou platit.' : null}>
-			<i class="bi bi-link-45deg" aria-hidden="true"></i> Vytvořit odkazy pro všechny členy
-		</button>
-	</form>
+	<div class="d-flex flex-wrap gap-2">
+		<form method="post" action="{link issueLinks!}">
+			<button type="submit" class="btn btn-outline-secondary" data-confirm={$tokens ? 'Vytvořit nové odkazy všem členům? Dosavadní odkazy přestanou platit.' : null}>
+				<i class="bi bi-link-45deg" aria-hidden="true"></i> Jen vytvořit odkazy
+			</button>
+		</form>
+		<form n:if="$canInvite" method="post" action="{link sendInvitations!}">
+			<button type="submit" class="btn btn-primary" data-confirm="{if $draft}Zasedání se sdílí se zastupiteli a všem členům odejde e-mailem pozvánka s osobním odkazem. Pokračovat?{elseif $tokens}Poslat pozvánky znovu všem členům? Každý dostane nový odkaz, dosavadní přestanou platit.{else}Rozeslat pozvánky s osobním odkazem všem členům?{/if}">
+				<i class="bi bi-envelope-paper" aria-hidden="true"></i> {$draft ? 'Sdílet a rozeslat pozvánky' : 'Rozeslat pozvánky e-mailem'}
+			</button>
+		</form>
+	</div>
 </div>
 
-<div n:if="$issuedTokens" class="card border-success mb-4">
-	<div class="card-header bg-success-subtle text-success-emphasis"><i class="bi bi-check-circle" aria-hidden="true"></i> Nové odkazy – zkopírujte je nebo odešlete hned, později už zobrazit nepůjdou</div>
+<div n:if="!$canInvite" class="alert alert-light border small">
+	<i class="bi bi-info-circle" aria-hidden="true"></i> Zasedání už začalo, pozvánky se nerozesílají. Odkazy lze dál vytvářet a odvolávat (podklady, ověření zápisu).
+</div>
+
+<div n:if="$issuedTokens" n:class="card, mb-4, $issuedReason === 'undelivered' ? border-warning : border-success">
+	{if $issuedReason === 'undelivered'}
+		<div class="card-header bg-warning-subtle text-warning-emphasis"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Tyto odkazy e-mailem neodešly – předejte je jinak, později už zobrazit nepůjdou</div>
+	{else}
+		<div class="card-header bg-success-subtle text-success-emphasis"><i class="bi bi-check-circle" aria-hidden="true"></i> Nové odkazy – zkopírujte je nebo odešlete hned, později už zobrazit nepůjdou</div>
+	{/if}
 	<div class="table-responsive">
 		<table class="table align-middle mb-0">
 			<thead><tr><th>Zastupitel</th><th>Odkaz</th><th></th></tr></thead>
@@ -82,6 +101,32 @@
 				<div class="card-body empty-state"><i class="bi bi-link-45deg" aria-hidden="true"></i>Zatím nebyly vytvořeny žádné odkazy.</div>
 			{/if}
 		</div>
+
+		<div class="card mt-4">
+			<div class="card-header d-flex align-items-center">
+				<span class="me-auto">Odeslané e-maily</span>
+				<span n:if="$mailLog" class="badge text-bg-light">{count($mailLog)}</span>
+			</div>
+			{if $mailLog}
+				<div class="table-responsive">
+					<table class="table align-middle mb-0">
+						<thead><tr><th>Kdy</th><th>Komu</th><th>Stav</th></tr></thead>
+						<tbody>
+							<tr n:foreach="$mailLog as $log">
+								<td class="small text-nowrap">{$log->getSentAt()|czDateTime}</td>
+								<td class="small">{$log->getPerson()?->getFullName() ?? $log->getRecipient()}<span class="d-block text-body-secondary">{$log->getRecipient()}</span></td>
+								<td class="small">
+									<span class="badge status-badge bg-{$log->getStatus()->tone()}-subtle text-{$log->getStatus()->tone()}-emphasis">{$log->getStatus()->label()}</span>
+									<span n:if="$log->getError()" class="d-block text-danger mt-1 text-break">{$log->getError()}</span>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			{else}
+				<div class="card-body empty-state"><i class="bi bi-envelope" aria-hidden="true"></i>Pozvánky zatím nebyly rozeslány.</div>
+			{/if}
+		</div>
 	</div>
 	<div class="col-xl-4">
 		<div class="card">
@@ -89,13 +134,16 @@
 			<ul class="list-group list-group-flush">
 				<li n:foreach="$members as $membership" class="list-group-item d-flex align-items-center gap-2">
 					<span class="me-auto">{$membership->getPerson()->getFullName()}<span class="d-block small text-body-secondary">{$membership->getPerson()->getEmail()?->value ?? 'bez e-mailu'}</span></span>
+					<form n:if="$canInvite && !$draft && $membership->getPerson()->getEmail()" method="post" action="{link sendInvitations!, personId: $membership->getPerson()->getId()}">
+						<button type="submit" class="btn btn-sm btn-outline-primary" title="Poslat pozvánku znovu (s novým odkazem)" aria-label="Poslat pozvánku znovu: {$membership->getPerson()->getFullName()}"><i class="bi bi-envelope" aria-hidden="true"></i></button>
+					</form>
 					<form method="post" action="{link issueLinks!, personId: $membership->getPerson()->getId()}">
 						<button type="submit" class="btn btn-sm btn-outline-secondary" title="Vytvořit nový odkaz">Nový odkaz</button>
 					</form>
 				</li>
 			</ul>
 			<div class="card-footer bg-transparent small text-body-secondary">
-				Odkaz je osobní a platí {App\Model\Access\AccessFacade::ValidityDays} dní po zasedání. Nový odkaz zruší předchozí.
+				Odkaz je osobní a platí {App\Model\Access\AccessFacade::ValidityDays} dní po zasedání. Nový odkaz (i nová pozvánka) zruší předchozí. Pozvánka obsahuje termín, místo, program a PDF pozvánky.
 			</div>
 		</div>
 	</div>

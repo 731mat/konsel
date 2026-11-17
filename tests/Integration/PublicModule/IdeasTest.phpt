@@ -78,6 +78,8 @@ test('citizen sees public projects with public comments only and submits a propo
 	], params: $params));
 	$submitted = $projects->find($municipality->getId(), ProjectStatus::Submitted);
 	Assert::count(1, $submitted);
+	$log = $container->getByType(Doctrine\DBAL\Connection::class)->fetchAllAssociative('SELECT type, status FROM mail_log');
+	Assert::same([], $log, 'obec bez e-mailu – upozornění se neposílá, podnět se přesto přijme');
 	Assert::false($submitted[0]->isPublic());
 	Assert::same('marie@example.cz', $submitted[0]->getSubmitterEmail()?->value);
 	Assert::notContains('Pítko pro psy na návsi', $tester->render('Public:Ideas', 'default', $params), 'podnět je neveřejný do posouzení');

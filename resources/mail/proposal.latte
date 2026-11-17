@@ -1,0 +1,21 @@
+{layout '@layout.latte'}
+{varType App\Model\Project\Project $project}
+{varType string $url}
+
+{block title}Nový podnět občana{/block}
+
+{block content}
+<p style="margin:0 0 14px;">Na stránce pro občany přibyl nový podnět. Do posouzení není veřejný.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; margin:0 0 6px; border-left:3px solid {$brand|noescape};">
+	<tr>
+		<td style="padding:4px 0 4px 14px;">
+			<div style="font-weight:bold; font-size:16px;">{$project->getTitle()}</div>
+			<div style="font-size:13px; color:#64748b;">{$project->getCreatedByName()}{if $project->getSubmitterEmail()} · {$project->getSubmitterEmail()->value}{/if}</div>
+			<div n:if="$project->getDescription()" style="margin-top:8px; white-space:pre-line;">{$project->getDescription()}</div>
+		</td>
+	</tr>
+</table>
+
+{include button, url: $url, label: 'Posoudit podnět'}
+
+<p style="margin:0; font-size:13px; color:#64748b;">Na tento e-mail můžete odpovědět – odpověď dostane přímo občan.</p>

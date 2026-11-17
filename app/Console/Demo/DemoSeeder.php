@@ -8,6 +8,7 @@ use App\Model\Access\AccessFacade;
 use App\Model\Attachment\AttachmentFacade;
 use App\Model\Comment\CommentAuthorRef;
 use App\Model\Comment\CommentFacade;
+use App\Model\Mail\InvitationFacade;
 use App\Model\Meeting\AgendaFacade;
 use App\Model\Meeting\Command\AssignOfficials;
 use App\Model\Meeting\Command\SaveAgendaItem;
@@ -66,7 +67,9 @@ final readonly class DemoSeeder
 		private AccessFacade $access,
 		private TemplateFacade $templates,
 		private ProjectFacade $projects,
+		private InvitationFacade $invitations,
 		private ClockInterface $clock,
+		private string $appUrl = 'http://localhost:8080',
 	) {}
 
 	/**
@@ -165,7 +168,16 @@ final readonly class DemoSeeder
 			self::file('Záměr prodeje pozemku 456-7.pdf', self::pdf(['Zamer prodeje pozemku p. c. 456/7', 'Vymera 312 m2, k. u. Neplachovice'])),
 		], null);
 
-		$portalLink = $this->access->issueFor($shared->getId(), $persons[2]->getId());
+		// pozvánky e-mailem (ve vývoji je zachytí Mailpit) – odkaz Petra Novotného se vypíše na konci
+		$invitations = $this->invitations->send($shared->getId(), fn(string $token): string => rtrim($this->appUrl, '/') . "/odkaz/{$token}");
+		$portalLink = null;
+		foreach ([...$invitations->sent, ...$invitations->notDelivered()] as $issued) {
+			if ($issued->accessToken->getPerson() === $persons[2]) {
+				$portalLink = $issued;
+			}
+		}
+
+		$portalLink ??= $this->access->issueFor($shared->getId(), $persons[2]->getId());
 
 		$draft = $this->meetings->create($council->getId(), new SaveMeeting(MeetingType::Regular, $today->modify('+9 weeks'), $officeRoom));
 		$this->agenda->addItem($draft->getId(), new SaveAgendaItem('Zpráva o činnosti finančního výboru', rapporteurId: $persons[2]->getId()));
@@ -185,6 +197,7 @@ final readonly class DemoSeeder
 			'Knihovna šablon usnesení a programu (řádné a ustavující zasedání)',
 			'Úkolníček: mateřská škola (propojená se 2 zasedáními), oprava komunikace, LED osvětlení, podnět občana',
 			'Zasedání zastupitelstva s programem: ustavující (zápis ověřen), proběhlé, sdílené a v přípravě',
+			sprintf('Pozvánky na sdílené zasedání: %d e-mailů odesláno, %d neodesláno (vývoj: http://localhost:8025)', count($invitations->sent), count($invitations->notDelivered())),
 			"Portál zastupitele (Petr Novotný, sdílené zasedání): /odkaz/{$portalLink->token}",
 			'Stránka pro občany: /obec/neplachovice/podnety',
 		];
