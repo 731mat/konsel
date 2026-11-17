@@ -8,6 +8,18 @@
 		</button>
 		<a class="navbar-brand brand me-auto" n:href=":Admin:Dashboard:">{include '../UI/@logo.latte'} Konšel</a>
 
+		<div n:if="count($switchBodies ?? []) > 1" class="dropdown">
+			<button class="btn btn-sm btn-outline-secondary dropdown-toggle body-switcher" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Orgán, za který se zobrazují seznamy">
+				<i class="bi bi-diagram-3" aria-hidden="true"></i>
+				<span class="d-none d-md-inline">{$selectedBody?->getName() ?? 'Všechny orgány'}</span>
+			</button>
+			<ul class="dropdown-menu dropdown-menu-end shadow-sm">
+				<li><a n:class="dropdown-item, !$selectedBody ? active" n:href="selectBody!, bodyId: null">Všechny orgány</a></li>
+				<li><hr class="dropdown-divider"></li>
+				<li n:foreach="$switchBodies as $switchBody"><a n:class="dropdown-item, $selectedBody === $switchBody ? active" n:href="selectBody!, bodyId: $switchBody->getId()">{$switchBody->getName()}</a></li>
+			</ul>
+		</div>
+
 		<div class="dropdown">
 			<button class="btn btn-link text-body text-decoration-none dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
 				<i class="bi bi-person-circle fs-5" aria-hidden="true"></i>

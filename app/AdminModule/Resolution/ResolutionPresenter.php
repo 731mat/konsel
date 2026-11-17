@@ -50,8 +50,9 @@ final class ResolutionPresenter extends SecuredPresenter
 	public function renderDefault(?string $body = null, ?string $year = null, ?string $status = null, ?string $q = null): void
 	{
 		$municipalityId = $this->requireMunicipality()->getId();
+		$body ??= (string) $this->selectedBodyId();
 		$search = new ResolutionSearch(
-			ctype_digit((string) $body) ? (int) $body : null,
+			ctype_digit($body) ? (int) $body : null,
 			ctype_digit((string) $year) ? (int) $year : null,
 			ResolutionStatus::tryFrom((string) $status),
 			$q === null || trim($q) === '' ? null : mb_substr(trim($q), 0, 100),

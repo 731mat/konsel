@@ -40,14 +40,15 @@ final class DashboardPresenter extends SecuredPresenter
 		$showMeetings = $this->currentMunicipality->isSet() && $this->isAllowed(Resource::Meeting);
 		$municipalityId = $showMeetings ? $this->currentMunicipality->get()->getId() : null;
 
-		$upcoming = $municipalityId === null ? [] : $this->meetingFacade->findUnfinished($municipalityId, 6);
+		$bodyId = $this->selectedBodyId();
+		$upcoming = $municipalityId === null ? [] : $this->meetingFacade->findUnfinished($municipalityId, 6, $bodyId);
 		$next = array_shift($upcoming);
 
 		$this->template->showMeetings = $showMeetings;
 		$this->template->next = $next;
 		$this->template->nextIn = $next === null ? null : $this->relativeDay($next);
 		$this->template->upcoming = $upcoming;
-		$this->template->recent = $recent = $municipalityId === null ? [] : $this->meetingFacade->findFinished($municipalityId);
+		$this->template->recent = $recent = $municipalityId === null ? [] : $this->meetingFacade->findFinished($municipalityId, bodyId: $bodyId);
 		$today = $this->clock->now()->setTime(0, 0);
 		$this->template->minutesDue = array_values(array_filter($recent, static fn(Meeting $meeting): bool => $meeting->getMinutesDeadline() !== null));
 		$this->template->daysLeft = static fn(Meeting $meeting): int => (int) $today->diff($meeting->getMinutesDeadline() ?? $today)->format('%r%a');

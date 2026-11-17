@@ -26,14 +26,14 @@ interface MeetingRepository
 	 *
 	 * @return list<Meeting>
 	 */
-	public function findUnfinished(Municipality $municipality, int $limit): array;
+	public function findUnfinished(Municipality $municipality, int $limit, ?Body $body = null): array;
 
 	/**
 	 * Proběhlá zasedání od posledního.
 	 *
 	 * @return list<Meeting>
 	 */
-	public function findFinished(Municipality $municipality, int $limit): array;
+	public function findFinished(Municipality $municipality, int $limit, ?Body $body = null): array;
 
 	/**
 	 * @return list<int> roky, ve kterých obec má zasedání, sestupně

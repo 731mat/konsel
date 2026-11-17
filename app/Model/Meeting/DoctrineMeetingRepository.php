@@ -53,14 +53,14 @@ final readonly class DoctrineMeetingRepository implements MeetingRepository
 		return $this->result($query);
 	}
 
-	public function findUnfinished(Municipality $municipality, int $limit): array
+	public function findUnfinished(Municipality $municipality, int $limit, ?Body $body = null): array
 	{
-		return $this->findByStatuses($municipality, [MeetingStatus::Draft, MeetingStatus::Shared, MeetingStatus::InProgress], 'ASC', $limit);
+		return $this->findByStatuses($municipality, [MeetingStatus::Draft, MeetingStatus::Shared, MeetingStatus::InProgress], 'ASC', $limit, $body);
 	}
 
-	public function findFinished(Municipality $municipality, int $limit): array
+	public function findFinished(Municipality $municipality, int $limit, ?Body $body = null): array
 	{
-		return $this->findByStatuses($municipality, [MeetingStatus::Closed, MeetingStatus::MinutesApproved], 'DESC', $limit);
+		return $this->findByStatuses($municipality, [MeetingStatus::Closed, MeetingStatus::MinutesApproved], 'DESC', $limit, $body);
 	}
 
 	public function findYears(Municipality $municipality): array
@@ -154,13 +154,16 @@ final readonly class DoctrineMeetingRepository implements MeetingRepository
 	 * @param 'ASC'|'DESC' $direction
 	 * @return list<Meeting>
 	 */
-	private function findByStatuses(Municipality $municipality, array $statuses, string $direction, int $limit): array
+	private function findByStatuses(Municipality $municipality, array $statuses, string $direction, int $limit, ?Body $body = null): array
 	{
 		$query = $this->queryFor($municipality)
 			->andWhere('m.status IN (:statuses)')
 			->setParameter('statuses', array_map(static fn(MeetingStatus $status): string => $status->value, $statuses), ArrayParameterType::STRING)
 			->orderBy('m.scheduledAt', $direction)
 			->setMaxResults($limit);
+		if ($body !== null) {
+			$query->andWhere('m.body = :body')->setParameter('body', $body);
+		}
 
 		return $this->result($query);
 	}

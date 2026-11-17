@@ -20,6 +20,18 @@ enum BodyType: string
 	}
 
 	/**
+	 * Konstatování usnášeníschopnosti ve správném rodě (zastupitelstvo je, rada je, výbor je …).
+	 */
+	public function quorumPhrase(bool $reached): string
+	{
+		return match ($this) {
+			self::Council => $reached ? 'je usnášeníschopné' : 'nebylo usnášeníschopné',
+			self::Board => $reached ? 'je usnášeníschopná' : 'nebyla usnášeníschopná',
+			self::Committee => $reached ? 'je usnášeníschopný' : 'nebyl usnášeníschopný',
+		};
+	}
+
+	/**
 	 * Funkce, které lze v orgánu tohoto typu zastávat.
 	 *
 	 * @return list<MemberFunction>

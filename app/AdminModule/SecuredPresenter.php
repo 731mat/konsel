@@ -10,6 +10,8 @@ use App\Core\Security\Resource;
 use App\Core\Tenancy\CurrentMunicipality;
 use App\Model\Municipality\Municipality;
 use App\Model\Municipality\MunicipalityFacade;
+use App\Model\People\Body;
+use App\Model\People\PeopleFacade;
 use App\Model\Shared\TenantOwned;
 use App\Model\Shared\ValueObject\StoredFile;
 use App\Model\Storage\FileStorage;
@@ -26,6 +28,8 @@ use Nette\Security\User;
  */
 abstract class SecuredPresenter extends BasePresenter
 {
+	private const string BodySessionSection = 'konsel.body';
+
 	#[Inject]
 	public CurrentMunicipality $currentMunicipality;
 
@@ -37,6 +41,12 @@ abstract class SecuredPresenter extends BasePresenter
 
 	#[Inject]
 	public FileStorage $fileStorage;
+
+	/**
+	 * Orgány pro přepínač v horní liště.
+	 */
+	#[Inject]
+	public PeopleFacade $bodyDirectory;
 
 	public function checkRequirements(mixed $element): void
 	{
@@ -75,6 +85,55 @@ abstract class SecuredPresenter extends BasePresenter
 	{
 		parent::beforeRender();
 		$this->template->currentMunicipality = $this->currentMunicipality->isSet() ? $this->currentMunicipality->get() : null;
+		$bodies = $this->switchableBodies();
+		$this->template->switchBodies = $bodies;
+		$this->template->selectedBody = $bodies[$this->selectedBodyId() ?? 0] ?? null;
+	}
+
+	/**
+	 * Přepínač orgánu v horní liště (zastupitelstvo / rada / výbory). Volba platí pro seznamy v celé administraci.
+	 */
+	#[Allowed(Resource::Dashboard)]
+	public function handleSelectBody(?int $bodyId = null): void
+	{
+		$section = $this->getSession(self::BodySessionSection);
+		if ($bodyId === null || !array_key_exists($bodyId, $this->switchableBodies())) {
+			$section->remove('bodyId');
+		} else {
+			$section->set('bodyId', $bodyId);
+		}
+
+		$this->redirect('this');
+	}
+
+	/**
+	 * Orgán zvolený v přepínači (null = všechny).
+	 */
+	protected function selectedBodyId(): ?int
+	{
+		$bodyId = $this->getSession(self::BodySessionSection)->get('bodyId');
+
+		return is_int($bodyId) && array_key_exists($bodyId, $this->switchableBodies()) ? $bodyId : null;
+	}
+
+	/**
+	 * Orgány aktuálního volebního období obce, mezi kterými se přepíná.
+	 *
+	 * @return array<int, Body>
+	 */
+	private function switchableBodies(): array
+	{
+		if (!$this->currentMunicipality->isSet() || !$this->getUser()->isLoggedIn()) {
+			return [];
+		}
+
+		$term = $this->bodyDirectory->findCurrentTerm($this->currentMunicipality->get()->getId());
+		$bodies = [];
+		foreach ($term === null ? [] : $this->bodyDirectory->findBodies($term->getId()) as $body) {
+			$bodies[$body->getId()] = $body;
+		}
+
+		return $bodies;
 	}
 
 	protected function createComponentAdminMenu(): AdminMenu

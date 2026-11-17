@@ -42,9 +42,9 @@
 </p>
 <p>
 	{if $quorum->isReached()}
-		Předsedající konstatoval(a), že je přítomna nadpoloviční většina všech členů a {$body->getName()} je usnášeníschopné (§ 92 odst. 3 zákona o obcích).
+		Předsedající konstatoval(a), že je přítomna nadpoloviční většina všech členů a {$body->getName()} {$body->getType()->quorumPhrase(true)}{if $body->getType() === App\Model\People\BodyType::Council} (§ 92 odst. 3 zákona o obcích){elseif $body->getType() === App\Model\People\BodyType::Board} (§ 101 odst. 2 zákona o obcích){/if}.
 	{else}
-		<strong>{$body->getName()|firstUpper} nebylo usnášeníschopné</strong> (přítomno {$quorum->present}, potřeba {$quorum->required}).
+		<strong>{$body->getName()|firstUpper} {$body->getType()->quorumPhrase(false)}</strong> (přítomno {$quorum->present}, potřeba {$quorum->required}).
 	{/if}
 	{if $meeting->getGuestCount() !== null}Přítomno hostů: {$meeting->getGuestCount()}.{/if}
 </p>
@@ -119,6 +119,22 @@
 
 <p>Zápis byl vyhotoven dne {$generatedAt|czDate}.</p>
 
+{if $body->getType() === App\Model\People\BodyType::Board}
+	{* zápis ze schůze rady podepisuje starosta nebo místostarosta spolu s určeným členem rady (§ 101 odst. 3) *}
+	<table class="signature" width="100%">
+		<tr>
+			<td width="50%" align="center">
+				<br><br>…………………………………………<br>
+				{$meeting->getChairperson()?->getFullName() ?? $mayor?->getFullName() ?? ''}<br><span class="muted">starosta / místostarosta</span>
+			</td>
+			<td width="50%" align="center">
+				<br><br>…………………………………………<br>
+				{($meeting->getVerifiers()[0] ?? null)?->getFullName() ?? ''}<br><span class="muted">určený člen rady</span>
+			</td>
+		</tr>
+	</table>
+	<p n:if="$meeting->getRecorder()" class="small muted">Zapsal(a): {$meeting->getRecorder()->getFullName()}</p>
+{else}
 <table class="signature" width="100%">
 	<tr>
 		<td width="50%" align="center">
@@ -140,4 +156,5 @@
 		{/foreach}
 	</tr>
 </table>
+{/if}
 {/block}

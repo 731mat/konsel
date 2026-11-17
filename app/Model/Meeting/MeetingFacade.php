@@ -167,17 +167,17 @@ final readonly class MeetingFacade
 	/**
 	 * @return list<Meeting> připravovaná a probíhající zasedání od nejbližšího
 	 */
-	public function findUnfinished(int $municipalityId, int $limit = 5): array
+	public function findUnfinished(int $municipalityId, int $limit = 5, ?int $bodyId = null): array
 	{
-		return $this->meetings->findUnfinished($this->municipalities->get($municipalityId), $limit);
+		return $this->meetings->findUnfinished($this->municipalities->get($municipalityId), $limit, $bodyId === null ? null : $this->bodies->get($bodyId));
 	}
 
 	/**
 	 * @return list<Meeting> proběhlá zasedání od posledního
 	 */
-	public function findFinished(int $municipalityId, int $limit = 5): array
+	public function findFinished(int $municipalityId, int $limit = 5, ?int $bodyId = null): array
 	{
-		return $this->meetings->findFinished($this->municipalities->get($municipalityId), $limit);
+		return $this->meetings->findFinished($this->municipalities->get($municipalityId), $limit, $bodyId === null ? null : $this->bodies->get($bodyId));
 	}
 
 	/**

@@ -92,7 +92,9 @@ final class MeetingPresenter extends SecuredPresenter
 	public function renderDefault(?string $body = null, ?string $year = null, ?string $status = null): void
 	{
 		$municipalityId = $this->requireMunicipality()->getId();
-		$selectedBody = ctype_digit((string) $body) ? $this->loadBody((int) $body) : null;
+		// bez parametru platí orgán z přepínače v horní liště, prázdný parametr = všechny orgány
+		$body ??= (string) $this->selectedBodyId();
+		$selectedBody = ctype_digit($body) ? $this->loadBody((int) $body) : null;
 		$year = ctype_digit((string) $year) ? (int) $year : null;
 		$selectedStatus = MeetingStatus::tryFrom((string) $status);
 
