@@ -34,6 +34,9 @@ use App\Model\Project\Command\SaveProject;
 use App\Model\Project\ProjectFacade;
 use App\Model\Project\ProjectPriority;
 use App\Model\Project\ProjectStatus;
+use App\Model\Resolution\Command\SaveResolutionTask;
+use App\Model\Resolution\ResolutionFacade;
+use App\Model\Resolution\ResolutionTaskFacade;
 use App\Model\Storage\UploadedFile;
 use App\Model\Template\TemplateFacade;
 use App\Model\User\Command\CreateUser;
@@ -75,6 +78,8 @@ final readonly class DemoSeeder
 		private InvitationFacade $invitations,
 		private ProceedingsFacade $proceedings,
 		private VotingFacade $voting,
+		private ResolutionFacade $resolutions,
+		private ResolutionTaskFacade $tasks,
 		private ClockInterface $clock,
 		private string $appUrl = 'http://localhost:8080',
 	) {}
@@ -163,6 +168,18 @@ final readonly class DemoSeeder
 			5 => "Pan Veselý se ptal, proč obec nevybrala levnější nabídku. Starosta odpověděl, že druhá nabídka nesplnila kvalifikaci.\n\nPan Procházka upozornil na nutnost dozoru stavby; starosta přislíbil technický dozor investora.",
 		], guestCount: 6);
 
+		// úkoly z usnesení proběhlého zasedání (jeden po termínu, aby bylo vidět zvýraznění)
+		foreach ($this->resolutions->findByMeeting($past->getId()) as $resolution) {
+			match ($resolution->getAgendaItem()->getPosition()) {
+				5 => [
+					$this->tasks->add($resolution->getId(), new SaveResolutionTask('Podepsat smlouvu o dílo se Silnice Morava s.r.o.', $persons[0]->getId(), $today->modify('-2 days'))),
+					$this->tasks->add($resolution->getId(), new SaveResolutionTask('Zveřejnit smlouvu v registru smluv', $persons[1]->getId(), $today->modify('+20 days'))),
+				],
+				6 => $this->tasks->add($resolution->getId(), new SaveResolutionTask('Provést inventarizaci majetku a předat zprávu zastupitelstvu', null, new \DateTimeImmutable('2027-01-31'))),
+				default => null,
+			};
+		}
+
 		$shared = $this->meetings->create($council->getId(), new SaveMeeting(MeetingType::Regular, $today->modify('+3 weeks'), $officeRoom));
 		$this->meetings->assignOfficials($shared->getId(), new AssignOfficials(chairpersonId: $persons[0]->getId(), recorderId: $persons[7]->getId()));
 		$this->program($shared->getId(), [
@@ -213,6 +230,7 @@ final readonly class DemoSeeder
 			'Knihovna šablon usnesení a programu (řádné a ustavující zasedání)',
 			'Úkolníček: mateřská škola (propojená se 2 zasedáními), oprava komunikace, LED osvětlení, podnět občana',
 			'Zasedání zastupitelstva s programem: ustavující (zápis ověřen), proběhlé (1 omluvený, odhlasované body), sdílené a v přípravě',
+			'Usnesení s čísly (1–10/2026) a úkoly z usnesení, jeden po termínu',
 			sprintf('Pozvánky na sdílené zasedání: %d e-mailů odesláno, %d neodesláno (vývoj: http://localhost:8025)', count($invitations->sent), count($invitations->notDelivered())),
 			"Portál zastupitele (Petr Novotný, sdílené zasedání): /odkaz/{$portalLink->token}",
 			'Stránka pro občany: /obec/neplachovice/podnety',

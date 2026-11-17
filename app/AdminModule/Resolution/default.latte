@@ -1,0 +1,72 @@
+{block title}Usnesení{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item active" aria-current="page">Usnesení</li>
+{/block}
+
+{block content}
+{varType App\Model\Resolution\Resolution[] $resolutions}
+{varType App\Model\Resolution\ResolutionSearch $search}
+{varType int[] $years}
+{varType App\Model\Resolution\ResolutionStatus[] $statuses}
+{varType array<int, string> $bodies}
+
+<div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+	<h1 class="h3 mb-0 me-auto">Usnesení</h1>
+	<span class="text-body-secondary small">{count($resolutions)} {count($resolutions) === 1 ? 'usnesení' : 'usnesení'}</span>
+</div>
+
+<form method="get" action="{link default}" class="card card-body mb-4 py-3">
+	<div class="row g-2 align-items-end">
+		<div class="col-md-4">
+			<label for="filter-q" class="form-label small text-body-secondary mb-1">Hledat ve znění, čísle a názvu bodu</label>
+			<input type="search" id="filter-q" name="q" value="{$search->text}" class="form-control form-control-sm" placeholder="např. smlouva, rozpočet, 12/2026">
+		</div>
+		<div class="col-md-3">
+			<label for="filter-body" class="form-label small text-body-secondary mb-1">Orgán</label>
+			<select id="filter-body" name="body" class="form-select form-select-sm">
+				<option value="">všechny</option>
+				<option n:foreach="$bodies as $id => $name" value="{$id}" selected={$search->bodyId === $id}>{$name}</option>
+			</select>
+		</div>
+		<div class="col-6 col-md-2">
+			<label for="filter-year" class="form-label small text-body-secondary mb-1">Rok</label>
+			<select id="filter-year" name="year" class="form-select form-select-sm">
+				<option value="">všechny</option>
+				<option n:foreach="$years as $year" value="{$year}" selected={$search->year === $year}>{$year}</option>
+			</select>
+		</div>
+		<div class="col-6 col-md-2">
+			<label for="filter-status" class="form-label small text-body-secondary mb-1">Stav</label>
+			<select id="filter-status" name="status" class="form-select form-select-sm">
+				<option value="">všechny</option>
+				<option n:foreach="$statuses as $status" value="{$status->value}" selected={$search->status === $status}>{$status->label()}</option>
+			</select>
+		</div>
+		<div class="col-md-1 d-flex gap-2">
+			<button type="submit" class="btn btn-sm btn-primary w-100">Filtrovat</button>
+		</div>
+	</div>
+	<a n:if="!$search->isEmpty()" n:href="default" class="small mt-2">Zrušit filtr</a>
+</form>
+
+<div class="card">
+	{if $resolutions}
+		<ul class="list-group list-group-flush">
+			<li n:foreach="$resolutions as $resolution" class="list-group-item list-group-item-action resolution-row position-relative">
+				<div class="resolution-number">{$resolution->getNumber()}</div>
+				<div class="min-w-0">
+					<a n:href="detail, id: $resolution->getId()" class="stretched-link text-reset fw-semibold d-block text-truncate">{$resolution->getAgendaItem()->getTitle()}</a>
+					<div class="small text-body-secondary">{$resolution->getBody()->getName()} · {$resolution->getMeeting()->getTitle()} · {$resolution->getMeeting()->getScheduledAt()|czDate}</div>
+					<div class="small text-break mt-1">{$resolution->getText()|truncate: 220}</div>
+				</div>
+				<span n:class="badge, status-badge, 'bg-' . $resolution->getStatus()->tone() . '-subtle', 'text-' . $resolution->getStatus()->tone() . '-emphasis'">{$resolution->getStatus()->label()}</span>
+			</li>
+		</ul>
+	{else}
+		<div class="card-body empty-state">
+			<i class="bi bi-journal-check" aria-hidden="true"></i>
+			{if $search->isEmpty()}Zatím žádná usnesení. Vzniknou přijetím hlasování na obrazovce průběhu zasedání.{else}Filtru neodpovídá žádné usnesení.{/if}
+		</div>
+	{/if}
+</div>

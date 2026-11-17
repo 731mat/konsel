@@ -10,6 +10,9 @@ use App\Core\Security\Privilege;
 use App\Core\Security\Resource;
 use App\Model\Meeting\Meeting;
 use App\Model\Meeting\MeetingFacade;
+use App\Model\Resolution\ResolutionTask;
+use App\Model\Resolution\ResolutionTaskFacade;
+use App\Model\Resolution\TaskFilter;
 use Psr\Clock\ClockInterface;
 
 #[Allowed(Resource::Dashboard)]
@@ -17,6 +20,7 @@ final class DashboardPresenter extends SecuredPresenter
 {
 	public function __construct(
 		private readonly MeetingFacade $meetingFacade,
+		private readonly ResolutionTaskFacade $taskFacade,
 		private readonly ClockInterface $clock,
 	) {
 		parent::__construct();
@@ -45,6 +49,12 @@ final class DashboardPresenter extends SecuredPresenter
 		$this->template->upcoming = $upcoming;
 		$this->template->recent = $municipalityId === null ? [] : $this->meetingFacade->findFinished($municipalityId);
 		$this->template->canCreateMeeting = $this->isAllowed(Resource::Meeting, Privilege::Edit);
+
+		$showTasks = $this->currentMunicipality->isSet() && $this->isAllowed(Resource::Resolution);
+		$open = $showTasks ? $this->taskFacade->find($this->currentMunicipality->get()->getId(), TaskFilter::Open) : [];
+		$this->template->tasks = array_slice($open, 0, 5);
+		$this->template->overdueCount = count(array_filter($open, fn(ResolutionTask $task): bool => $this->taskFacade->isOverdue($task)));
+		$this->template->isOverdue = fn(ResolutionTask $task): bool => $this->taskFacade->isOverdue($task);
 	}
 
 	private function relativeDay(Meeting $meeting): string

@@ -876,6 +876,22 @@ h1, .h1, h2, .h2, h3, .h3 {
 	white-space: nowrap;
 }
 
+.resolution-text p:last-child {
+	margin-bottom: 0;
+}
+
+.task-row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto auto;
+	align-items: center;
+	gap: .75rem;
+}
+
+.task-overdue {
+	box-shadow: inset 3px 0 0 var(--bs-danger);
+	background: rgba(var(--bs-danger-rgb), .04);
+}
+
 @include media-breakpoint-down(sm) {
 	.resolution-row {
 		grid-template-columns: minmax(0, 1fr) auto;

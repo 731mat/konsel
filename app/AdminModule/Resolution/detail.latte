@@ -1,0 +1,121 @@
+{block title}Usnesení č. {$resolution->getNumber()}{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href="default">Usnesení</a></li>
+	<li class="breadcrumb-item active" aria-current="page">{$resolution->getNumber()}</li>
+{/block}
+
+{block content}
+{varType App\Model\Resolution\Resolution $resolution}
+{varType App\Model\Resolution\ResolutionTask[] $tasks}
+{varType Closure $isOverdue}
+{varType bool $canEdit}
+{varType bool $canRevoke}
+{var $round = $resolution->getVotingRound()}
+
+<div class="d-flex flex-wrap align-items-start gap-3 mb-4">
+	<div class="me-auto">
+		<h1 class="h3 mb-1">
+			Usnesení č. {$resolution->getNumber()}
+			<span n:class="badge, status-badge, fs-6, align-middle, 'bg-' . $resolution->getStatus()->tone() . '-subtle', 'text-' . $resolution->getStatus()->tone() . '-emphasis'">{$resolution->getStatus()->label()}</span>
+		</h1>
+		<p class="text-body-secondary mb-0">
+			{$resolution->getBody()->getName()} ·
+			<a n:href="Meeting:detail, id: $resolution->getMeeting()->getId(), tab: resolutions" class="link-secondary">{$resolution->getMeeting()->getTitle()}, {$resolution->getMeeting()->getScheduledAt()|czDate}</a>
+			· bod {$resolution->getAgendaItem()->getPosition()}. {$resolution->getAgendaItem()->getTitle()}
+		</p>
+	</div>
+</div>
+
+<div class="row g-4">
+	<div class="col-xl-8 d-flex flex-column gap-4">
+		<div class="card">
+			<div class="card-header">Znění</div>
+			<div class="card-body">
+				<div class="text-break resolution-text">{$resolution->getText()|nl2p}</div>
+				<div n:if="$resolution->getStatusNote()" class="alert alert-secondary small mb-0 mt-3">{$resolution->getStatusNote()}</div>
+			</div>
+		</div>
+
+		<div class="card" id="ukoly">
+			<div class="card-header d-flex align-items-center">
+				<span class="me-auto"><i class="bi bi-check2-square" aria-hidden="true"></i> Úkoly z usnesení</span>
+				<span n:if="$tasks" class="badge text-bg-light">{count($tasks)}</span>
+			</div>
+			{if $tasks}
+				<ul class="list-group list-group-flush">
+					<li n:foreach="$tasks as $task" n:class="list-group-item, task-row, $isOverdue($task) ? task-overdue">
+						<div class="min-w-0">
+							<div n:class="fw-semibold, $task->getStatus() !== App\Model\Resolution\TaskStatus::Open ? 'text-decoration-line-through text-body-secondary'">{$task->getDescription()}</div>
+							<div class="small text-body-secondary">
+								{$task->getAssignee()?->getFullName() ?? 'obecní úřad'}
+								{if $task->getDueDate()} · termín <span n:class="$isOverdue($task) ? 'text-danger fw-semibold'">{$task->getDueDate()|czDate}{if $isOverdue($task)} (po termínu){/if}</span>{/if}
+								{if $task->getCompletedAt()} · splněno {$task->getCompletedAt()|czDate}{/if}
+							</div>
+						</div>
+						<span n:class="badge, status-badge, 'bg-' . $task->getStatus()->tone() . '-subtle', 'text-' . $task->getStatus()->tone() . '-emphasis'">{$task->getStatus()->label()}</span>
+						<div n:if="$canEdit" class="d-flex gap-1">
+							{if $task->getStatus() === App\Model\Resolution\TaskStatus::Open}
+								<form method="post" action="{link completeTask!, taskId: $task->getId()}"><button type="submit" class="btn btn-sm btn-outline-success" title="Splněno"><i class="bi bi-check2" aria-hidden="true"></i><span class="visually-hidden">Splněno</span></button></form>
+								<form method="post" action="{link cancelTask!, taskId: $task->getId()}"><button type="submit" class="btn btn-sm btn-light" title="Zrušit úkol" data-confirm="Zrušit úkol?"><i class="bi bi-x-lg" aria-hidden="true"></i><span class="visually-hidden">Zrušit</span></button></form>
+							{else}
+								<form method="post" action="{link reopenTask!, taskId: $task->getId()}"><button type="submit" class="btn btn-sm btn-light">Otevřít</button></form>
+							{/if}
+						</div>
+					</li>
+				</ul>
+			{else}
+				<div class="card-body text-body-secondary small">Usnesení zatím nemá úkoly. Úkol přidejte, pokud usnesení něco ukládá (např. „ukládá starostovi podepsat smlouvu“).</div>
+			{/if}
+			<div n:if="$canEdit" class="card-footer bg-transparent">
+				{form taskForm}
+					<div n:foreach="$form->getOwnErrors() as $error" class="alert alert-danger py-2">{$error}</div>
+					<div class="row g-2 align-items-end">
+						<div class="col-md-5">
+							{label description, class: 'form-label small' /}
+							{input description, class: ($form['description']->hasErrors() ? 'form-control form-control-sm is-invalid' : 'form-control form-control-sm')}
+							<div n:ifcontent class="invalid-feedback d-block">{inputError description}</div>
+						</div>
+						<div class="col-md-3">
+							{label assigneeId, class: 'form-label small' /}
+							{input assigneeId, class: 'form-select form-select-sm'}
+						</div>
+						<div class="col-md-2">
+							{label dueDate, class: 'form-label small' /}
+							{input dueDate, class: 'form-control form-control-sm'}
+						</div>
+						<div class="col-md-2">{input add, class: 'btn btn-sm btn-primary w-100'}</div>
+					</div>
+				{/form}
+			</div>
+		</div>
+	</div>
+
+	<div class="col-xl-4 d-flex flex-column gap-4">
+		<div n:if="$round" class="card">
+			<div class="card-header">Hlasování</div>
+			<div class="card-body small">
+				<div class="mb-2">{$round->getType()->label()}{if $round->getCandidate()}: {$round->getCandidate()->getFullName()}{/if}</div>
+				<dl class="row mb-2">
+					{foreach App\Model\Meeting\VoteChoice::cases() as $choice}
+						<dt class="col-6 fw-normal text-body-secondary">{$choice->label()|firstUpper}</dt><dd class="col-6 mb-1 fw-semibold">{$round->count($choice)}</dd>
+					{/foreach}
+				</dl>
+				<details>
+					<summary class="text-body-secondary">Jmenovitě</summary>
+					<ul class="list-unstyled mt-2 mb-0">
+						<li n:foreach="$round->getVotes() as $vote">{$vote->getPerson()->getFullName()}: <span n:class="'text-' . $vote->getChoice()->tone() . '-emphasis'">{$vote->getChoice()->label()}</span></li>
+					</ul>
+				</details>
+			</div>
+		</div>
+
+		<div n:if="$canRevoke" class="card">
+			<div class="card-header">Revokace</div>
+			<div class="card-body">
+				<p class="small text-body-secondary">Pokud usnesení zrušilo pozdější usnesení, označte ho jako revokované.</p>
+				{control revokeForm}
+			</div>
+		</div>
+	</div>
+</div>

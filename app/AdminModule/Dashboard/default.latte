@@ -6,6 +6,9 @@
 {varType string|null $nextIn}
 {varType App\Model\Meeting\Meeting[] $upcoming}
 {varType App\Model\Meeting\Meeting[] $recent}
+{varType App\Model\Resolution\ResolutionTask[] $tasks}
+{varType int $overdueCount}
+{varType Closure $isOverdue}
 {varType bool $canCreateMeeting}
 
 <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
@@ -76,3 +79,21 @@
 		</div>
 	</div>
 {/if}
+
+<div n:if="$tasks || $overdueCount" class="card mt-4">
+	<div class="card-header d-flex align-items-center">
+		<span class="me-auto"><i class="bi bi-check2-square text-primary me-1" aria-hidden="true"></i> Úkoly z usnesení</span>
+		<span n:if="$overdueCount" class="badge bg-danger-subtle text-danger-emphasis me-2">{$overdueCount} po termínu</span>
+		<a n:href="Task:default" class="small">Všechny úkoly</a>
+	</div>
+	<ul class="list-group list-group-flush">
+		<li n:foreach="$tasks as $task" n:class="list-group-item, task-row, $isOverdue($task) ? task-overdue">
+			<div class="min-w-0">
+				<a n:href="Resolution:detail#ukoly, id: $task->getResolution()->getId()" class="fw-semibold text-reset">{$task->getDescription()}</a>
+				<div class="small text-body-secondary">{$task->getAssignee()?->getFullName() ?? 'obecní úřad'} · usnesení č. {$task->getResolution()->getNumber()}</div>
+			</div>
+			<span n:class="small, text-nowrap, $isOverdue($task) ? 'text-danger fw-semibold' : 'text-body-secondary'">{$task->getDueDate() ? ($task->getDueDate()|czDate) : 'bez termínu'}</span>
+			<span></span>
+		</li>
+	</ul>
+</div>

@@ -9,6 +9,8 @@ use App\Model\Meeting\Meeting;
 use App\Model\Meeting\VotingRound;
 use App\Model\Municipality\Municipality;
 use App\Model\People\Body;
+use App\Model\Shared\Exception\InvalidStateException;
+use App\Model\Shared\Exception\ValidationException;
 use App\Model\Shared\IntegerId;
 use App\Model\Shared\TenantOwned;
 use Doctrine\ORM\Mapping as ORM;
@@ -69,6 +71,12 @@ final class Resolution implements TenantOwned
 	private \DateTimeImmutable $adoptedAt;
 
 	/**
+	 * Poznámka ke stavu, např. „revokováno usnesením č. 12/2027“.
+	 */
+	#[ORM\Column(type: 'text', nullable: true)]
+	private ?string $statusNote = null;
+
+	/**
 	 * @internal vzniká přes ResolutionRecorder (číslo přiděluje NumberingSequenceRepository)
 	 */
 	public function __construct(VotingRound $round, string $number, int $sequence, string $scopeKey, string $text, \DateTimeImmutable $adoptedAt)
@@ -91,6 +99,32 @@ final class Resolution implements TenantOwned
 	public function changeText(string $text): void
 	{
 		$this->text = $text;
+	}
+
+	/**
+	 * Zrušení usnesení pozdějším usnesením (revokace).
+	 *
+	 * @throws InvalidStateException
+	 * @throws ValidationException
+	 */
+	public function revoke(string $note): void
+	{
+		if ($this->status !== ResolutionStatus::Adopted) {
+			throw new InvalidStateException("Usnesení je {$this->status->label()}, revokovat lze jen přijaté.");
+		}
+
+		$note = trim($note);
+		if ($note === '' || mb_strlen($note) > 500) {
+			throw new ValidationException('Uveďte, kterým usnesením bylo zrušeno (nejvýše 500 znaků).', 'note');
+		}
+
+		$this->status = ResolutionStatus::Revoked;
+		$this->statusNote = $note;
+	}
+
+	public function getStatusNote(): ?string
+	{
+		return $this->statusNote;
 	}
 
 	public function getMunicipality(): Municipality

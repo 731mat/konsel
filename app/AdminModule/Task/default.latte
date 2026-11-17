@@ -1,0 +1,56 @@
+{block title}Úkoly z usnesení{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item active" aria-current="page">Úkoly</li>
+{/block}
+
+{block content}
+{varType App\Model\Resolution\TaskFilter $filter}
+{varType App\Model\Resolution\TaskFilter[] $filters}
+{varType App\Model\Resolution\ResolutionTask[] $tasks}
+{varType int $overdueCount}
+{varType Closure $isOverdue}
+{varType bool $canEdit}
+{varType bool $hasEmail}
+
+<div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+	<h1 class="h3 mb-0 me-auto">Úkoly z usnesení</h1>
+	<span n:if="$overdueCount" class="badge bg-danger-subtle text-danger-emphasis fs-6"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {$overdueCount} po termínu</span>
+</div>
+
+<ul class="nav nav-pills mb-3">
+	<li n:foreach="$filters as $item" class="nav-item">
+		<a n:href="default, filter: $item->value" n:class="nav-link, $item === $filter ? active">{$item->label()}{if $item === App\Model\Resolution\TaskFilter::Overdue && $overdueCount} <span class="badge text-bg-danger">{$overdueCount}</span>{/if}</a>
+	</li>
+</ul>
+
+<p n:if="$filter === App\Model\Resolution\TaskFilter::Mine" class="small text-body-secondary">
+	Úkoly osob se stejným e-mailem jako váš účet{if !$hasEmail} (váš účet nemá e-mail){/if}.
+</p>
+
+<div class="card">
+	{if $tasks}
+		<ul class="list-group list-group-flush">
+			<li n:foreach="$tasks as $task" n:class="list-group-item, task-row, $isOverdue($task) ? task-overdue">
+				<div class="min-w-0">
+					<div n:class="fw-semibold, $task->getStatus() !== App\Model\Resolution\TaskStatus::Open ? 'text-decoration-line-through text-body-secondary'">{$task->getDescription()}</div>
+					<div class="small text-body-secondary">
+						{$task->getAssignee()?->getFullName() ?? 'obecní úřad'}
+						{if $task->getDueDate()} · termín <span n:class="$isOverdue($task) ? 'text-danger fw-semibold'">{$task->getDueDate()|czDate}{if $isOverdue($task)} (po termínu){/if}</span>{/if}
+						· <a n:href="Resolution:detail#ukoly, id: $task->getResolution()->getId()">usnesení č. {$task->getResolution()->getNumber()}</a>
+					</div>
+				</div>
+				<span n:class="badge, status-badge, 'bg-' . $task->getStatus()->tone() . '-subtle', 'text-' . $task->getStatus()->tone() . '-emphasis'">{$task->getStatus()->label()}</span>
+				<form n:if="$canEdit && $task->getStatus() === App\Model\Resolution\TaskStatus::Open" method="post" action="{link complete!, taskId: $task->getId()}">
+					<button type="submit" class="btn btn-sm btn-outline-success"><i class="bi bi-check2" aria-hidden="true"></i> Splněno</button>
+				</form>
+				<span n:if="!$canEdit || $task->getStatus() !== App\Model\Resolution\TaskStatus::Open"></span>
+			</li>
+		</ul>
+	{else}
+		<div class="card-body empty-state">
+			<i class="bi bi-check2-square" aria-hidden="true"></i>
+			{$filter === App\Model\Resolution\TaskFilter::Overdue ? 'Žádný úkol není po termínu.' : 'Žádné úkoly. Úkol přidáte v detailu usnesení.'}
+		</div>
+	{/if}
+</div>
