@@ -158,7 +158,10 @@ final readonly class DemoSeeder
 				$persons[6]->getId() => VoteChoice::Against,
 				$persons[4]->getId() => VoteChoice::Abstain,
 			],
-		]);
+		], discussions: [
+			4 => 'Starosta vysvětlil, že vyšší daňové příjmy pokryjí opravu chodníku v ulici Za Školou.',
+			5 => "Pan Veselý se ptal, proč obec nevybrala levnější nabídku. Starosta odpověděl, že druhá nabídka nesplnila kvalifikaci.\n\nPan Procházka upozornil na nutnost dozoru stavby; starosta přislíbil technický dozor investora.",
+		], guestCount: 6);
 
 		$shared = $this->meetings->create($council->getId(), new SaveMeeting(MeetingType::Regular, $today->modify('+3 weeks'), $officeRoom));
 		$this->meetings->assignOfficials($shared->getId(), new AssignOfficials(chairpersonId: $persons[0]->getId(), recorderId: $persons[7]->getId()));
@@ -330,9 +333,18 @@ final readonly class DemoSeeder
 	 *
 	 * @param list<int> $excused ID omluvených členů
 	 * @param array<int, array<int, VoteChoice>> $exceptions pořadí bodu → ID osoby → volba
+	 * @param array<int, string> $discussions pořadí bodu → shrnutí diskuse
 	 */
-	private function runMeeting(int $meetingId, \DateTimeImmutable $startedAt, \DateTimeImmutable $endedAt, bool $approveMinutes, array $excused = [], array $exceptions = []): void
-	{
+	private function runMeeting(
+		int $meetingId,
+		\DateTimeImmutable $startedAt,
+		\DateTimeImmutable $endedAt,
+		bool $approveMinutes,
+		array $excused = [],
+		array $exceptions = [],
+		array $discussions = [],
+		?int $guestCount = null,
+	): void {
 		$this->meetings->transition($meetingId, MeetingTransition::Share);
 		foreach ($excused as $personId) {
 			$this->proceedings->mark($meetingId, $personId, AttendanceStatus::Excused);
@@ -345,6 +357,10 @@ final readonly class DemoSeeder
 				continue;
 			}
 
+			if (isset($discussions[$item->getPosition()])) {
+				$this->proceedings->recordDiscussion($item->getId(), $discussions[$item->getPosition()]);
+			}
+
 			$round = $this->voting->open($item->getId(), VotingType::Proposal);
 			$this->voting->allFor($round->getId());
 			foreach ($exceptions[$item->getPosition()] ?? [] as $personId => $choice) {
@@ -354,6 +370,7 @@ final readonly class DemoSeeder
 			$this->voting->close($round->getId());
 		}
 
+		$this->proceedings->recordMinutesDetails($meetingId, $guestCount, null);
 		$this->meetings->transition($meetingId, MeetingTransition::Close);
 
 		$this->meetings->correctTimes($meetingId, $startedAt, $endedAt);

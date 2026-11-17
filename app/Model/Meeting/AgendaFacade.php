@@ -36,6 +36,16 @@ final readonly class AgendaFacade
 		return $this->transaction->run(fn(): AgendaItem => $this->meetings->get($meetingId)->addAgendaItem($this->content($command)));
 	}
 
+	/**
+	 * Bod doplněný do programu během zasedání.
+	 *
+	 * @param ?int $position pozice nového bodu; null = na konec
+	 */
+	public function addItemDuringMeeting(int $meetingId, SaveAgendaItem $command, ?int $position = null): AgendaItem
+	{
+		return $this->transaction->run(fn(): AgendaItem => $this->meetings->get($meetingId)->addAgendaItemDuringMeeting($this->content($command), $position));
+	}
+
 	public function updateItem(int $itemId, SaveAgendaItem $command): void
 	{
 		$this->transaction->run(function () use ($itemId, $command): void {

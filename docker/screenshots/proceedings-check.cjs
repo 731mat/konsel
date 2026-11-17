@@ -51,6 +51,18 @@ const check = (condition, message) => {
 	const summary = (await page.locator(`#${itemId} .voting-round`).last().innerText()).replace(/\s+/g, ' ');
 	check(summary.includes('přijato') && summary.includes('7 pro'), `výsledek: ${summary.slice(0, 120)}`);
 	check(await page.evaluate(() => window.konselMarker === undefined), 'zahájení znovu načetlo stránku, hlasování už běží přes AJAX');
+
+	// --- Diskuse: uloží se při opuštění pole, i když hned kliknu na hlasování jiného bodu ---
+	const discussion = page.locator(`#${itemId} textarea[name=discussion]`);
+	await discussion.fill('Pan Novotný navrhl ověřovatele, bez dalších připomínek.');
+	const next = page.locator('.proceedings-item', { has: page.locator('button:has-text("Hlasovat o návrhu usnesení")') }).first();
+	const nextId = await next.getAttribute('id');
+	await next.locator('button:has-text("Hlasovat o návrhu usnesení")').click();
+	await page.waitForSelector(`#${nextId} .voting-round-open`);
+	await page.waitForFunction((id) => document.querySelector(`#${id} [data-autosave-status]`)?.textContent.startsWith('Uloženo'), itemId);
+	check(await discussion.inputValue() === 'Pan Novotný navrhl ověřovatele, bez dalších připomínek.', 'rozepsaná diskuse zůstala po překreslení hlasování');
+	await page.reload();
+	check(await page.locator(`#${itemId} textarea[name=discussion]`).inputValue() === 'Pan Novotný navrhl ověřovatele, bez dalších připomínek.', 'diskuse je uložená i po načtení stránky');
 	await page.screenshot({ path: '/out/proceedings-after.png', fullPage: true });
 	await browser.close();
 	console.log('Průběh funguje.');

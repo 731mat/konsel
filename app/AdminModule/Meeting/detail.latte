@@ -81,6 +81,7 @@
 							<span class="agenda-number">{$item->getPosition()}.</span>
 							<div class="me-auto min-w-0">
 								<a n:href="Agenda:detail, id: $item->getId()" class="fw-semibold">{$item->getTitle()}</a>
+								<span n:if="$item->isAddedDuringMeeting()" class="badge bg-info-subtle text-info-emphasis ms-1">doplněno na zasedání</span>
 								<div class="small text-body-secondary d-flex flex-wrap gap-3 mt-1">
 									<span n:if="$item->getRapporteur()"><i class="bi bi-person" aria-hidden="true"></i> {$item->getRapporteur()->getFullName()}</span>
 									<span n:if="$item->getProposedResolution()"><i class="bi bi-journal-check" aria-hidden="true"></i> návrh usnesení</span>

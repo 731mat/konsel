@@ -200,3 +200,54 @@ document.addEventListener('click', (event) => {
 	window.bootstrap.Modal.getInstance(item.closest('.modal'))?.hide();
 	resolution.focus();
 });
+
+// Průběžné ukládání textu: <form data-autosave> s textarea – uloží se při opuštění pole (i bez kliknutí na Uložit).
+// Požadavek nesmí zrušit souběžné AJAXové kliknutí (hlasování), proto unique: false a bez překreslení snippetů.
+function autosave(form) {
+	const status = form.querySelector('[data-autosave-status]');
+	const textarea = form.querySelector('textarea');
+	if (textarea.dataset.saved === textarea.value) {
+		return;
+	}
+	const value = textarea.value;
+	status.textContent = 'Ukládám…';
+	naja.makeRequest('POST', form.action, new FormData(form), { unique: false, history: false })
+		.then((payload) => {
+			if (payload?.error) {
+				status.textContent = payload.error;
+				status.classList.add('text-danger');
+				return;
+			}
+			textarea.dataset.saved = value;
+			status.classList.remove('text-danger');
+			status.textContent = `Uloženo v ${new Date().toLocaleTimeString('cs-CZ', { hour: 'numeric', minute: '2-digit' })}`;
+		})
+		.catch(() => {
+			status.textContent = 'Nepodařilo se uložit – zkuste Uložit.';
+			status.classList.add('text-danger');
+		});
+}
+
+document.addEventListener('focusin', (event) => {
+	const textarea = event.target instanceof HTMLTextAreaElement ? event.target : null;
+	if (textarea?.closest('form[data-autosave]') && textarea.dataset.saved === undefined) {
+		textarea.dataset.saved = textarea.value;
+	}
+});
+
+document.addEventListener('change', (event) => {
+	const form = event.target instanceof HTMLTextAreaElement ? event.target.closest('form[data-autosave]') : null;
+	if (form) {
+		autosave(form);
+	}
+});
+
+document.addEventListener('submit', (event) => {
+	const form = event.target instanceof HTMLFormElement && event.target.matches('form[data-autosave]') ? event.target : null;
+	if (form) {
+		event.preventDefault();
+		const textarea = form.querySelector('textarea');
+		textarea.dataset.saved ??= '\u0000';
+		autosave(form);
+	}
+});

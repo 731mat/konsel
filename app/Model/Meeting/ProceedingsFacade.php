@@ -18,6 +18,7 @@ final readonly class ProceedingsFacade
 {
 	public function __construct(
 		private MeetingRepository $meetings,
+		private AgendaItemRepository $items,
 		private PersonRepository $persons,
 		private AttendanceRepository $attendances,
 		private TransactionManager $transaction,
@@ -75,6 +76,29 @@ final readonly class ProceedingsFacade
 	{
 		$this->transaction->run(function () use ($meetingId, $personId): void {
 			$this->row($this->meetings->get($meetingId), $this->persons->get($personId))->return($this->clock->now());
+		});
+	}
+
+	/**
+	 * @throws InvalidStateException
+	 * @throws ValidationException
+	 */
+	public function recordDiscussion(int $itemId, ?string $discussion): void
+	{
+		$this->transaction->run(function () use ($itemId, $discussion): void {
+			$item = $this->items->get($itemId);
+			$item->getMeeting()->recordDiscussion($item, $discussion);
+		});
+	}
+
+	/**
+	 * @throws InvalidStateException
+	 * @throws ValidationException
+	 */
+	public function recordMinutesDetails(int $meetingId, ?int $guestCount, ?string $note): void
+	{
+		$this->transaction->run(function () use ($meetingId, $guestCount, $note): void {
+			$this->meetings->get($meetingId)->recordMinutesDetails($guestCount, $note);
 		});
 	}
 

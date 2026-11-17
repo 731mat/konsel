@@ -20,6 +20,8 @@
 {varType App\Model\Meeting\VoteChoice[] $voteChoices}
 {varType App\Model\Meeting\VotingType[] $otherVotingTypes}
 {varType App\Model\People\Person[] $candidates}
+{varType bool $canRecordProceedings}
+{varType bool $canAssignOfficials}
 
 <div class="proceedings-header d-flex flex-wrap align-items-center gap-3 mb-4">
 	<div class="me-auto">
@@ -122,7 +124,7 @@
 </div>
 {/snippet}
 
-{snippet agenda}
+{snippetArea agenda}
 <div class="d-flex align-items-center mb-3" id="program">
 	<h2 class="h5 mb-0 me-auto">Program a hlasování</h2>
 	<span n:if="!$canVote && $meeting->getStatus()->isPlanning()" class="small text-body-secondary">Hlasovat půjde po zahájení zasedání.</span>
@@ -140,14 +142,15 @@
 		<div class="card-header d-flex align-items-center gap-2">
 			<span class="agenda-number">{$item->getPosition()}.</span>
 			<span class="me-auto">{$item->getTitle()}</span>
-			<span n:if="$openRound" class="badge status-badge bg-warning-subtle text-warning-emphasis">hlasuje se</span>
-			<span n:if="$decided" class="badge status-badge bg-success-subtle text-success-emphasis">rozhodnuto</span>
+			<span n:if="$item->isAddedDuringMeeting()" class="badge bg-info-subtle text-info-emphasis">doplněno na zasedání</span>
 		</div>
 		<div class="card-body">
 			<div n:if="$item->getProposedResolution()" class="proposal-text mb-3">
 				<div class="small fw-semibold text-body-secondary mb-1">Návrh usnesení</div>
 				<div class="text-break">{$item->getProposedResolution()|nl2p}</div>
 			</div>
+
+			<div n:snippet="voting-{$item->getId()}" class="mb-3">
 
 			{foreach $itemRounds as $round}
 				{if $round->isOpen()}
@@ -191,12 +194,86 @@
 			{elseif !$itemRounds}
 				<p class="small text-body-secondary mb-0">{$item->getProposedResolution() ? 'Zatím se nehlasovalo.' : 'Bez návrhu usnesení.'}</p>
 			{/if}
+			</div>
+
+			{if $canRecordProceedings}
+				<form method="post" action="{link discussion!, itemId: $item->getId()}" class="discussion-form" data-autosave>
+					<label class="form-label small fw-semibold" for="discussion-{$item->getId()}">Diskuse do zápisu</label>
+					<textarea name="discussion" rows="3" class="form-control form-control-sm" id="discussion-{$item->getId()}" maxlength="{App\Model\Meeting\Meeting::MaxDiscussionLength}" placeholder="Kdo vystoupil a s čím, dotazy a odpovědi…">{$item->getDiscussion()}</textarea>
+					<div class="d-flex align-items-center gap-2 mt-1">
+						<span class="small text-body-secondary" data-autosave-status aria-live="polite">{if $item->getDiscussion()}Uloženo{else}Ukládá se samo při opuštění pole{/if}</span>
+						<button type="submit" class="btn btn-sm btn-outline-secondary ms-auto">Uložit</button>
+					</div>
+				</form>
+			{elseif $item->getDiscussion()}
+				<div class="small fw-semibold text-body-secondary mb-1">Diskuse</div>
+				<div class="small text-break">{$item->getDiscussion()|nl2p}</div>
+			{/if}
 		</div>
 	</section>
 {else}
 	<div class="card"><div class="card-body empty-state"><i class="bi bi-list-ol" aria-hidden="true"></i>Zasedání nemá program.</div></div>
 {/foreach}
-{/snippet}
+{/snippetArea}
+
+<div n:if="$canVote" class="card mb-4">
+	<div class="card-header">
+		<button type="button" class="btn btn-link p-0 text-decoration-none fw-semibold" data-bs-toggle="collapse" data-bs-target="#doplnit-bod" aria-expanded="false">
+			<i class="bi bi-plus-circle" aria-hidden="true"></i> Doplnit bod do programu
+		</button>
+	</div>
+	<div class="collapse" id="doplnit-bod">
+		<div class="card-body">
+			<p class="small text-body-secondary">Program je po zahájení zamčený. Doplnění bodu musí zastupitelstvo schválit hlasováním – typicky při bodu Schválení programu (hlasujte o programu včetně doplněného bodu).</p>
+			{control addItemForm}
+		</div>
+	</div>
+</div>
+
+<div class="card mb-4" id="zapis">
+	<div class="card-header">Údaje do zápisu</div>
+	<div class="card-body">
+		<dl class="row small mb-3">
+			<dt class="col-sm-4 fw-normal text-body-secondary">Předsedající</dt><dd class="col-sm-8">{$meeting->getChairperson()?->getFullName() ?? '—'}</dd>
+			<dt class="col-sm-4 fw-normal text-body-secondary">Zapisovatel</dt><dd class="col-sm-8">{$meeting->getRecorder()?->getFullName() ?? '—'}</dd>
+			<dt class="col-sm-4 fw-normal text-body-secondary">Ověřovatelé zápisu</dt><dd class="col-sm-8">{implode(', ', array_map(fn($p) => $p->getFullName(), $meeting->getVerifiers())) ?: '—'}</dd>
+		</dl>
+		<a n:if="$canAssignOfficials" n:href="Meeting:officials, id: $meeting->getId()" class="btn btn-sm btn-outline-secondary mb-3"><i class="bi bi-pencil" aria-hidden="true"></i> Určit funkce</a>
+		{if $canRecordProceedings}
+			{form minutesForm}
+				<div n:foreach="$form->getOwnErrors() as $error" class="alert alert-danger py-2">{$error}</div>
+				<div class="row g-3">
+					<div class="col-sm-4">
+						{label startedAt, class: 'form-label' /}
+						{input startedAt, class: ($form['startedAt']->hasErrors() ? 'form-control is-invalid' : 'form-control')}
+						<div n:ifcontent class="invalid-feedback d-block">{inputError startedAt}</div>
+					</div>
+					<div class="col-sm-4">
+						{label endedAt, class: 'form-label' /}
+						{input endedAt, class: ($form['endedAt']->hasErrors() ? 'form-control is-invalid' : 'form-control')}
+						<div n:ifcontent class="invalid-feedback d-block">{inputError endedAt}</div>
+					</div>
+					<div class="col-sm-4">
+						{label guestCount, class: 'form-label' /}
+						{input guestCount, class: ($form['guestCount']->hasErrors() ? 'form-control is-invalid' : 'form-control')}
+						<div n:ifcontent class="invalid-feedback d-block">{inputError guestCount}</div>
+					</div>
+					<div class="col-12">
+						{label minutesNote, class: 'form-label' /}
+						{input minutesNote, class: ($form['minutesNote']->hasErrors() ? 'form-control is-invalid' : 'form-control')}
+						<div n:ifcontent class="invalid-feedback d-block">{inputError minutesNote}</div>
+					</div>
+				</div>
+				{input save, class: 'btn btn-primary mt-3'}
+			{/form}
+		{else}
+			<dl class="row small mb-0">
+				<dt class="col-sm-4 fw-normal text-body-secondary">Počet hostů</dt><dd class="col-sm-8">{$meeting->getGuestCount() ?? '—'}</dd>
+				<dt n:if="$meeting->getMinutesNote()" class="col-sm-4 fw-normal text-body-secondary">Poznámka</dt><dd n:if="$meeting->getMinutesNote()" class="col-sm-8">{$meeting->getMinutesNote()|nl2p}</dd>
+			</dl>
+		{/if}
+	</div>
+</div>
 
 {define roundTitle, App\Model\Meeting\VotingRound $round}
 	<div class="fw-semibold">

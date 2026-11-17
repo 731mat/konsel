@@ -51,6 +51,18 @@ final class AgendaItem implements TenantOwned, Timestampable
 	private ?Person $rapporteur = null;
 
 	/**
+	 * Shrnutí diskuse k bodu do zápisu (prostý text s odstavci).
+	 */
+	#[ORM\Column(type: 'text', nullable: true)]
+	private ?string $discussion = null;
+
+	/**
+	 * Bod doplněný do programu až na zasedání (o doplnění se hlasuje při schválení programu).
+	 */
+	#[ORM\Column]
+	private bool $addedDuringMeeting = false;
+
+	/**
 	 * Úkol z úkolníčku, ke kterému bod patří (stejné téma napříč zasedáními).
 	 */
 	#[ORM\ManyToOne(targetEntity: Project::class)]
@@ -77,6 +89,32 @@ final class AgendaItem implements TenantOwned, Timestampable
 		$this->description = $content->description;
 		$this->proposedResolution = $content->proposedResolution;
 		$this->rapporteur = $content->rapporteur;
+	}
+
+	/**
+	 * @internal použijte Meeting::recordDiscussion()
+	 */
+	public function changeDiscussion(?string $discussion): void
+	{
+		$this->discussion = $discussion;
+	}
+
+	/**
+	 * @internal použijte Meeting::addAgendaItemDuringMeeting()
+	 */
+	public function markAddedDuringMeeting(): void
+	{
+		$this->addedDuringMeeting = true;
+	}
+
+	public function getDiscussion(): ?string
+	{
+		return $this->discussion;
+	}
+
+	public function isAddedDuringMeeting(): bool
+	{
+		return $this->addedDuringMeeting;
 	}
 
 	/**

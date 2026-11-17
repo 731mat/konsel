@@ -37,6 +37,10 @@ final class Meeting implements TenantOwned, Timestampable
 	 */
 	public const int NoticePeriodDays = 7;
 
+	public const int MaxDiscussionLength = 20_000;
+
+	public const int MaxMinutesNoteLength = 5000;
+
 	#[ORM\ManyToOne(targetEntity: Municipality::class)]
 	#[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
 	private Municipality $municipality;
@@ -83,6 +87,18 @@ final class Meeting implements TenantOwned, Timestampable
 
 	#[ORM\Column(nullable: true)]
 	private ?\DateTimeImmutable $endedAt = null;
+
+	/**
+	 * Počet hostů (veřejnosti) do zápisu.
+	 */
+	#[ORM\Column(nullable: true)]
+	private ?int $guestCount = null;
+
+	/**
+	 * Další údaje do zápisu (např. kdo se dostavil později, technické poznámky).
+	 */
+	#[ORM\Column(type: 'text', nullable: true)]
+	private ?string $minutesNote = null;
 
 	/**
 	 * @var Collection<int, AgendaItem>
@@ -204,16 +220,85 @@ final class Meeting implements TenantOwned, Timestampable
 	public function addAgendaItem(AgendaItemContent $content, ?int $position = null): AgendaItem
 	{
 		$this->assertProgramEditable();
-		$this->assertRapporteur($content);
 
-		$items = $this->getAgendaItems();
-		$position = $position === null ? count($items) + 1 : max(1, min($position, count($items) + 1));
-		$item = new AgendaItem($this, $position, $content);
-		array_splice($items, $position - 1, 0, [$item]);
-		$this->agendaItems->add($item);
-		$this->renumberAgenda($items);
+		return $this->insertAgendaItem($content, $position);
+	}
+
+	/**
+	 * Doplnění bodu na zasedání (zastupitelstvo o něm hlasovalo při schválení programu).
+	 *
+	 * @param ?int $position pozice nového bodu; null = na konec
+	 * @throws InvalidStateException zasedání neprobíhá
+	 * @throws ValidationException
+	 */
+	public function addAgendaItemDuringMeeting(AgendaItemContent $content, ?int $position = null): AgendaItem
+	{
+		if ($this->status !== MeetingStatus::InProgress) {
+			throw new InvalidStateException('Bod lze doplnit do programu jen během zasedání.');
+		}
+
+		$item = $this->insertAgendaItem($content, $position);
+		$item->markAddedDuringMeeting();
 
 		return $item;
+	}
+
+	/**
+	 * Průběh lze zapisovat během zasedání a opravovat po jeho ukončení až do ověření zápisu.
+	 */
+	public function canRecordProceedings(): bool
+	{
+		return $this->status === MeetingStatus::InProgress || $this->status === MeetingStatus::Closed;
+	}
+
+	/**
+	 * Shrnutí diskuse k bodu do zápisu.
+	 *
+	 * @throws InvalidStateException
+	 * @throws ValidationException
+	 */
+	public function recordDiscussion(AgendaItem $item, ?string $discussion): void
+	{
+		$this->assertProceedingsRecordable();
+		$this->assertOwnsItem($item);
+		$discussion = self::normalizeText($discussion);
+		if ($discussion !== null && mb_strlen($discussion) > self::MaxDiscussionLength) {
+			throw new ValidationException('Diskuse může mít nejvýše ' . self::MaxDiscussionLength . ' znaků.', 'discussion');
+		}
+
+		$item->changeDiscussion($discussion);
+	}
+
+	/**
+	 * Údaje do zápisu: počet hostů a poznámka.
+	 *
+	 * @throws InvalidStateException
+	 * @throws ValidationException
+	 */
+	public function recordMinutesDetails(?int $guestCount, ?string $note): void
+	{
+		$this->assertProceedingsRecordable();
+		if ($guestCount !== null && ($guestCount < 0 || $guestCount > 10_000)) {
+			throw new ValidationException('Počet hostů musí být 0 až 10 000.', 'guestCount');
+		}
+
+		$note = self::normalizeText($note);
+		if ($note !== null && mb_strlen($note) > self::MaxMinutesNoteLength) {
+			throw new ValidationException('Poznámka může mít nejvýše ' . self::MaxMinutesNoteLength . ' znaků.', 'minutesNote');
+		}
+
+		$this->guestCount = $guestCount;
+		$this->minutesNote = $note;
+	}
+
+	public function getGuestCount(): ?int
+	{
+		return $this->guestCount;
+	}
+
+	public function getMinutesNote(): ?string
+	{
+		return $this->minutesNote;
 	}
 
 	/**
@@ -562,6 +647,36 @@ final class Meeting implements TenantOwned, Timestampable
 	public function getEndedAt(): ?\DateTimeImmutable
 	{
 		return $this->endedAt;
+	}
+
+	private function insertAgendaItem(AgendaItemContent $content, ?int $position): AgendaItem
+	{
+		$this->assertRapporteur($content);
+
+		$items = $this->getAgendaItems();
+		$position = $position === null ? count($items) + 1 : max(1, min($position, count($items) + 1));
+		$item = new AgendaItem($this, $position, $content);
+		array_splice($items, $position - 1, 0, [$item]);
+		$this->agendaItems->add($item);
+		$this->renumberAgenda($items);
+
+		return $item;
+	}
+
+	private function assertProceedingsRecordable(): void
+	{
+		if (!$this->canRecordProceedings()) {
+			throw new InvalidStateException($this->status === MeetingStatus::MinutesApproved
+				? 'Zápis je ověřen, průběh zasedání už nelze měnit.'
+				: 'Průběh lze zapisovat až po zahájení zasedání.');
+		}
+	}
+
+	private static function normalizeText(?string $text): ?string
+	{
+		$text = $text === null ? null : trim(str_replace(["\r\n", "\r"], "\n", $text));
+
+		return $text === '' ? null : $text;
 	}
 
 	/**

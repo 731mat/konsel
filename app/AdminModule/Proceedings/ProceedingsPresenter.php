@@ -8,8 +8,10 @@ use App\AdminModule\SecuredPresenter;
 use App\Core\Security\Allowed;
 use App\Core\Security\Privilege;
 use App\Core\Security\Resource;
+use App\Model\Meeting\AgendaFacade;
 use App\Model\Meeting\Attendance;
 use App\Model\Meeting\AttendanceStatus;
+use App\Model\Meeting\Command\SaveAgendaItem;
 use App\Model\Meeting\Meeting;
 use App\Model\Meeting\MeetingFacade;
 use App\Model\Meeting\MeetingStatus;
@@ -22,7 +24,11 @@ use App\Model\Meeting\VotingType;
 use App\Model\People\PeopleFacade;
 use App\Model\Shared\Exception\DomainException;
 use App\Model\Shared\Exception\NotFoundException;
+use App\Model\Shared\Exception\ValidationException;
+use App\UI\Form\FormErrors;
+use App\UI\Form\FormFactory;
 use Nette\Application\Attributes\Requires;
+use Nette\Application\UI\Form;
 
 /**
  * Obrazovka průběhu zasedání: docházka a usnášeníschopnost nahoře, pod ní body programu.
@@ -37,6 +43,8 @@ final class ProceedingsPresenter extends SecuredPresenter
 		private readonly ProceedingsFacade $proceedingsFacade,
 		private readonly VotingFacade $votingFacade,
 		private readonly PeopleFacade $peopleFacade,
+		private readonly AgendaFacade $agendaFacade,
+		private readonly FormFactory $formFactory,
 	) {
 		parent::__construct();
 	}
@@ -48,6 +56,14 @@ final class ProceedingsPresenter extends SecuredPresenter
 		} catch (NotFoundException $e) {
 			$this->error($e->getMessage());
 		}
+
+		$meeting = $this->meeting;
+		$this->getComponent('minutesForm')->setDefaults([
+			'startedAt' => $meeting->getStartedAt()?->format('H:i'),
+			'endedAt' => $meeting->getEndedAt()?->format('H:i'),
+			'guestCount' => $meeting->getGuestCount(),
+			'minutesNote' => $meeting->getMinutesNote(),
+		]);
 	}
 
 	public function renderDefault(): void
@@ -63,6 +79,8 @@ final class ProceedingsPresenter extends SecuredPresenter
 		$this->template->rounds = $this->votingFacade->findByMeeting($meeting->getId());
 		$this->template->voters = fn(VotingRound $round): array => $this->votingFacade->voters($round);
 		$this->template->canVote = $canEdit && $meeting->getStatus() === MeetingStatus::InProgress;
+		$this->template->canRecordProceedings = $canEdit && $meeting->canRecordProceedings();
+		$this->template->canAssignOfficials = $canEdit && $meeting->canAssignOfficials();
 		$this->template->canCorrect = $canEdit && in_array($meeting->getStatus(), [MeetingStatus::InProgress, MeetingStatus::Closed], true);
 		$this->template->voteChoices = VoteChoice::choices();
 		$this->template->otherVotingTypes = [VotingType::CounterProposal, VotingType::Amendment, VotingType::Election];
@@ -120,7 +138,7 @@ final class ProceedingsPresenter extends SecuredPresenter
 
 		$type = VotingType::tryFrom($this->postString('type') ?? '') ?? $this->error('Neznámý typ hlasování.');
 		$candidate = $this->postString('candidateId');
-		$this->runVotingChange(fn() => $this->votingFacade->open(
+		$this->runVotingChange($itemId, fn() => $this->votingFacade->open(
 			$itemId,
 			$type,
 			$this->postString('proposalText'),
@@ -134,7 +152,7 @@ final class ProceedingsPresenter extends SecuredPresenter
 	{
 		$round = $this->ownedRound($roundId);
 		$choice = VoteChoice::tryFrom($this->postString('choice') ?? '') ?? $this->error('Neznámá volba.');
-		$this->runVotingChange(fn() => $this->votingFacade->cast($round->getId(), $personId, $choice));
+		$this->runVotingChange($round->getAgendaItem()->getId(), fn() => $this->votingFacade->cast($round->getId(), $personId, $choice));
 	}
 
 	#[Allowed(Resource::Meeting, Privilege::Edit)]
@@ -142,7 +160,7 @@ final class ProceedingsPresenter extends SecuredPresenter
 	public function handleAllFor(int $roundId): void
 	{
 		$round = $this->ownedRound($roundId);
-		$this->runVotingChange(fn() => $this->votingFacade->allFor($round->getId()));
+		$this->runVotingChange($round->getAgendaItem()->getId(), fn() => $this->votingFacade->allFor($round->getId()));
 	}
 
 	#[Allowed(Resource::Meeting, Privilege::Edit)]
@@ -150,7 +168,7 @@ final class ProceedingsPresenter extends SecuredPresenter
 	public function handleCloseVoting(int $roundId): void
 	{
 		$round = $this->ownedRound($roundId);
-		$this->runVotingChange(function () use ($round): void {
+		$this->runVotingChange($round->getAgendaItem()->getId(), function () use ($round): void {
 			$result = $this->votingFacade->close($round->getId());
 			$this->flashMessage("Hlasování č. {$round->getSequence()} k bodu {$round->getAgendaItem()->getPosition()}: {$result->label($round->getType())}.", $result->tone());
 		});
@@ -161,7 +179,7 @@ final class ProceedingsPresenter extends SecuredPresenter
 	public function handleReopenVoting(int $roundId): void
 	{
 		$round = $this->ownedRound($roundId);
-		$this->runVotingChange(fn() => $this->votingFacade->reopen($round->getId()));
+		$this->runVotingChange($round->getAgendaItem()->getId(), fn() => $this->votingFacade->reopen($round->getId()));
 	}
 
 	#[Allowed(Resource::Meeting, Privilege::Edit)]
@@ -169,7 +187,34 @@ final class ProceedingsPresenter extends SecuredPresenter
 	public function handleDeleteVoting(int $roundId): void
 	{
 		$round = $this->ownedRound($roundId);
-		$this->runVotingChange(fn() => $this->votingFacade->delete($round->getId()));
+		$this->runVotingChange($round->getAgendaItem()->getId(), fn() => $this->votingFacade->delete($round->getId()));
+	}
+
+	/**
+	 * Diskuse k bodu do zápisu. Ukládá se průběžně (AJAX bez překreslení – rozepsaný text zůstane).
+	 */
+	#[Allowed(Resource::Meeting, Privilege::Edit)]
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleDiscussion(int $itemId): void
+	{
+		if ($this->requireMeeting()->findAgendaItem($itemId) === null) {
+			$this->error('Bod neexistuje.');
+		}
+
+		try {
+			$this->proceedingsFacade->recordDiscussion($itemId, $this->postString('discussion'));
+			$this->payload->saved = true;
+			$message = null;
+		} catch (DomainException $e) {
+			$this->payload->error = $message = $e->getMessage();
+		}
+
+		if ($this->isAjax()) {
+			$this->sendPayload();
+		}
+
+		$this->flashMessage($message ?? 'Diskuse byla uložena.', $message === null ? 'success' : 'danger');
+		$this->redirect('this#bod-' . $itemId);
 	}
 
 	/**
@@ -215,9 +260,11 @@ final class ProceedingsPresenter extends SecuredPresenter
 	}
 
 	/**
+	 * Překreslí jen hlasování jednoho bodu (rozepsaná diskuse u ostatních bodů zůstane).
+	 *
 	 * @param callable(): mixed $change
 	 */
-	private function runVotingChange(callable $change): void
+	private function runVotingChange(int $itemId, callable $change): void
 	{
 		try {
 			$change();
@@ -230,6 +277,7 @@ final class ProceedingsPresenter extends SecuredPresenter
 		}
 
 		$this->redrawControl('agenda');
+		$this->redrawControl("voting-{$itemId}");
 		$this->redrawControl('flashes');
 	}
 
@@ -253,6 +301,119 @@ final class ProceedingsPresenter extends SecuredPresenter
 		$value = $this->getRequest()->getPost($name);
 
 		return is_string($value) ? $value : null;
+	}
+
+	/**
+	 * Údaje do zápisu: skutečný čas zahájení a ukončení, počet hostů, poznámka.
+	 */
+	protected function createComponentMinutesForm(): Form
+	{
+		$form = $this->formFactory->create();
+		$form->addText('startedAt', 'Zahájeno')
+			->setHtmlType('time')
+			->setNullable();
+		$form->addText('endedAt', 'Ukončeno')
+			->setHtmlType('time')
+			->setNullable();
+		$form->addInteger('guestCount', 'Počet hostů')
+			->setNullable()
+			->addRule(Form::Range, 'Počet hostů musí být 0 až 10 000.', [0, 10_000]);
+		$form->addTextArea('minutesNote', 'Poznámka do zápisu', null, 3)
+			->setNullable()
+			->setMaxLength(Meeting::MaxMinutesNoteLength)
+			->setHtmlAttribute('placeholder', 'Např. kdo se dostavil později, přerušení zasedání…');
+		$form->addSubmit('save', 'Uložit údaje');
+		$form->onSuccess[] = function (Form $form): void {
+			$this->requirePermission(Resource::Meeting, Privilege::Edit);
+			$data = $form->getValues(MinutesFormData::class);
+			$meeting = $this->requireMeeting();
+			try {
+				if ($data->startedAt !== null && $meeting->getStartedAt() !== null) {
+					$day = $meeting->getStartedAt();
+					$this->meetingFacade->correctTimes(
+						$meeting->getId(),
+						self::atTime($day, $data->startedAt, 'startedAt'),
+						$data->endedAt === null ? null : self::atTime($day, $data->endedAt, 'endedAt'),
+					);
+				}
+
+				$this->proceedingsFacade->recordMinutesDetails($meeting->getId(), $data->guestCount, $data->minutesNote);
+			} catch (ValidationException $e) {
+				FormErrors::apply($form, $e);
+
+				return;
+			} catch (DomainException $e) {
+				$form->addError($e->getMessage());
+
+				return;
+			}
+
+			$this->flashMessage('Údaje do zápisu byly uloženy.', 'success');
+			$this->redirect('this#zapis');
+		};
+
+		return $form;
+	}
+
+	/**
+	 * Doplnění bodu do programu během zasedání.
+	 */
+	protected function createComponentAddItemForm(): Form
+	{
+		$meeting = $this->requireMeeting();
+		$positions = [];
+		foreach ($meeting->getAgendaItems() as $item) {
+			$positions[$item->getPosition()] = "před bod {$item->getPosition()}. {$item->getTitle()}";
+		}
+
+		$form = $this->formFactory->create();
+		$form->addText('title', 'Název bodu')
+			->setRequired('Zadejte název bodu.')
+			->setMaxLength(300);
+		$form->addTextArea('proposedResolution', 'Návrh usnesení', null, 3)
+			->setNullable()
+			->setHtmlAttribute('placeholder', "{$meeting->getBody()->getName()} schvaluje …");
+		$form->addSelect('position', 'Zařadit', $positions)
+			->setPrompt('na konec programu');
+		$form->addSubmit('add', 'Doplnit bod');
+		$form->onSuccess[] = function (Form $form): void {
+			$this->requirePermission(Resource::Agenda, Privilege::Edit);
+			$data = $form->getValues(AddItemFormData::class);
+			try {
+				$item = $this->agendaFacade->addItemDuringMeeting(
+					$this->requireMeeting()->getId(),
+					new SaveAgendaItem($data->title, proposedResolution: $data->proposedResolution),
+					$data->position,
+				);
+			} catch (ValidationException $e) {
+				FormErrors::apply($form, $e);
+
+				return;
+			} catch (DomainException $e) {
+				$form->addError($e->getMessage());
+
+				return;
+			}
+
+			$this->flashMessage("Bod „{$item->getTitle()}“ byl doplněn do programu jako {$item->getPosition()}. bod.", 'success');
+			$this->redirect('this#bod-' . $item->getId());
+		};
+
+		return $form;
+	}
+
+	/**
+	 * Čas „HH:MM“ ke dni zasedání.
+	 *
+	 * @throws ValidationException
+	 */
+	private static function atTime(\DateTimeImmutable $day, string $time, string $field): \DateTimeImmutable
+	{
+		if (preg_match('~^(\d{1,2}):(\d{2})$~', $time, $m) !== 1 || (int) $m[1] > 23 || (int) $m[2] > 59) {
+			throw new ValidationException('Zadejte čas ve tvaru HH:MM.', $field);
+		}
+
+		return $day->setTime((int) $m[1], (int) $m[2]);
 	}
 
 	private function requireMeeting(): Meeting

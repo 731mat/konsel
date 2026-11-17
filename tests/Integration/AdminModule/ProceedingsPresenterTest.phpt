@@ -146,3 +146,53 @@ test('clerk opens voting, records votes with one click and closes it with the re
 	Assert::contains('nepřijato', $closed, '2 pro z 5 členů nestačí');
 	Assert::contains('Opravit hlasování', $closed);
 });
+
+test('discussion, minutes details and an item added during the meeting are saved from the proceedings screen', function (): void {
+	$container = ContainerFactory::create();
+	TestDatabase::migrate($container);
+	$scenario = MeetingScenario::create($container);
+	$meetings = $container->getByType(MeetingFacade::class);
+	$meetings->transition($scenario->meeting->getId(), MeetingTransition::Share);
+	$meetings->transition($scenario->meeting->getId(), MeetingTransition::Start);
+	$tester = new PresenterTester($container);
+	$tester->loginAs((new Fixtures($container))->user($scenario->municipality, 'editor@obec.cz', Role::Editor));
+	$params = [
+		'id' => $scenario->meeting->getId(),
+	];
+
+	PresenterTester::assertRedirect(proceedingsSignal($tester, $params, 'discussion', [
+		'itemId' => $scenario->item->getId(),
+	], [
+		'discussion' => 'Paní Černá se ptala na výši rezervy.',
+	]));
+
+	Assert::contains('nemohlo být zahájeno v budoucnosti', PresenterTester::renderResponse($tester->submitForm('Admin:Proceedings', 'minutesForm', [
+		'startedAt' => '18:05',
+		'endedAt' => '',
+		'guestCount' => '7',
+		'minutesNote' => '',
+	], params: $params)), 'testovací hodiny ukazují 10:00');
+	PresenterTester::assertRedirect($tester->submitForm('Admin:Proceedings', 'minutesForm', [
+		'startedAt' => '09:05',
+		'endedAt' => '',
+		'guestCount' => '7',
+		'minutesNote' => 'Zasedání bylo veřejné.',
+	], params: $params));
+
+	PresenterTester::assertRedirect($tester->submitForm('Admin:Proceedings', 'addItemForm', [
+		'title' => 'Příspěvek hasičům na výstroj',
+		'proposedResolution' => 'Zastupitelstvo obce schvaluje příspěvek 20 000 Kč.',
+		'position' => '',
+	], params: $params));
+
+	$meeting = $meetings->get($scenario->meeting->getId());
+	Assert::same('Paní Černá se ptala na výši rezervy.', $meeting->getAgendaItems()[0]->getDiscussion());
+	Assert::same(7, $meeting->getGuestCount());
+	Assert::same('09:05', $meeting->getStartedAt()?->format('H:i'));
+	Assert::true($meeting->getAgendaItems()[1]->isAddedDuringMeeting());
+
+	$html = $tester->render('Admin:Proceedings', 'default', $params);
+	Assert::contains('doplněno na zasedání', $html);
+	Assert::contains('Paní Černá se ptala na výši rezervy.', $html);
+	Assert::contains('value="7"', $html);
+});
