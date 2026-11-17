@@ -64,3 +64,25 @@ test('reader cannot edit templates', function (): void {
 	$e = Assert::exception(fn() => $tester->run('Admin:Template', 'add'), BadRequestException::class);
 	Assert::same(403, $e?->getHttpCode());
 });
+
+test('program of a meeting can be saved as a template from the templates page', function (): void {
+	$container = ContainerFactory::create();
+	TestDatabase::migrate($container);
+	$scenario = MeetingScenario::create($container);
+	$tester = new PresenterTester($container);
+	$tester->loginAs((new Fixtures($container))->user($scenario->municipality));
+
+	Assert::contains('Vytvořit šablonu z programu zasedání', $tester->render('Admin:Template'));
+	Assert::notContains('Opakujete podobný program', $tester->render('Admin:Meeting', 'detail', [
+		'id' => $scenario->meeting->getId(),
+	]));
+
+	PresenterTester::assertRedirect($tester->run('Admin:Template', 'default', [
+		'do' => 'saveProgram',
+	], post: [
+		'meetingId' => (string) $scenario->meeting->getId(),
+		'name' => 'Rozpočtové zasedání',
+	]));
+	$templates = $container->getByType(TemplateFacade::class)->findMeetingTemplates($scenario->municipality->getId());
+	Assert::same(['Rozpočtové zasedání'], array_map(static fn($t) => $t->getName(), $templates));
+});

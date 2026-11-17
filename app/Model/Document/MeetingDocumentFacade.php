@@ -14,7 +14,6 @@ use App\Model\People\MemberFunction;
 use App\Model\People\Person;
 use App\Model\Resolution\ResolutionFacade;
 use App\Model\Storage\FileStorage;
-use Nette\Bridges\ApplicationLatte\LatteFactory;
 use Nette\Utils\Strings;
 use Psr\Clock\ClockInterface;
 
@@ -27,22 +26,23 @@ final readonly class MeetingDocumentFacade
 		private MeetingRepository $meetings,
 		private AttachmentRepository $attachments,
 		private FileStorage $storage,
-		private LatteFactory $latteFactory,
+		private DocumentTemplateEngine $engine,
+		private DocumentTemplateRepository $templates,
 		private PdfRenderer $pdf,
 		private ProceedingsFacade $proceedings,
 		private VotingFacade $voting,
 		private ResolutionFacade $resolutions,
 		private ClockInterface $clock,
-		private string $templateDir = __DIR__ . '/../../../resources/documents',
 	) {}
 
 	/**
 	 * @param bool $namedVotes u zápisu jmenovité výsledky hlasování
+	 * @param array<string, string> $overrides neuložené šablony pro náhled (název souboru → zdroj)
 	 */
-	public function generate(int $meetingId, MeetingDocumentType $type, bool $namedVotes = false): RenderedDocument
+	public function generate(int $meetingId, MeetingDocumentType $type, bool $namedVotes = false, array $overrides = []): RenderedDocument
 	{
 		$meeting = $this->meetings->get($meetingId);
-		$html = $this->renderHtml($meeting, $type, namedVotes: $namedVotes);
+		$html = $this->renderHtml($meeting, $type, namedVotes: $namedVotes, overrides: $overrides);
 		$title = "{$type->label()} – {$meeting->getTitle()}";
 		$fileName = sprintf(
 			'%s-%s-%s.pdf',
@@ -66,9 +66,12 @@ final readonly class MeetingDocumentFacade
 	}
 
 	/**
-	 * HTML podoba dokumentu (pro PDF, Word i testy).
+	 * HTML podoba dokumentu (pro PDF, Word i testy). Použije vlastní šablony obce (pro orgán, jinak pro celou obec),
+	 * $overrides má přednost (náhled neuložené šablony).
+	 *
+	 * @param array<string, string> $overrides název souboru šablony → zdroj
 	 */
-	public function renderHtml(Meeting $meeting, MeetingDocumentType $type, bool $withLogo = true, bool $namedVotes = false): string
+	public function renderHtml(Meeting $meeting, MeetingDocumentType $type, bool $withLogo = true, bool $namedVotes = false, array $overrides = []): string
 	{
 		$municipality = $meeting->getMunicipality();
 		$logo = $municipality->getLogo();
@@ -106,19 +109,22 @@ final readonly class MeetingDocumentFacade
 			];
 		}
 
-		return $this->latteFactory->create()->renderToString($this->templateDir . "/{$type->value}.latte", $params);
+		return $this->engine->render(DocumentTemplateType::fromMeetingDocument($type), $params, $overrides + $this->customTemplates($meeting));
 	}
 
 	/**
 	 * Výpis z jednoho usnesení (pro úřady, smluvní strany, dotace) s ověřením správnosti.
 	 */
-	public function generateResolutionExtract(int $resolutionId, bool $editable = false): RenderedDocument
+	/**
+	 * @param array<string, string> $overrides
+	 */
+	public function generateResolutionExtract(int $resolutionId, bool $editable = false, array $overrides = []): RenderedDocument
 	{
 		$resolution = $this->resolutions->get($resolutionId);
 		$meeting = $resolution->getMeeting();
 		$municipality = $meeting->getMunicipality();
 		$logo = $municipality->getLogo();
-		$html = $this->latteFactory->create()->renderToString($this->templateDir . '/resolution-extract.latte', [
+		$html = $this->engine->render(DocumentTemplateType::ResolutionExtract, [
 			'meeting' => $meeting,
 			'municipality' => $municipality,
 			'profile' => $municipality->getProfile(),
@@ -127,12 +133,31 @@ final readonly class MeetingDocumentFacade
 			'attachments' => [],
 			'generatedAt' => $this->clock->now(),
 			'resolution' => $resolution,
-		]);
+		], $overrides + $this->customTemplates($meeting));
 		$fileName = sprintf('vypis-usneseni-%s', Strings::webalize($resolution->getNumber()));
 
 		return $editable
 			? new RenderedDocument("{$fileName}.doc", $html, 'application/msword')
 			: new RenderedDocument("{$fileName}.pdf", $this->pdf->render($html, "Výpis z usnesení č. {$resolution->getNumber()}"));
+	}
+
+	/**
+	 * Vlastní šablony obce platné pro orgán zasedání: šablona orgánu má přednost před šablonou celé obce.
+	 *
+	 * @return array<string, string> název souboru → zdroj
+	 */
+	private function customTemplates(Meeting $meeting): array
+	{
+		$sources = [];
+		$templates = $this->templates->findByMunicipality($meeting->getMunicipality());
+		usort($templates, static fn(DocumentTemplate $a, DocumentTemplate $b): int => ($a->getBody() === null ? 0 : 1) <=> ($b->getBody() === null ? 0 : 1));
+		foreach ($templates as $template) {
+			if ($template->getBody() === null || $template->getBody() === $meeting->getBody()) {
+				$sources[$template->getType()->fileName()] = $template->getSource();
+			}
+		}
+
+		return $sources;
 	}
 
 	/**

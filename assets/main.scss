@@ -838,6 +838,28 @@ h1, .h1, h2, .h2, h3, .h3 {
 	}
 }
 
+// nadpis části uvnitř karty (Důvodová zpráva, Návrh usnesení)
+.section-label {
+	font-size: .75rem;
+	font-weight: 600;
+	letter-spacing: .06em;
+	text-transform: uppercase;
+	color: var(--bs-secondary-color);
+	margin-bottom: .5rem;
+}
+
+// návrh usnesení jako citace: pruh vlevo, kurzíva, bez rámečku
+.proposal-quote {
+	margin: 0;
+	padding: .15rem 0 .15rem 1rem;
+	border-left: 3px solid var(--bs-primary);
+	font-style: italic;
+
+	p:last-child {
+		margin-bottom: 0;
+	}
+}
+
 .proposal-text {
 	padding: .6rem .85rem;
 	border-left: 3px solid var(--bs-primary-border-subtle);
@@ -1232,4 +1254,14 @@ h1, .h1, h2, .h2, h3, .h3 {
 		margin-bottom: .5rem;
 		opacity: .6;
 	}
+}
+
+// --- Editor šablon dokumentů --------------------------------------------------
+.code-editor {
+	min-height: 32rem;
+	tab-size: 4;
+	white-space: pre;
+	overflow-wrap: normal;
+	overflow-x: auto;
+	line-height: 1.5;
 }

@@ -21,14 +21,17 @@
 <p class="text-body-secondary" n:if="$item->getRapporteur()"><i class="bi bi-person" aria-hidden="true"></i> Předkládá {$item->getRapporteur()->getFullName()}</p>
 
 <div class="d-flex flex-column gap-4 mt-3">
-	<div class="card" n:if="$item->getDescription()">
-		<div class="card-header">Důvodová zpráva</div>
-		<div class="card-body text-break">{$item->getDescription()|nl2p}</div>
-	</div>
-
-	<div class="card border-primary-subtle" n:if="$item->getProposedResolution()">
-		<div class="card-header bg-primary-subtle text-primary-emphasis"><i class="bi bi-journal-check" aria-hidden="true"></i> Návrh usnesení</div>
-		<div class="card-body text-break">{$item->getProposedResolution()|nl2p}</div>
+	<div class="card" n:if="$item->getDescription() || $item->getProposedResolution()">
+		<div class="card-body">
+			{if $item->getDescription()}
+				<h2 class="section-label">Důvodová zpráva</h2>
+				<div class="text-break">{$item->getDescription()|nl2p}</div>
+			{/if}
+			{if $item->getProposedResolution()}
+				<h2 n:class="section-label, $item->getDescription() ? mt-4">Návrh usnesení</h2>
+				<blockquote class="proposal-quote text-break">{$item->getProposedResolution()|nl2p}</blockquote>
+			{/if}
+		</div>
 	</div>
 
 	<div class="card" n:if="$attachments">

@@ -188,7 +188,6 @@ final class MeetingPresenter extends SecuredPresenter
 			static fn(MeetingDocumentType $type): bool => $type->isAvailableFor($meeting->getStatus()),
 		));
 		$this->template->meetingTemplates = $this->templateFacade->findMeetingTemplates($meeting->getMunicipality()->getId());
-		$this->template->canSaveTemplate = $this->isAllowed(Resource::Template, Privilege::Edit) && $meeting->getAgendaItems() !== [];
 		$this->template->canViewDocuments = $canViewDocuments = $this->isAllowed(Resource::Document);
 		$documentsTab = $this->template->tab === 'documents' && $canViewDocuments;
 		$this->template->archivedDocuments = $documentsTab ? $this->archiveFacade->findByMeeting($meeting->getId()) : [];
@@ -514,22 +513,6 @@ final class MeetingPresenter extends SecuredPresenter
 			$added = $this->templateFacade->applyToMeeting($template->getId(), $meeting->getId());
 			$this->flashMessage("Do programu bylo vloženo {$added} bodů ze šablony „{$template->getName()}“.", 'success');
 		});
-	}
-
-	#[Allowed(Resource::Template, Privilege::Edit)]
-	#[Requires(methods: 'POST', sameOrigin: true)]
-	public function handleSaveAsTemplate(): void
-	{
-		$meeting = $this->meeting ?? $this->error();
-		$name = $this->getRequest()->getPost('name');
-		try {
-			$template = $this->templateFacade->saveProgramAsTemplate($meeting->getId(), is_string($name) ? $name : '');
-			$this->flashMessage("Program byl uložen jako šablona „{$template->getName()}“.", 'success');
-		} catch (DomainException $e) {
-			$this->flashMessage($e->getMessage(), 'danger');
-		}
-
-		$this->redirect('this');
 	}
 
 	#[Allowed(Resource::Agenda, Privilege::Edit)]

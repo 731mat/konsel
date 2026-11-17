@@ -254,6 +254,17 @@ document.addEventListener('submit', (event) => {
 
 // Náhled čísla usnesení u masky orgánu: <input data-numbering-mask> + <strong data-numbering-preview>.
 // Ukázka = 7. usnesení, 3. zasedání, bod 4, rok 2026 (stejně jako NumberingMask::example()). Platnost hlídá server.
+// editor šablon: Tab vloží tabulátor místo přechodu na další pole
+document.addEventListener('keydown', (event) => {
+	const field = event.target;
+	if (event.key !== 'Tab' || event.shiftKey || !(field instanceof HTMLTextAreaElement) || !field.classList.contains('code-editor')) {
+		return;
+	}
+
+	event.preventDefault();
+	field.setRangeText('\t', field.selectionStart, field.selectionEnd, 'end');
+});
+
 // filtr, který se odešle hned po výběru (bez inline JS kvůli budoucí CSP)
 document.addEventListener('change', (event) => {
 	const field = event.target;

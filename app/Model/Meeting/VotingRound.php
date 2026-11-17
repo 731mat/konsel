@@ -287,6 +287,14 @@ final class VotingRound implements TenantOwned
 		return array_values($this->votes->toArray());
 	}
 
+	/**
+	 * @return list<Vote> hlasy s danou volbou (pro jmenovité hlasování)
+	 */
+	public function votesWith(VoteChoice $choice): array
+	{
+		return array_values(array_filter($this->getVotes(), static fn(Vote $vote): bool => $vote->getChoice() === $choice));
+	}
+
 	public function getMunicipality(): Municipality
 	{
 		return $this->municipality;

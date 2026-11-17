@@ -7,7 +7,11 @@ namespace App\Core\Latte;
 use App\Core\Security\Privilege;
 use App\Core\Security\Resource;
 use App\Core\Tenancy\CurrentMunicipality;
+use App\Model\Meeting\AttendanceEntry;
+use App\Model\Meeting\Vote;
 use App\Model\Municipality\Module;
+use App\Model\People\Membership;
+use App\Model\People\Person;
 use App\Model\Shared\RichText\HtmlSanitizer;
 use App\Model\Shared\RichText\RichText;
 use App\Model\Shared\ValueObject\StoredFile;
@@ -21,6 +25,7 @@ use Nette\Utils\Html;
  * Filtry a funkce Latte pro celou aplikaci.
  *
  * Filtry:  |czDate  |czDateLong  |czDateTime  |czMonth  |nl2p  |richText  |fileIcon  |initials  |genitiveBody
+ *          |names (seznam jmen)  |period (tečka na konec věty)  |where: fn($x) => … (výběr z pole, jen funkce)
  * Funkce:  vite('assets/main.js'), allowed(Resource::Meeting, Privilege::Edit), brandStyle(), moduleEnabled(Module::Plans)
  */
 final class LatteExtension extends Extension
@@ -47,6 +52,9 @@ final class LatteExtension extends Extension
 			'initials' => self::initials(...),
 			'nl2p' => self::nl2p(...),
 			'richText' => $this->richText(...),
+			'names' => self::names(...),
+			'period' => self::period(...),
+			'where' => self::where(...),
 		];
 	}
 
@@ -81,6 +89,58 @@ final class LatteExtension extends Extension
 	public function moduleEnabled(Module $module): bool
 	{
 		return !$this->currentMunicipality->isSet() || $this->currentMunicipality->get()->isModuleEnabled($module);
+	}
+
+	/**
+	 * „Ing. Jan Dvořák, Marie Svobodová“ ze seznamu osob, řádků docházky, hlasů nebo členství.
+	 *
+	 * @param iterable<mixed> $items
+	 */
+	public static function names(iterable $items, string $separator = ', '): string
+	{
+		$names = [];
+		foreach ($items as $item) {
+			$person = match (true) {
+				$item instanceof Person => $item,
+				$item instanceof AttendanceEntry => $item->person,
+				$item instanceof Vote, $item instanceof Membership => $item->getPerson(),
+				default => null,
+			};
+			if ($person !== null) {
+				$names[] = $person->getFullName();
+			}
+		}
+
+		return implode($separator, $names);
+	}
+
+	/**
+	 * Tečka na konec věty – jen pokud tam už není (např. „Ph.D.“).
+	 */
+	public static function period(?string $text): string
+	{
+		$text = rtrim((string) $text);
+
+		return $text === '' || substr($text, -1) === '.' ? $text : $text . '.';
+	}
+
+	/**
+	 * Výběr prvků pole podmínkou. Přijímá jen funkci (ne název funkce) – bezpečné i v sandboxu šablon dokumentů.
+	 *
+	 * @param iterable<mixed> $items
+	 * @param \Closure(mixed): mixed $condition
+	 * @return list<mixed>
+	 */
+	public static function where(iterable $items, \Closure $condition): array
+	{
+		$selected = [];
+		foreach ($items as $item) {
+			if ($condition($item) === true) {
+				$selected[] = $item;
+			}
+		}
+
+		return $selected;
 	}
 
 	public static function czDate(?\DateTimeInterface $date): string

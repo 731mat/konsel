@@ -1,0 +1,87 @@
+{block title}{$documentType->label()} – šablona{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href="default">Nastavení</a></li>
+	<li class="breadcrumb-item"><a n:href="documents">Dokumenty</a></li>
+	<li class="breadcrumb-item active" aria-current="page">{$documentType->label()}</li>
+{/block}
+
+{block content}
+{varType App\Model\Document\DocumentTemplateType $documentType}
+{varType array<int, string> $bodies}
+{varType int|null $selectedBody}
+{varType App\Model\Document\DocumentTemplate|null $custom}
+
+<div class="d-flex flex-wrap align-items-start gap-3 mb-3">
+	<div class="me-auto">
+		<h1 class="h3 mb-1">{$documentType->label()}</h1>
+		<p class="text-body-secondary mb-0">{$documentType->description()}</p>
+	</div>
+	<form n:if="$custom" method="post" action="{link resetDocument!, type: $documentType->value, body: $selectedBody}">
+		<button type="submit" class="btn btn-outline-danger btn-sm" data-confirm="Smazat vlastní šablonu a vrátit výchozí?"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Obnovit výchozí</button>
+	</form>
+</div>
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+	<span class="small text-body-secondary">Platí pro:</span>
+	<a n:href="document, type: $documentType->value, body: null" n:class="btn, btn-sm, $selectedBody === null ? btn-primary : btn-outline-secondary">celou obec</a>
+	<a n:foreach="$bodies as $bodyId => $bodyName" n:href="document, type: $documentType->value, body: $bodyId" n:class="btn, btn-sm, $selectedBody === $bodyId ? btn-primary : btn-outline-secondary">{$bodyName}</a>
+</div>
+
+<div class="row g-4">
+	<div class="col-xl-8">
+		<div class="card">
+			<div class="card-header small d-flex align-items-center gap-2">
+				{if $custom}
+					<span class="badge bg-primary-subtle text-primary-emphasis">vlastní šablona</span>
+					<span class="text-body-secondary">upraveno {$custom->getUpdatedAt()|czDateTime}{if $custom->getUpdatedBy()} · {$custom->getUpdatedBy()->getName()}{/if}</span>
+				{else}
+					<span class="badge bg-secondary-subtle text-secondary-emphasis">výchozí šablona</span>
+					<span class="text-body-secondary">uložením vznikne vlastní šablona {$selectedBody ? 'tohoto orgánu' : 'obce'}</span>
+				{/if}
+			</div>
+			<div class="card-body">
+				{form documentTemplateForm}
+					<div n:foreach="$form->getOwnErrors() as $error" class="alert alert-danger py-2">{$error}</div>
+					<label n:name="source" class="visually-hidden">Šablona</label>
+					<textarea n:name="source" n:class="form-control, font-monospace, small, code-editor, $form['source']->hasErrors() ? is-invalid"></textarea>
+					<div n:ifcontent class="invalid-feedback d-block">{inputError source}</div>
+					<div class="d-flex flex-wrap gap-2 mt-3">
+						<button n:name="save" class="btn btn-primary"><i class="bi bi-check-lg" aria-hidden="true"></i> Uložit šablonu</button>
+						<button n:name="preview" class="btn btn-outline-secondary"><i class="bi bi-eye" aria-hidden="true"></i> Náhled PDF</button>
+					</div>
+				{/form}
+			</div>
+		</div>
+	</div>
+
+	<div class="col-xl-4">
+		<div class="card mb-4">
+			<div class="card-header fw-semibold">Dostupné údaje</div>
+			<ul class="list-group list-group-flush small">
+				<li n:foreach="$documentType->variables() as $variable => $description" class="list-group-item">
+					<code>{$variable}</code>
+					<div class="text-body-secondary">{$description}</div>
+				</li>
+			</ul>
+		</div>
+		<div class="card mb-4">
+			<div class="card-header fw-semibold">Povinné náležitosti</div>
+			<ul class="list-group list-group-flush small">
+				<li n:foreach="$documentType->requiredSnippets() as $snippet => $description" class="list-group-item">{$description}</li>
+			</ul>
+		</div>
+		<div class="card">
+			<div class="card-header fw-semibold">Jak psát šablonu</div>
+			<div class="card-body small">
+				<ul class="ps-3 mb-2">
+					<li>Výpis údaje: <code>{l}$meeting->getPlace(){r}</code></li>
+					<li>Podmínka: <code>{l}if $mayor{r}…{l}/if{r}</code>, cyklus: <code>{l}foreach $meeting->getAgendaItems() as $item{r}…{l}/foreach{r}</code></li>
+					<li>Filtry: <code>|czDate</code>, <code>|czDateLong</code>, <code>|genitiveBody</code>, <code>|breakLines</code>, <code>|names</code>, <code>|period</code>, <code>|upper</code></li>
+					<li>Společná hlavička: <code>{l}layout '@layout.latte'{r}</code> na začátku a obsah v <code>{l}block content{r}</code>.</li>
+				</ul>
+				<p class="text-body-secondary mb-0">Šablona smí údaje jen číst – PHP, soubory ani změny dat v ní nejdou. Podrobně v Nápovědě, kapitola Šablony dokumentů.</p>
+			</div>
+		</div>
+	</div>
+</div>

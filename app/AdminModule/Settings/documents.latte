@@ -1,0 +1,40 @@
+{block title}Dokumenty – nastavení obce{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href="default">Nastavení</a></li>
+	<li class="breadcrumb-item active" aria-current="page">Dokumenty</li>
+{/block}
+
+{block content}
+{varType App\Model\Document\DocumentTemplateType[] $types}
+{varType array<string, App\Model\Document\DocumentTemplate[]> $custom}
+<h1 class="h3 mb-3">Nastavení obce</h1>
+{include '@tabs.latte', current: 'documents'}
+
+<p class="text-body-secondary" style="max-width: 48rem">
+	Pozvánku, zápis, usnesení a další dokumenty si můžete upravit podle zvyklostí obce. Šablona je HTML s proměnnými Latte –
+	v editoru je předvyplněná výchozí podoba a seznam dostupných údajů. Šablona může platit pro celou obec, nebo jen pro jeden orgán
+	(např. vlastní zápis rady). Před uložením ji zkontrolujeme a vyzkoušíme na skutečném zasedání.
+</p>
+
+<div class="card">
+	<ul class="list-group list-group-flush">
+		<li n:foreach="$types as $type" class="list-group-item py-3 d-flex flex-wrap flex-md-nowrap align-items-center gap-3">
+			<i class="bi bi-{$type === App\Model\Document\DocumentTemplateType::Layout ? 'layout-text-window' : 'file-earmark-text'} fs-4 text-body-secondary d-none d-md-inline" aria-hidden="true"></i>
+			<div class="flex-grow-1 min-w-0">
+				<div class="fw-semibold">{$type->label()}</div>
+				<div class="small text-body-secondary">{$type->description()}</div>
+				<div class="d-flex flex-wrap gap-1 mt-1">
+					{foreach $custom[$type->value] ?? [] as $template}
+						<a n:href="document, type: $type->value, body: $template->getBody()?->getId()" class="badge bg-primary-subtle text-primary-emphasis text-decoration-none">
+							<i class="bi bi-pencil" aria-hidden="true"></i> vlastní{if $template->getBody()} – {$template->getBody()->getName()}{else} – celá obec{/if} · {$template->getUpdatedAt()|czDate}
+						</a>
+					{else}
+						<span class="badge bg-secondary-subtle text-secondary-emphasis">výchozí</span>
+					{/foreach}
+				</div>
+			</div>
+			<a n:href="document, type: $type->value" class="btn btn-sm btn-outline-primary text-nowrap"><i class="bi bi-code-slash" aria-hidden="true"></i> Upravit</a>
+		</li>
+	</ul>
+</div>

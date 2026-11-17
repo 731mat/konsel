@@ -8,6 +8,8 @@ use App\AdminModule\SecuredPresenter;
 use App\Core\Security\Allowed;
 use App\Core\Security\Privilege;
 use App\Core\Security\Resource;
+use App\Model\Meeting\Meeting;
+use App\Model\Meeting\MeetingFacade;
 use App\Model\Shared\Exception\DomainException;
 use App\Model\Shared\Exception\NotFoundException;
 use App\Model\Shared\Exception\ValidationException;
@@ -33,6 +35,7 @@ final class TemplatePresenter extends SecuredPresenter
 
 	public function __construct(
 		private readonly TemplateFacade $templateFacade,
+		private readonly MeetingFacade $meetingFacade,
 		private readonly FormFactory $formFactory,
 	) {
 		parent::__construct();
@@ -49,6 +52,30 @@ final class TemplatePresenter extends SecuredPresenter
 		$this->template->resolutionTemplates = $grouped;
 		$this->template->meetingTemplates = $this->templateFacade->findMeetingTemplates($municipalityId);
 		$this->template->canEdit = $this->isAllowed(Resource::Template, Privilege::Edit);
+		$this->template->sourceMeetings = array_values(array_filter(
+			array_slice($this->meetingFacade->find($municipalityId), 0, 30),
+			static fn(Meeting $meeting): bool => $meeting->getAgendaItems() !== [],
+		));
+	}
+
+	/**
+	 * Šablona programu z programu existujícího zasedání.
+	 */
+	#[Allowed(Resource::Template, Privilege::Edit)]
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleSaveProgram(): void
+	{
+		$meetingId = $this->getRequest()->getPost('meetingId');
+		$name = $this->getRequest()->getPost('name');
+		try {
+			$meeting = $this->assertOwned($this->meetingFacade->get(is_numeric($meetingId) ? (int) $meetingId : 0));
+			$template = $this->templateFacade->saveProgramAsTemplate($meeting->getId(), is_string($name) ? $name : '');
+			$this->flashMessage("Program byl uložen jako šablona „{$template->getName()}“.", 'success');
+		} catch (DomainException $e) {
+			$this->flashMessage($e->getMessage(), 'danger');
+		}
+
+		$this->redirect('this');
 	}
 
 	#[Allowed(Resource::Template, Privilege::Edit)]

@@ -18,6 +18,7 @@ services:
 	- App\Model\Attachment\AttachmentPolicy(%attachmentMaxSize%)
 	- App\Model\Shared\RichText\SymfonyHtmlSanitizer
 	- App\Model\Document\MpdfRenderer(%tempDir%/mpdf)
+	- App\Model\Document\DocumentTemplateEngine
 	- App\Console\Demo\DemoSeeder(appUrl: %appUrl%)
 	- App\Model\Mail\MailTemplates
 	- App\Model\Resolution\ResolutionRecorder

@@ -12,9 +12,12 @@ use App\Model\Ai\AiException;
 use App\Model\Ai\AiFacade;
 use App\Model\Ai\AiSettings;
 use App\Model\Ai\Command\SaveAiSettings;
+use App\Model\Document\DocumentTemplateFacade;
+use App\Model\Document\DocumentTemplateType;
 use App\Model\Municipality\BrandColors;
 use App\Model\Municipality\Command\UpdateMunicipalitySettings;
 use App\Model\Municipality\Module;
+use App\Model\People\PeopleFacade;
 use App\Model\Shared\Exception\DomainException;
 use App\Model\Shared\Exception\ValidationException;
 use App\Model\Storage\UploadedFile;
@@ -40,9 +43,15 @@ final class SettingsPresenter extends SecuredPresenter
 		['Břidlicová', '#334155', '#f59e0b'],
 	];
 
+	private ?DocumentTemplateType $documentType = null;
+
+	private ?int $documentBodyId = null;
+
 	public function __construct(
 		private readonly FormFactory $formFactory,
 		private readonly AiFacade $aiFacade,
+		private readonly DocumentTemplateFacade $documentTemplateFacade,
+		private readonly PeopleFacade $peopleFacade,
 	) {
 		parent::__construct();
 	}
@@ -125,6 +134,108 @@ final class SettingsPresenter extends SecuredPresenter
 		};
 
 		return $form;
+	}
+
+	public function renderDocuments(): void
+	{
+		$municipalityId = $this->requireMunicipality()->getId();
+		$custom = [];
+		foreach ($this->documentTemplateFacade->findCustom($municipalityId) as $template) {
+			$custom[$template->getType()->value][] = $template;
+		}
+
+		$this->template->types = DocumentTemplateType::cases();
+		$this->template->custom = $custom;
+	}
+
+	/**
+	 * Editor šablony dokumentu. body = vlastní šablona jen pro orgán (jinak pro celou obec).
+	 */
+	public function actionDocument(string $type, ?int $body = null): void
+	{
+		$municipalityId = $this->requireMunicipality()->getId();
+		$this->documentType = DocumentTemplateType::tryFrom($type) ?? $this->error('Neznámá šablona.');
+		$bodies = $this->documentBodies();
+		$this->documentBodyId = $body !== null && isset($bodies[$body]) ? $body : null;
+		$this->getComponent('documentTemplateForm')->setDefaults([
+			'source' => $this->documentTemplateFacade->getSource($municipalityId, $this->documentType, $this->documentBodyId),
+		]);
+	}
+
+	public function renderDocument(): void
+	{
+		$type = $this->documentType ?? $this->error();
+		$this->template->documentType = $type;
+		$this->template->bodies = $this->documentBodies();
+		$this->template->selectedBody = $this->documentBodyId;
+		$this->template->custom = $this->documentTemplateFacade->findCustomFor($this->requireMunicipality()->getId(), $type, $this->documentBodyId);
+	}
+
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleResetDocument(): void
+	{
+		$type = $this->documentType ?? $this->error();
+		$this->documentTemplateFacade->reset($this->requireMunicipality()->getId(), $type, $this->documentBodyId);
+		$this->flashMessage("Šablona „{$type->label()}“ je zase výchozí.", 'success');
+		$this->redirect('this');
+	}
+
+	protected function createComponentDocumentTemplateForm(): Form
+	{
+		$form = $this->formFactory->create();
+		$form->addTextArea('source', 'Šablona (HTML + Latte)')
+			->setRequired('Šablona je prázdná.')
+			->setHtmlAttribute('rows', 32)
+			->setHtmlAttribute('spellcheck', 'false')
+			->setHtmlAttribute('class', 'form-control font-monospace small code-editor');
+		$form->addSubmit('save', 'Uložit šablonu');
+		$form->addSubmit('preview', 'Náhled PDF')
+			->setValidationScope(null)
+			->setHtmlAttribute('formtarget', '_blank');
+		$form->onSuccess[] = function (Form $form): void {
+			$type = $this->documentType ?? $this->error();
+			/** @var array{source: string} $values */
+			$values = $form->getValues('array');
+			$municipalityId = $this->requireMunicipality()->getId();
+			$preview = $form['preview'];
+			assert($preview instanceof \Nette\Forms\Controls\SubmitButton);
+			try {
+				if ($preview->isSubmittedBy()) {
+					$document = $this->documentTemplateFacade->preview($municipalityId, $type, $this->documentBodyId, $values['source']);
+					$this->getHttpResponse()->setContentType($document->mimeType);
+					$this->getHttpResponse()->setHeader('Content-Disposition', 'inline; filename="nahled.pdf"');
+					$this->sendResponse(new \Nette\Application\Responses\CallbackResponse(static function () use ($document): void {
+						echo $document->content;
+					}));
+				}
+
+				$this->documentTemplateFacade->save($municipalityId, $type, $this->documentBodyId, $values['source'], $this->currentUserId());
+			} catch (ValidationException $e) {
+				FormErrors::apply($form, $e);
+
+				return;
+			}
+
+			$this->flashMessage("Šablona „{$type->label()}“ byla uložena. Nové dokumenty se už tvoří podle ní.", 'success');
+			$this->redirect('this');
+		};
+
+		return $form;
+	}
+
+	/**
+	 * @return array<int, string> orgány obce (aktuální i minulá období)
+	 */
+	private function documentBodies(): array
+	{
+		$bodies = [];
+		foreach ($this->peopleFacade->findTerms($this->requireMunicipality()->getId()) as $term) {
+			foreach ($this->peopleFacade->findBodies($term->getId()) as $body) {
+				$bodies[$body->getId()] = "{$body->getName()} ({$term->getName()})";
+			}
+		}
+
+		return $bodies;
 	}
 
 	public function actionModules(): void
