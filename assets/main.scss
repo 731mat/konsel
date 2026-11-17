@@ -902,6 +902,70 @@ h1, .h1, h2, .h2, h3, .h3 {
 	}
 }
 
+// --- Nápověda (wiki) ---------------------------------------------------------------
+.wiki-nav {
+	position: sticky;
+	top: calc(var(--konsel-navbar-height) + 1rem);
+}
+
+.wiki-content {
+	max-width: 62rem;
+
+	h2 {
+		font-size: 1.3rem;
+		margin: 2rem 0 .75rem;
+		padding-bottom: .35rem;
+		border-bottom: var(--bs-border-width) solid var(--bs-border-color);
+	}
+
+	h3 {
+		font-size: 1.1rem;
+		margin: 1.5rem 0 .5rem;
+	}
+
+	table {
+		width: 100%;
+		margin-bottom: 1rem;
+		font-size: .9rem;
+		border-collapse: collapse;
+	}
+
+	th,
+	td {
+		padding: .45rem .6rem;
+		border: var(--bs-border-width) solid var(--bs-border-color);
+		vertical-align: top;
+	}
+
+	th {
+		background: var(--bs-tertiary-bg);
+	}
+
+	pre {
+		padding: .85rem 1rem;
+		border-radius: var(--bs-border-radius);
+		background: var(--bs-tertiary-bg);
+		font-size: .82rem;
+	}
+
+	:not(pre) > code {
+		padding: .1rem .3rem;
+		border-radius: var(--bs-border-radius-sm);
+		background: var(--bs-tertiary-bg);
+		color: var(--bs-emphasis-color);
+	}
+
+	.wiki-diagram {
+		margin: 1rem 0 1.5rem;
+		padding: 1rem;
+		border: var(--bs-border-width) solid var(--bs-border-color);
+		border-radius: var(--bs-border-radius);
+		background: var(--bs-body-bg);
+		text-align: center;
+		overflow-x: auto;
+	}
+}
+
 // --- Datum zasedání (dlaždice) ------------------------------------------------------
 .date-tile {
 	display: flex;

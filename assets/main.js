@@ -365,3 +365,23 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 	}, 5000);
 });
+
+// Diagramy ve wiki (Nápověda): bloky ```mermaid z Markdownu vykreslí Mermaid – knihovna se stáhne jen tady.
+async function renderDiagrams(root) {
+	const blocks = [...root.querySelectorAll('pre > code.language-mermaid')];
+	if (blocks.length === 0) {
+		return;
+	}
+	const { default: mermaid } = await import('mermaid');
+	mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: document.documentElement.dataset.bsTheme === 'dark' ? 'dark' : 'default' });
+	const nodes = blocks.map((code) => {
+		const diagram = document.createElement('div');
+		diagram.className = 'mermaid wiki-diagram';
+		diagram.textContent = code.textContent;
+		code.parentElement.replaceWith(diagram);
+		return diagram;
+	});
+	await mermaid.run({ nodes });
+}
+
+document.addEventListener('DOMContentLoaded', () => renderDiagrams(document));

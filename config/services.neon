@@ -34,6 +34,7 @@ services:
 	aiClient: App\Model\Ai\OpenAiClient
 	mailer: App\Model\Mail\NetteMailer(from: %mailFrom%)
 	viteAssets: App\Core\Latte\ViteAssets(%rootDir%/www/assets/.vite/manifest.json)
+	- App\UI\Help\Wiki(%rootDir%/doc/wiki)
 
 
 # Automatická registrace podle konvence adresářů

@@ -6,6 +6,7 @@ Nette 3.3 + Doctrine ORM 3, SQLite (později MySQL). Produkce: konsel.matyho.cz.
 - **Plán a stav práce:** doc/todo-v2.md. Tasky se dělají po jednom. Postup je v sekci „Jak s tímhle plánem pracovat“.
 - **Architektonická rozhodnutí (ADR A1–A15) a cílová struktura:** tamtéž. Neodchyluj se od nich bez zápisu do Deníku a dotazu.
 - **Doménové požadavky:** doc/todo-v1.md.
+- **Wiki (pro vlastníka i nové vývojáře):** doc/wiki/*.md, v aplikaci menu Nápověda (`Admin:Help`, diagramy Mermaid). Nová funkce nebo změna toku aktualizuje i příslušnou kapitolu (moduly, životní cykly, plán). Kontrola diagramů: `docker/screenshots/wiki-check.cjs`.
 
 ## Příkazy
 

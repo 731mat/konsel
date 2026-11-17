@@ -1,0 +1,33 @@
+{block title}{$current->title} – nápověda{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href="default">Nápověda</a></li>
+	<li class="breadcrumb-item active" aria-current="page">{$current->title}</li>
+{/block}
+
+{block content}
+{varType App\UI\Help\WikiPage[] $pages}
+{varType App\UI\Help\WikiPage $current}
+{varType Latte\Runtime\Html $html}
+
+<div class="row g-4">
+	<nav class="col-lg-3" aria-label="Kapitoly nápovědy">
+		<div class="card wiki-nav">
+			<div class="card-header"><i class="bi bi-book" aria-hidden="true"></i> Wiki Konšela</div>
+			<div class="list-group list-group-flush">
+				<a n:foreach="$pages as $page" n:href="default, page: $page->slug" n:class="list-group-item, list-group-item-action, $page === $current ? active" aria-current={$page === $current ? 'page' : null}>{$page->title}</a>
+			</div>
+			<div class="card-footer bg-transparent small text-body-secondary">
+				Zdroj: <code>doc/wiki/</code> v projektu. Novou stránku přidáte souborem <code>11-nazev.md</code>.
+			</div>
+		</div>
+	</nav>
+	<div class="col-lg-9">
+		<article class="card">
+			<div class="card-body wiki-content">
+				<h1 class="h3 mb-3">{$current->title}</h1>
+				{$html}
+			</div>
+		</article>
+	</div>
+</div>
