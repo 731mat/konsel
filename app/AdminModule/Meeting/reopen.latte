@@ -1,0 +1,25 @@
+{block title}Znovu otevřít – {$meeting->getTitle()}{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href="default">Zasedání</a></li>
+	<li class="breadcrumb-item"><a n:href="detail, id: $meeting->getId()">{$meeting->getTitle()}</a></li>
+	<li class="breadcrumb-item active" aria-current="page">Znovu otevřít</li>
+{/block}
+
+{block content}
+{varType App\Model\Meeting\Meeting $meeting}
+{var $approved = $meeting->isArchived()}
+<h1 class="h3 mb-1">{$approved ? 'Zrušit ověření zápisu' : 'Znovu otevřít zasedání'}</h1>
+<p class="text-body-secondary mb-4">{$meeting->getTitle()} · {$meeting->getBody()->getName()} · {$meeting->getScheduledAt()|czDateTime}</p>
+<div class="card" style="max-width: 44rem">
+	<div class="card-body">
+		<div class="alert alert-warning small">
+			{if $approved}
+				Zasedání se vrátí do stavu <strong>Ukončeno</strong>: půjde opravit docházku, hlasování, diskusi do zápisu a funkce. Po opravě zápis znovu ověřte – do archivu se uloží nová konečná verze. Dosavadní verze v archivu zůstanou.
+			{else}
+				Zasedání se vrátí do stavu <strong>Probíhá</strong> a čas ukončení se smaže. Použijte jen při omylem ukončeném zasedání nebo nutné opravě průběhu.
+			{/if}
+		</div>
+		{control reopenForm}
+	</div>
+</div>

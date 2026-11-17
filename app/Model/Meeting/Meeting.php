@@ -14,6 +14,7 @@ use App\Model\Shared\IntegerId;
 use App\Model\Shared\TenantOwned;
 use App\Model\Shared\Timestampable;
 use App\Model\Shared\TimestampableTrait;
+use App\Model\User\User;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -121,11 +122,23 @@ final class Meeting implements TenantOwned, Timestampable
 	])]
 	private Collection $agendaItems;
 
+	/**
+	 * Historie znovuotevření (kdo, kdy, proč) – vzniká jen přes reopen().
+	 *
+	 * @var Collection<int, MeetingReopening>
+	 */
+	#[ORM\OneToMany(targetEntity: MeetingReopening::class, mappedBy: 'meeting', cascade: ['persist'])]
+	#[ORM\OrderBy([
+		'reopenedAt' => 'ASC',
+	])]
+	private Collection $reopenings;
+
 	public function __construct(Body $body, int $number, MeetingType $type, \DateTimeImmutable $scheduledAt, string $place)
 	{
 		$this->municipality = $body->getMunicipality();
 		$this->body = $body;
 		$this->agendaItems = new ArrayCollection();
+		$this->reopenings = new ArrayCollection();
 		$this->renumber($number);
 		$this->reschedule($type, $scheduledAt, $place);
 	}
@@ -419,7 +432,7 @@ final class Meeting implements TenantOwned, Timestampable
 			MeetingTransition::Start => $this->start($clock),
 			MeetingTransition::Close => $this->close($clock),
 			MeetingTransition::ApproveMinutes => $this->approveMinutes(),
-			MeetingTransition::Reopen => $this->reopen(),
+			MeetingTransition::Reopen, MeetingTransition::ReopenMinutes => throw new InvalidStateException('Znovuotevření vyžaduje důvod.'),
 		};
 	}
 
@@ -459,12 +472,46 @@ final class Meeting implements TenantOwned, Timestampable
 	}
 
 	/**
-	 * Closed → InProgress. Smí jen správce obce (kontroluje presenter přes Privilege::Manage), audit doplní T39.
+	 * Znovuotevření s důvodem, který zůstane v historii: ukončené zasedání → probíhá (oprava průběhu),
+	 * ověřený zápis → ukončené (zrušení ověření, zápis jde opravit a znovu ověřit).
+	 * Smí jen správce obce (kontroluje presenter přes Privilege::Manage).
+	 *
+	 * @throws InvalidStateException
+	 * @throws ValidationException chybí důvod
 	 */
-	public function reopen(): void
+	public function reopen(string $reason, ?User $by, ClockInterface $clock): MeetingReopening
 	{
-		$this->move(MeetingTransition::Reopen);
-		$this->endedAt = null;
+		$transition = match ($this->status) {
+			MeetingStatus::Closed => MeetingTransition::Reopen,
+			MeetingStatus::MinutesApproved => MeetingTransition::ReopenMinutes,
+			default => throw new InvalidStateException("Znovu otevřít lze jen ukončené zasedání nebo zasedání s ověřeným zápisem (teď je ve stavu „{$this->status->label()}“)."),
+		};
+
+		$reopening = new MeetingReopening($this, $this->status, $transition->target(), $reason, $by, $clock->now());
+		$this->move($transition);
+		if ($transition === MeetingTransition::Reopen) {
+			$this->endedAt = null;
+		}
+
+		$this->reopenings->add($reopening);
+
+		return $reopening;
+	}
+
+	/**
+	 * @return list<MeetingReopening> od nejstaršího
+	 */
+	public function getReopenings(): array
+	{
+		return array_values($this->reopenings->toArray());
+	}
+
+	/**
+	 * Zápis je ověřen: zasedání je uzavřené a archivované, nic z jeho průběhu ani podkladů se nemění.
+	 */
+	public function isArchived(): bool
+	{
+		return $this->status === MeetingStatus::MinutesApproved;
 	}
 
 	/**

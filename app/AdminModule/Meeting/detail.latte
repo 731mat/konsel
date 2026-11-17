@@ -47,10 +47,8 @@
 
 		{foreach $transitions as $transition}
 			{var $confirm = $confirmations[$transition->value] ?? null}
-			{if $transition->value === 'reopen'}
-				<form method="post" action="{link reopen!}" class="d-inline">
-					<button type="submit" class="btn btn-outline-danger" data-confirm={$confirm}>{$transition->label()}</button>
-				</form>
+			{if $transition->isReopening()}
+				<a n:href="reopen, id: $meeting->getId()" class="btn btn-outline-danger">{$transition->label()}</a>
 			{else}
 				<form method="post" action="{link transition!, transition: $transition->value}" class="d-inline">
 					<button type="submit" class="btn btn-primary" data-confirm={$confirm}>{$transition->label()}</button>
@@ -288,6 +286,22 @@
 				</div>
 				<a n:href="links, id: $meeting->getId()" class="btn btn-sm btn-outline-primary">{$meeting->getStatus()->isPlanning() ? 'Rozeslat' : 'Spravovat'}</a>
 			</div>
+		</div>
+
+		<div n:if="$meeting->getReopenings()" class="card">
+			<div class="card-header fw-semibold"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Historie znovuotevření</div>
+			<ul class="list-group list-group-flush small">
+				<li n:foreach="$meeting->getReopenings() as $reopening" class="list-group-item">
+					<div class="d-flex flex-wrap gap-2 text-body-secondary">
+						<span>{$reopening->getReopenedAt()|czDateTime}</span>
+						<span>·</span>
+						<span>{$reopening->getReopenedByName()}</span>
+						<span>·</span>
+						<span>{$reopening->getFromStatus()->label()} → {$reopening->getToStatus()->label()}</span>
+					</div>
+					<div class="text-break mt-1">{$reopening->getReason()}</div>
+				</li>
+			</ul>
 		</div>
 
 		<div class="card">

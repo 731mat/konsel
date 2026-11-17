@@ -72,7 +72,7 @@ final readonly class AttachmentFacade
 	{
 		$file = $this->transaction->run(function () use ($attachmentId): StoredFile {
 			$attachment = $this->attachments->get($attachmentId);
-			$this->assertMeetingOpen($attachment);
+			$attachment->assertChangeable();
 			$this->attachments->remove($attachment);
 
 			return $attachment->getFile();
@@ -85,7 +85,6 @@ final readonly class AttachmentFacade
 	{
 		$this->transaction->run(function () use ($attachmentId, $publicForMembers): void {
 			$attachment = $this->attachments->get($attachmentId);
-			$this->assertMeetingOpen($attachment);
 			$attachment->changeVisibility($publicForMembers);
 		});
 	}
@@ -133,17 +132,10 @@ final readonly class AttachmentFacade
 		return $this->storage->getLocalPath($attachment->getFile());
 	}
 
-	private function assertMeetingOpen(Attachment $attachment): void
-	{
-		if ($attachment->getMeeting()?->canEditAttachments() === false) {
-			throw new InvalidStateException('Zasedání je uzavřené (zápis ověřen), přílohy už nelze měnit.');
-		}
-	}
-
 	private function assertEditable(AgendaItem $item): void
 	{
 		if (!$item->getMeeting()->canEditAttachments()) {
-			throw new InvalidStateException('Zasedání je uzavřené (zápis ověřen), přílohy už nelze měnit.');
+			throw new InvalidStateException('Zápis je ověřen, podklady zasedání už nelze měnit.');
 		}
 	}
 

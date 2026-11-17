@@ -86,13 +86,14 @@ final class ArchivedDocument implements TenantOwned, Timestampable
 	}
 
 	/**
-	 * Smazat lze jen verzi zasedání, které ještě není uzavřené ověřeným zápisem – archiv uzavřeného zasedání je neměnný.
+	 * Smazat lze jen pracovní verzi zasedání, které ještě není uzavřené ověřeným zápisem. Konečné verze
+	 * a vše uložené po ověření zůstávají i po případném znovuotevření (archiv je jen pro přidávání).
 	 *
 	 * @throws InvalidStateException
 	 */
 	public function assertDeletable(): void
 	{
-		if ($this->meeting->getStatus() === MeetingStatus::MinutesApproved) {
+		if ($this->meeting->isArchived() || $this->origin === ArchivedDocumentOrigin::Final || $this->meetingStatus === MeetingStatus::MinutesApproved) {
 			throw new InvalidStateException('Zápis je ověřen, archiv zasedání už nelze měnit.');
 		}
 	}

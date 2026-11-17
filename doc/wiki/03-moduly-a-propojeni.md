@@ -114,6 +114,7 @@ flowchart TB
 | Odkazy zastupitelů | `Access` | Pozvánky a odkazy | osobní odkaz do portálu (v DB jen otisk) |
 | E-maily | `Mail` | Pozvánky a odkazy | pozvánky, upozornění na podnět, záznam odeslání |
 | Dokumenty | `Document` | Dokumenty u zasedání, výpis u usnesení | PDF přes mPDF, verze pro Word |
+| Archiv | `Document` (ArchiveEntry) | menu Archiv | proběhlá zasedání podle let a orgánů, konečný zápis a usnesení |
 | Archiv dokumentů | `Document` (ArchivedDocument) | Dokumenty → Archiv dokumentů | uložené verze PDF, konečný zápis po ověření, podepsané skeny; po ověření jen přidávat |
 | AI | `Ai` | Nastavení → Umělá inteligence | napojení na OpenAI (klíč šifrovaně) |
 | Hledání | `Search` | Hledat (menu a pole v horní liště) | fulltext bez diakritiky v zasedáních, bodech, usneseních, diskusích, úkolníčku a šablonách |

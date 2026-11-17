@@ -34,6 +34,7 @@ final class AdminMenu extends Control
 			new MenuItem('Úkolníček', 'Project', 'kanban', Resource::Project),
 			new MenuItem('Usnesení', 'Resolution', 'journal-check', Resource::Resolution),
 			new MenuItem('Úkoly z usnesení', 'Task', 'check2-square', Resource::Resolution),
+			new MenuItem('Archiv', 'Archive', 'archive', Resource::Meeting),
 			new MenuItem('Hledat', 'Search', 'search', Resource::Meeting),
 			new MenuItem('Osoby a orgány', 'Member', 'people', Resource::Member, 'Správa obce'),
 			new MenuItem('Šablony', 'Template', 'files', Resource::Template, 'Správa obce'),

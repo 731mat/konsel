@@ -98,7 +98,7 @@ test('meeting goes through the whole lifecycle and records times', function (): 
 
 	$meeting->approveMinutes();
 	Assert::same(MeetingStatus::MinutesApproved, $meeting->getStatus());
-	Assert::same([], $meeting->getAvailableTransitions());
+	Assert::same([MeetingTransition::ReopenMinutes], $meeting->getAvailableTransitions());
 });
 
 test('every transition not allowed from the current status throws and keeps the status', function (): void {
@@ -109,6 +109,13 @@ test('every transition not allowed from the current status throws and keeps the 
 	foreach (MeetingStatus::cases() as $status) {
 		foreach (MeetingTransition::cases() as $transition) {
 			$meeting = $world->meetingIn($status, $clock);
+			if ($transition->isReopening()) {
+				Assert::exception(fn() => $meeting->transition($transition, $clock), InvalidStateException::class, 'Znovuotevření vyžaduje důvod.');
+				Assert::same($status, $meeting->getStatus());
+
+				continue;
+			}
+
 			if ($transition->source() === $status) {
 				$meeting->transition($transition, $clock);
 				Assert::same($transition->target(), $meeting->getStatus(), "{$status->value} --{$transition->value}-->");
@@ -126,7 +133,8 @@ test('every transition not allowed from the current status throws and keeps the 
 		}
 	}
 
-	Assert::same(count(MeetingStatus::cases()) * count(MeetingTransition::cases()) - count(MeetingTransition::cases()), $checked);
+	$regular = count(array_filter(MeetingTransition::cases(), static fn(MeetingTransition $t): bool => !$t->isReopening()));
+	Assert::same(count(MeetingStatus::cases()) * $regular - $regular, $checked);
 });
 
 test('available transitions follow the state machine', function (): void {
@@ -137,7 +145,7 @@ test('available transitions follow the state machine', function (): void {
 		'shared' => [MeetingTransition::Start],
 		'in_progress' => [MeetingTransition::Close],
 		'closed' => [MeetingTransition::ApproveMinutes, MeetingTransition::Reopen],
-		'minutes_approved' => [],
+		'minutes_approved' => [MeetingTransition::ReopenMinutes],
 	];
 
 	foreach (MeetingStatus::cases() as $status) {
@@ -151,7 +159,7 @@ test('reopening a closed meeting clears end time and allows closing again', func
 	$meeting = $world->meetingIn(MeetingStatus::Closed, $clock);
 	Assert::notNull($meeting->getEndedAt());
 
-	$meeting->reopen();
+	$meeting->reopen('Omylem ukončené – chybí hlasování o bodu Různé.', null, $clock);
 	Assert::same(MeetingStatus::InProgress, $meeting->getStatus());
 	Assert::null($meeting->getEndedAt());
 
@@ -301,4 +309,33 @@ test('title reflects body and meeting type', function (): void {
 	Assert::same('3. mimořádné zasedání', $world->meeting(type: MeetingType::Extraordinary)->getTitle());
 	Assert::same('3. mimořádná schůze', $world->meeting(body: $board, type: MeetingType::Extraordinary)->getTitle());
 	Assert::same('3. jednání', $world->meeting(body: $committee)->getTitle());
+});
+
+test('reopening needs a reason, is recorded and works only from closed or approved meetings', function (): void {
+	$world = new MeetingWorld();
+	$clock = new MockClock('2026-12-20 09:00:00', 'Europe/Prague');
+
+	$approved = $world->meetingIn(MeetingStatus::MinutesApproved, $clock);
+	Assert::true($approved->isArchived());
+	Assert::exception(fn() => $approved->reopen('chyba', null, $clock), ValidationException::class, 'Uveďte důvod znovuotevření (10 až 1000 znaků) – zůstane v historii zasedání.');
+	Assert::same(MeetingStatus::MinutesApproved, $approved->getStatus(), 'bez důvodu se stav nemění');
+
+	$reopening = $approved->reopen("  Ověřovatel upozornil na chybu\r\nv usnesení č. 5.  ", null, $clock);
+	Assert::same(MeetingStatus::Closed, $approved->getStatus(), 'zrušení ověření vrátí zasedání do stavu Ukončeno');
+	Assert::false($approved->isArchived());
+	Assert::notNull($approved->getEndedAt(), 'čas ukončení zůstává');
+	Assert::same([$reopening], $approved->getReopenings());
+	Assert::same(MeetingStatus::MinutesApproved, $reopening->getFromStatus());
+	Assert::same(MeetingStatus::Closed, $reopening->getToStatus());
+	Assert::same("Ověřovatel upozornil na chybu\nv usnesení č. 5.", $reopening->getReason());
+	Assert::same('systém', $reopening->getReopenedByName());
+	Assert::same('2026-12-20 09:00', $reopening->getReopenedAt()->format('Y-m-d H:i'));
+
+	$approved->reopen('Ještě je třeba opravit docházku.', null, $clock);
+	Assert::same(MeetingStatus::InProgress, $approved->getStatus());
+	Assert::count(2, $approved->getReopenings());
+
+	foreach ([MeetingStatus::Draft, MeetingStatus::Shared, MeetingStatus::InProgress] as $status) {
+		Assert::exception(fn() => $world->meetingIn($status, $clock)->reopen('Dostatečně dlouhý důvod.', null, $clock), InvalidStateException::class);
+	}
 });

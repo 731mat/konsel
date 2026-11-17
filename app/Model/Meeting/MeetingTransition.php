@@ -6,7 +6,8 @@ namespace App\Model\Meeting;
 
 /**
  * Povolené přechody stavového automatu zasedání:
- * Draft → Shared → InProgress → Closed → MinutesApproved, navíc Closed → InProgress (znovuotevření, jen správce).
+ * Draft → Shared → InProgress → Closed → MinutesApproved, navíc znovuotevření (jen správce, s důvodem):
+ * Closed → InProgress a MinutesApproved → Closed (zrušení ověření zápisu).
  */
 enum MeetingTransition: string
 {
@@ -15,6 +16,7 @@ enum MeetingTransition: string
 	case Close = 'close';
 	case ApproveMinutes = 'approve_minutes';
 	case Reopen = 'reopen';
+	case ReopenMinutes = 'reopen_minutes';
 
 	public function source(): MeetingStatus
 	{
@@ -24,6 +26,7 @@ enum MeetingTransition: string
 			self::Close => MeetingStatus::InProgress,
 			self::ApproveMinutes => MeetingStatus::Closed,
 			self::Reopen => MeetingStatus::Closed,
+			self::ReopenMinutes => MeetingStatus::MinutesApproved,
 		};
 	}
 
@@ -35,6 +38,7 @@ enum MeetingTransition: string
 			self::Close => MeetingStatus::Closed,
 			self::ApproveMinutes => MeetingStatus::MinutesApproved,
 			self::Reopen => MeetingStatus::InProgress,
+			self::ReopenMinutes => MeetingStatus::Closed,
 		};
 	}
 
@@ -46,6 +50,15 @@ enum MeetingTransition: string
 			self::Close => 'Ukončit zasedání',
 			self::ApproveMinutes => 'Zápis je ověřen',
 			self::Reopen => 'Znovu otevřít',
+			self::ReopenMinutes => 'Zrušit ověření zápisu',
 		};
+	}
+
+	/**
+	 * Znovuotevření: jen správce obce a vždy s důvodem (Meeting::reopen()).
+	 */
+	public function isReopening(): bool
+	{
+		return $this === self::Reopen || $this === self::ReopenMinutes;
 	}
 }

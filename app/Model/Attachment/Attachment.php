@@ -9,6 +9,7 @@ use App\Model\Meeting\AgendaItem;
 use App\Model\Meeting\Meeting;
 use App\Model\Municipality\Municipality;
 use App\Model\Project\Project;
+use App\Model\Shared\Exception\InvalidStateException;
 use App\Model\Shared\Exception\ValidationException;
 use App\Model\Shared\IntegerId;
 use App\Model\Shared\TenantOwned;
@@ -72,7 +73,7 @@ final class Attachment implements TenantOwned, Timestampable
 		$this->file = $file;
 		$this->uploadedBy = $uploadedBy;
 		$this->publicForMembers = $publicForMembers;
-		$this->rename($file->originalName);
+		$this->title = self::normalizeTitle($file->originalName);
 	}
 
 	public static function forProject(Project $project, StoredFile $file, ?User $uploadedBy): self
@@ -83,8 +84,15 @@ final class Attachment implements TenantOwned, Timestampable
 		return $attachment;
 	}
 
+	/**
+	 * @throws InvalidStateException zápis zasedání je ověřen
+	 */
 	public static function forAgendaItem(AgendaItem $item, StoredFile $file, ?User $uploadedBy, bool $publicForMembers = true): self
 	{
+		if ($item->getMeeting()->isArchived()) {
+			throw new InvalidStateException('Zápis je ověřen, podklady zasedání už nelze měnit.');
+		}
+
 		return new self($item->getMunicipality(), $item, null, $file, $uploadedBy, $publicForMembers);
 	}
 
@@ -100,17 +108,26 @@ final class Attachment implements TenantOwned, Timestampable
 
 	public function rename(string $title): void
 	{
-		$title = trim($title);
-		if ($title === '' || mb_strlen($title) > 255) {
-			throw new ValidationException('Název přílohy musí mít 1 až 255 znaků.', 'title');
-		}
-
-		$this->title = $title;
+		$this->assertChangeable();
+		$this->title = self::normalizeTitle($title);
 	}
 
 	public function changeVisibility(bool $publicForMembers): void
 	{
+		$this->assertChangeable();
 		$this->publicForMembers = $publicForMembers;
+	}
+
+	/**
+	 * Soubory zasedání s ověřeným zápisem jsou součást archivu – nejdou přejmenovat, skrýt ani smazat.
+	 *
+	 * @throws InvalidStateException
+	 */
+	public function assertChangeable(): void
+	{
+		if ($this->getMeeting()?->isArchived() === true) {
+			throw new InvalidStateException('Zápis je ověřen, podklady zasedání už nelze měnit.');
+		}
 	}
 
 	public function getMunicipality(): Municipality
@@ -173,5 +190,15 @@ final class Attachment implements TenantOwned, Timestampable
 	public function canPreview(): bool
 	{
 		return $this->file->isPdf() || $this->file->isImage();
+	}
+
+	private static function normalizeTitle(string $title): string
+	{
+		$title = trim($title);
+		if ($title === '' || mb_strlen($title) > 255) {
+			throw new ValidationException('Název přílohy musí mít 1 až 255 znaků.', 'title');
+		}
+
+		return $title;
 	}
 }

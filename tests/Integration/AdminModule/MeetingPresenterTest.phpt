@@ -186,8 +186,13 @@ test('editor cannot reopen or delete, admin can', function (): void {
 		]);
 	}
 
-	$e = Assert::exception(fn() => $scene->signal($meetingId, 'reopen'), BadRequestException::class);
+	$e = Assert::exception(fn() => $scene->tester->run('Admin:Meeting', 'reopen', [
+		'id' => $meetingId,
+	]), BadRequestException::class);
 	Assert::same(403, $e?->getHttpCode());
+	Assert::notContains('Znovu otevřít', $scene->tester->render('Admin:Meeting', 'detail', [
+		'id' => $meetingId,
+	]));
 	$e = Assert::exception(fn() => $scene->signal($meetingId, 'transition', [
 		'transition' => 'reopen',
 	]), BadRequestException::class);
@@ -196,8 +201,32 @@ test('editor cannot reopen or delete, admin can', function (): void {
 
 	$admin = $scene->fixtures->user($scene->municipality, 'spravce@neplachovice.cz', Role::Admin);
 	$scene->tester->loginAs($admin);
-	PresenterTester::assertRedirect($scene->signal($meetingId, 'reopen'));
+	Assert::contains('Znovu otevřít', $scene->tester->render('Admin:Meeting', 'detail', [
+		'id' => $meetingId,
+	]));
+	Assert::contains('Důvod znovuotevření', $scene->tester->render('Admin:Meeting', 'reopen', [
+		'id' => $meetingId,
+	]));
+	$response = $scene->tester->submitForm('Admin:Meeting', 'reopenForm', [
+		'reason' => 'krátký',
+	], 'reopen', params: [
+		'id' => $meetingId,
+	]);
+	Assert::type(Nette\Application\Responses\TextResponse::class, $response, 'krátký důvod neprojde');
+	Assert::same(MeetingStatus::Closed, $scene->meetings->get($meetingId)->getStatus());
+
+	PresenterTester::assertRedirect($scene->tester->submitForm('Admin:Meeting', 'reopenForm', [
+		'reason' => 'Omylem ukončené, chybí hlasování o bodu Různé.',
+	], 'reopen', params: [
+		'id' => $meetingId,
+	]));
 	Assert::same(MeetingStatus::InProgress, $scene->meetings->get($meetingId)->getStatus());
+	$html = $scene->tester->render('Admin:Meeting', 'detail', [
+		'id' => $meetingId,
+	]);
+	Assert::contains('Historie znovuotevření', $html);
+	Assert::contains('Omylem ukončené, chybí hlasování o bodu Různé.', $html);
+	Assert::contains('Ukončeno → Probíhá', $html);
 });
 
 test('reader sees meetings but cannot change them', function (): void {

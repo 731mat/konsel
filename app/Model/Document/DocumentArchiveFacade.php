@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Model\Document;
 
+use App\Model\Meeting\Meeting;
 use App\Model\Meeting\MeetingRepository;
 use App\Model\Meeting\MeetingStatus;
 use App\Model\Shared\Exception\InvalidStateException;
@@ -51,6 +52,23 @@ final readonly class DocumentArchiveFacade
 	public function findByMeeting(int $meetingId): array
 	{
 		return $this->documents->findByMeeting($this->meetings->get($meetingId));
+	}
+
+	/**
+	 * Archiv podle let a orgánů: proběhlá zasedání (ukončená a s ověřeným zápisem) a jejich konečné dokumenty.
+	 *
+	 * @param list<Meeting> $meetings
+	 * @return list<ArchiveEntry>
+	 */
+	public function overview(array $meetings): array
+	{
+		$finished = array_values(array_filter($meetings, static fn(Meeting $meeting): bool => in_array($meeting->getStatus(), [MeetingStatus::Closed, MeetingStatus::MinutesApproved], true)));
+		$documents = [];
+		foreach ($this->documents->findByMeetings($finished) as $document) {
+			$documents[$document->getMeeting()->getId()][] = $document;
+		}
+
+		return array_map(static fn(Meeting $meeting): ArchiveEntry => new ArchiveEntry($meeting, $documents[$meeting->getId()] ?? []), $finished);
 	}
 
 	/**

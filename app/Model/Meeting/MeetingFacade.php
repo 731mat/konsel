@@ -12,11 +12,13 @@ use App\Model\People\Body;
 use App\Model\People\BodyRepository;
 use App\Model\People\Person;
 use App\Model\People\PersonRepository;
+use App\Model\Shared\Exception\DomainException;
 use App\Model\Shared\Exception\InvalidStateException;
 use App\Model\Shared\Exception\ValidationException;
 use App\Model\Shared\TransactionManager;
 use App\Model\Shared\ValueObject\StoredFile;
 use App\Model\Storage\FileStorage;
+use App\Model\User\UserRepository;
 use Psr\Clock\ClockInterface;
 
 /**
@@ -31,6 +33,7 @@ final readonly class MeetingFacade
 		private MunicipalityRepository $municipalities,
 		private AttachmentRepository $attachments,
 		private FileStorage $storage,
+		private UserRepository $users,
 		private TransactionManager $transaction,
 		private ClockInterface $clock,
 	) {}
@@ -92,6 +95,20 @@ final readonly class MeetingFacade
 
 			return $warnings;
 		});
+	}
+
+	/**
+	 * Znovuotevření s důvodem (ukončené → probíhá, ověřený zápis → ukončené). Oprávnění hlídá presenter (správce obce).
+	 *
+	 * @throws DomainException
+	 */
+	public function reopen(int $meetingId, ?int $userId, string $reason): MeetingReopening
+	{
+		return $this->transaction->run(fn(): MeetingReopening => $this->meetings->get($meetingId)->reopen(
+			$reason,
+			$userId === null ? null : $this->users->find($userId),
+			$this->clock,
+		));
 	}
 
 	public function correctTimes(int $meetingId, \DateTimeImmutable $startedAt, ?\DateTimeImmutable $endedAt): void

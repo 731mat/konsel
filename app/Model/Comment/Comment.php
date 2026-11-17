@@ -182,8 +182,15 @@ final class Comment implements TenantOwned, Timestampable
 	/**
 	 * Smazat smí autor; správce (rozhoduje volající podle oprávnění) i cizí komentář.
 	 */
+	/**
+	 * @throws InvalidStateException diskuse u bodu zasedání s ověřeným zápisem je součást archivu
+	 */
 	public function delete(\DateTimeImmutable $at): void
 	{
+		if ($this->agendaItem?->getMeeting()->isArchived() === true) {
+			throw new InvalidStateException('Zápis je ověřen, diskusi k bodům už nelze měnit.');
+		}
+
 		$this->deletedAt ??= $at;
 	}
 

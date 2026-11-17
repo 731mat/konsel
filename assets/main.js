@@ -254,6 +254,14 @@ document.addEventListener('submit', (event) => {
 
 // Náhled čísla usnesení u masky orgánu: <input data-numbering-mask> + <strong data-numbering-preview>.
 // Ukázka = 7. usnesení, 3. zasedání, bod 4, rok 2026 (stejně jako NumberingMask::example()). Platnost hlídá server.
+// filtr, který se odešle hned po výběru (bez inline JS kvůli budoucí CSP)
+document.addEventListener('change', (event) => {
+	const field = event.target;
+	if (field instanceof HTMLSelectElement && field.matches('[data-autosubmit]') && field.form) {
+		field.form.requestSubmit();
+	}
+});
+
 function previewNumbering(input) {
 	const preview = input.closest('form')?.querySelector('[data-numbering-preview]');
 	if (!preview) {

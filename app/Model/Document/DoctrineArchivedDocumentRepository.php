@@ -35,6 +35,24 @@ final readonly class DoctrineArchivedDocumentRepository implements ArchivedDocum
 			->getResult();
 	}
 
+	public function findByMeetings(array $meetings): array
+	{
+		if ($meetings === []) {
+			return [];
+		}
+
+		/** @var list<ArchivedDocument> */
+		return $this->entityManager->createQueryBuilder()
+			->select('d')
+			->from(ArchivedDocument::class, 'd')
+			->where('d.meeting IN (:meetings)')
+			->setParameter('meetings', $meetings)
+			->orderBy('d.createdAt', 'DESC')
+			->addOrderBy('d.id', 'DESC')
+			->getQuery()
+			->getResult();
+	}
+
 	public function add(ArchivedDocument $document): void
 	{
 		$this->entityManager->persist($document);

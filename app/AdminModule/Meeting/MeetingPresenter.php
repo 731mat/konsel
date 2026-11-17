@@ -21,6 +21,7 @@ use App\Model\Meeting\Command\AssignOfficials;
 use App\Model\Meeting\Command\SaveMeeting;
 use App\Model\Meeting\Meeting;
 use App\Model\Meeting\MeetingFacade;
+use App\Model\Meeting\MeetingReopening;
 use App\Model\Meeting\MeetingStatus;
 use App\Model\Meeting\MeetingTransition;
 use App\Model\Meeting\MeetingType;
@@ -171,14 +172,13 @@ final class MeetingPresenter extends SecuredPresenter
 		$this->template->tabs = self::Tabs;
 		$this->template->transitions = array_values(array_filter(
 			$meeting->getAvailableTransitions(),
-			static fn(MeetingTransition $t): bool => $t === MeetingTransition::Reopen ? $canManage : $canEdit,
+			static fn(MeetingTransition $t): bool => $t->isReopening() ? $canManage : $canEdit,
 		));
 		$this->template->warnings = $warnings = $this->meetingFacade->getWarnings($meeting);
 		$this->template->confirmations = array_filter([
 			MeetingTransition::Share->value => $warnings === [] ? null : implode(' ', $warnings) . ' Přesto sdílet?',
 			MeetingTransition::Close->value => 'Ukončit zasedání?',
 			MeetingTransition::ApproveMinutes->value => 'Po ověření zápisu už nepůjde měnit průběh zasedání ani funkce. Pokračovat?',
-			MeetingTransition::Reopen->value => 'Znovu otevřít ukončené zasedání?',
 		]);
 		$this->template->canEdit = $canEdit;
 		$this->template->attachmentCounts = $this->attachmentFacade->countByMeeting($meeting);
@@ -454,18 +454,37 @@ final class MeetingPresenter extends SecuredPresenter
 	{
 		$meeting = $this->meeting ?? $this->error();
 		$selected = MeetingTransition::tryFrom($transition);
-		if ($selected === null || $selected === MeetingTransition::Reopen) {
+		if ($selected === null || $selected->isReopening()) {
 			$this->error('Neznámá akce.');
 		}
 
 		$this->runTransition($meeting, $selected);
 	}
 
+	/**
+	 * Znovuotevření zasedání s důvodem (jen správce obce).
+	 */
 	#[Allowed(Resource::Meeting, Privilege::Manage)]
-	#[Requires(methods: 'POST', sameOrigin: true)]
-	public function handleReopen(): void
+	public function actionReopen(int $id): void
 	{
-		$this->runTransition($this->meeting ?? $this->error(), MeetingTransition::Reopen);
+		$this->meeting = $this->loadMeeting($id);
+		if (!in_array($this->meeting->getStatus(), [MeetingStatus::Closed, MeetingStatus::MinutesApproved], true)) {
+			$this->flashMessage('Znovu otevřít lze jen ukončené zasedání nebo zasedání s ověřeným zápisem.', 'warning');
+			$this->redirect('detail', [
+				'id' => $id,
+			]);
+		}
+
+		if ($this->meeting->isArchived()) {
+			$submit = $this->getComponent('reopenForm')['reopen'];
+			assert($submit instanceof \Nette\Forms\Controls\SubmitButton);
+			$submit->setCaption(MeetingTransition::ReopenMinutes->label());
+		}
+	}
+
+	public function renderReopen(): void
+	{
+		$this->template->meeting = $this->meeting;
 	}
 
 	#[Allowed(Resource::Agenda, Privilege::Edit)]
@@ -551,6 +570,21 @@ final class MeetingPresenter extends SecuredPresenter
 
 		$this->flashMessage('Zasedání bylo smazáno.', 'success');
 		$this->redirect('default');
+	}
+
+	protected function createComponentReopenForm(): Form
+	{
+		$form = $this->formFactory->create();
+		$form->addTextArea('reason', 'Důvod znovuotevření', rows: 4)
+			->setRequired('Uveďte důvod znovuotevření.')
+			->addRule(Form::MinLength, 'Důvod musí mít alespoň %d znaků.', MeetingReopening::MinReasonLength)
+			->addRule(Form::MaxLength, 'Důvod může mít nejvýše %d znaků.', MeetingReopening::MaxReasonLength)
+			->setHtmlAttribute('placeholder', 'např. v zápisu chybí jmenovité hlasování u bodu 5, upozornil ověřovatel')
+			->setOption('description', 'Důvod se uloží do historie zasedání spolu s vaším jménem a časem.');
+		$form->addSubmit('reopen', 'Znovu otevřít');
+		$form->onSuccess[] = $this->reopenFormSucceeded(...);
+
+		return $form;
 	}
 
 	/**
@@ -675,6 +709,32 @@ final class MeetingPresenter extends SecuredPresenter
 		return $form;
 	}
 
+	private function reopenFormSucceeded(Form $form): void
+	{
+		$this->requirePermission(Resource::Meeting, Privilege::Manage);
+		$meeting = $this->meeting ?? $this->error();
+		/** @var array{reason: string} $values */
+		$values = $form->getValues('array');
+		try {
+			$reopening = $this->meetingFacade->reopen($meeting->getId(), $this->currentUserId(), $values['reason']);
+		} catch (ValidationException $e) {
+			FormErrors::apply($form, $e);
+
+			return;
+		} catch (DomainException $e) {
+			$form->addError($e->getMessage());
+
+			return;
+		}
+
+		$this->flashMessage($reopening->getToStatus() === MeetingStatus::Closed
+			? 'Ověření zápisu bylo zrušeno. Zasedání je opět ukončené – průběh a zápis lze opravit a znovu ověřit.'
+			: 'Zasedání bylo znovu otevřeno.', 'success');
+		$this->redirect('detail', [
+			'id' => $meeting->getId(),
+		]);
+	}
+
 	private function archiveUploadFormSucceeded(Form $form): void
 	{
 		$this->requirePermission(Resource::Document, Privilege::Edit);
@@ -782,7 +842,7 @@ final class MeetingPresenter extends SecuredPresenter
 				MeetingTransition::Start => 'Zasedání bylo zahájeno.',
 				MeetingTransition::Close => 'Zasedání bylo ukončeno.',
 				MeetingTransition::ApproveMinutes => 'Zápis je označen jako ověřený. Zasedání je uzavřené.',
-				MeetingTransition::Reopen => 'Zasedání bylo znovu otevřeno.',
+				MeetingTransition::Reopen, MeetingTransition::ReopenMinutes => 'Zasedání bylo znovu otevřeno.',
 			}, 'success');
 			foreach ($warnings as $warning) {
 				$this->flashMessage($warning, 'warning');

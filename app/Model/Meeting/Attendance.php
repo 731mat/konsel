@@ -183,7 +183,10 @@ final class Attendance implements TenantOwned
 		return $this->note;
 	}
 
-	private static function assertRecordable(Meeting $meeting): void
+	/**
+	 * @throws InvalidStateException
+	 */
+	public static function assertRecordable(Meeting $meeting): void
 	{
 		if (!self::canRecord($meeting)) {
 			throw new InvalidStateException($meeting->getStatus() === MeetingStatus::Draft

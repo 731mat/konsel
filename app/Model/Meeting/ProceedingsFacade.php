@@ -52,6 +52,7 @@ final readonly class ProceedingsFacade
 	{
 		$this->transaction->run(function () use ($meetingId): void {
 			$meeting = $this->meetings->get($meetingId);
+			Attendance::assertRecordable($meeting);
 			foreach ($this->overview($meeting)->entries as $entry) {
 				if ($entry->getStatus() === AttendanceStatus::Unknown) {
 					$this->row($meeting, $entry->person)->mark(AttendanceStatus::Present, $this->clock->now());

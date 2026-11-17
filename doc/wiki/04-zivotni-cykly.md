@@ -11,8 +11,8 @@ stateDiagram-v2
     Shared --> InProgress: Zahájit zasedání
     InProgress --> Closed: Ukončit zasedání
     Closed --> MinutesApproved: Zápis je ověřen
-    Closed --> InProgress: Znovu otevřít (jen správce)
-    MinutesApproved --> [*]
+    Closed --> InProgress: Znovu otevřít<br/>(správce, s důvodem)
+    MinutesApproved --> Closed: Zrušit ověření zápisu<br/>(správce, s důvodem)
 
     Draft: V přípravě
     Shared: Sdíleno
@@ -28,6 +28,8 @@ stateDiagram-v2
 | Probíhá | jen „doplnit bod“ | ano | zapisovat | **hlasovat** | zapisovat | + zápis a usnesení (koncept) |
 | Ukončeno | – | ano | opravovat | opravovat | opravovat | zápis, usnesení, výpisy; běží lhůta 10 dnů |
 | Zápis ověřen | – | – | – | – | – | vše jen ke čtení; konečný zápis a usnesení se uloží do archivu |
+
+Po ověření zápisu je zasedání **neměnné** – hlídá to přímo entita (`Meeting::isArchived()`), ne jen obrazovka: program, přílohy, diskuse u bodů, docházka, hlasování, funkce i archiv dokumentů odmítnou změnu. Ověřuje to test `ApprovedMeetingImmutabilityTest` (zkouší všechny fasády). Znovu otevřít smí jen správce obce a musí napsat **důvod** – uloží se do historie zasedání (`MeetingReopening`: kdo, kdy, z jakého stavu, proč) a je vidět v detailu zasedání. Úkoly z usnesení a propojení bodu s úkolníčkem jdou měnit i dál (nejsou součástí zápisu).
 
 Smazat jde jen zasedání v přípravě. Sdílení zasedání méně než 7 dní předem zobrazí varování (§ 93 – vyvěšení na úřední desce).
 

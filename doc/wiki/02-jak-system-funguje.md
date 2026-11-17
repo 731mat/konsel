@@ -73,9 +73,11 @@ flowchart LR
 - Dále: **usnesení ze zasedání** (s podpisy), **výpis z jednoho usnesení**.
 
 ### 7. Ověření zápisu (stav *Zápis ověřen*)
-- Po ověření zápisu už průběh ani funkce nejde měnit. Znovu otevřít smí jen správce.
+- Po ověření zápisu už nejde měnit program, podklady, diskuse, docházka, hlasování ani funkce – zasedání je v **archivu**.
+- Najde-li se chyba, správce zvolí **Zrušit ověření zápisu** a napíše důvod. Zasedání se vrátí do stavu *Ukončeno*, opraví se a zápis se ověří znovu. Důvod zůstane v historii zasedání.
 - Konečný **zápis a usnesení se samy uloží do archivu** (Dokumenty → Archiv dokumentů). Naskenovaný **podepsaný originál** nahrajete tamtéž jako PDF.
 - Archiv ověřeného zasedání je jen pro přidávání – verze nejde smazat.
+- Menu **Archiv**: zasedání podle let a orgánů s konečným (nebo podepsaným) zápisem a usnesením na jedno kliknutí; neověřená zasedání jsou označená „čeká na ověření zápisu“ i se lhůtou.
 
 ## Úkolníček a občané
 

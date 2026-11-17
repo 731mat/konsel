@@ -1,0 +1,87 @@
+{block title}Archiv{if $selectedYear} {$selectedYear}{/if}{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item active" aria-current="page">Archiv</li>
+{/block}
+
+{block content}
+{varType int[] $years}
+{varType int|null $selectedYear}
+{varType array<int, string> $bodies}
+{varType int|null $selectedBody}
+{varType array<string, App\Model\Document\ArchiveEntry[]> $grouped}
+{varType int $approvedCount}
+{varType int $entryCount}
+
+<div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+	<h1 class="h3 mb-0 me-auto">Archiv</h1>
+	<span n:if="$entryCount" class="text-body-secondary small">{$approvedCount} z {$entryCount} zasedání s ověřeným zápisem</span>
+</div>
+
+<div n:if="$years" class="d-flex flex-wrap align-items-center gap-2 mb-3">
+	<ul class="nav nav-pills me-auto" aria-label="Rok">
+		<li n:foreach="$years as $year" class="nav-item">
+			<a n:class="nav-link, py-1, $year === $selectedYear ? active" n:href="default, year: $year, body: (string) $selectedBody" aria-current={$year === $selectedYear ? 'page' : null}>{$year}</a>
+		</li>
+	</ul>
+	<form method="get" action="{link default}" class="d-flex gap-2 align-items-center mw-100">
+		<input type="hidden" name="year" value="{$selectedYear}">
+		<label for="archive-body" class="small text-body-secondary">Orgán</label>
+		<select id="archive-body" name="body" class="form-select form-select-sm w-auto min-w-0" data-autosubmit>
+			<option value="">všechny</option>
+			<option n:foreach="$bodies as $id => $name" value="{$id}" selected={$selectedBody === $id}>{$name}</option>
+		</select>
+		<noscript><button type="submit" class="btn btn-sm btn-outline-secondary">Zobrazit</button></noscript>
+	</form>
+</div>
+
+{if $grouped}
+	<div n:foreach="$grouped as $bodyName => $entries" class="card mb-4">
+		<div class="card-header fw-semibold">{$bodyName}</div>
+		<ul class="list-group list-group-flush">
+			<li n:foreach="$entries as $entry" class="list-group-item py-3">
+				{var $meeting = $entry->meeting}
+				{var $minutes = $entry->document(App\Model\Document\MeetingDocumentType::Minutes)}
+				{var $resolutions = $entry->document(App\Model\Document\MeetingDocumentType::Resolutions)}
+				<div class="d-flex flex-wrap align-items-center gap-3">
+					{include '../Meeting/@dateTile.latte', date: $meeting->getScheduledAt(), muted: !$meeting->isArchived()}
+					<div class="flex-grow-1 min-w-0">
+						<a n:href="Meeting:detail, id: $meeting->getId(), tab: documents" class="fw-semibold text-reset">{$meeting->getTitle()}</a>
+						<span class="ms-1">{include '../Meeting/@status.latte', status: $meeting->getStatus()}</span>
+						<div class="small text-body-secondary">
+							{$meeting->getScheduledAt()|czDateTime} · {$meeting->getPlace()}
+							{if !$meeting->isArchived() && $meeting->getMinutesDeadline()}
+								· <span n:class="$meeting->getMinutesDeadline() < new DateTimeImmutable() ? text-danger">zápis do {$meeting->getMinutesDeadline()|czDate}</span>
+							{/if}
+						</div>
+					</div>
+					<div class="d-flex flex-wrap gap-2">
+						{if $minutes}
+							<a n:href="Meeting:archived, id: $meeting->getId(), documentId: $minutes->getId()" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary" title="{$minutes->getOrigin()->label()}, {$minutes->getCreatedAt()|czDateTime}">
+								<i class="bi bi-{$minutes->getOrigin()->icon()}" aria-hidden="true"></i> Zápis
+							</a>
+						{/if}
+						{if $resolutions}
+							<a n:href="Meeting:archived, id: $meeting->getId(), documentId: $resolutions->getId()" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary" title="{$resolutions->getOrigin()->label()}, {$resolutions->getCreatedAt()|czDateTime}">
+								<i class="bi bi-{$resolutions->getOrigin()->icon()}" aria-hidden="true"></i> Usnesení
+							</a>
+						{/if}
+						<span n:if="$entry->isMissingFinal()" class="badge text-bg-warning align-self-center">chybí konečný zápis v archivu</span>
+						<span n:if="!$meeting->isArchived()" class="badge bg-secondary-subtle text-secondary-emphasis align-self-center">čeká na ověření zápisu</span>
+					</div>
+				</div>
+			</li>
+		</ul>
+	</div>
+	<p class="small text-body-secondary">
+		<i class="bi bi-pen" aria-hidden="true"></i> podepsaný originál · <i class="bi bi-patch-check" aria-hidden="true"></i> konečná verze uložená při ověření zápisu.
+		Všechny verze najdete v detailu zasedání na záložce Dokumenty.
+	</p>
+{else}
+	<div class="card">
+		<div class="card-body empty-state">
+			<i class="bi bi-archive" aria-hidden="true"></i>
+			{if $years}V tomto roce zatím neproběhlo žádné zasedání{if $selectedBody} tohoto orgánu{/if}.{else}Archiv je prázdný – zasedání se do něj dostanou po ukončení a ověření zápisu.{/if}
+		</div>
+	</div>
+{/if}
