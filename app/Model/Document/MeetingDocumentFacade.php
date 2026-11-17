@@ -82,6 +82,20 @@ final readonly class MeetingDocumentFacade
 			'generatedAt' => $this->clock->now(),
 		];
 
+		if ($type === MeetingDocumentType::Resolutions) {
+			$params += [
+				'resolutions' => $this->resolutions->findByMeeting($meeting->getId()),
+				'deputy' => $this->findMember($meeting, MemberFunction::DeputyMayor),
+				'draft' => $meeting->getStatus() === MeetingStatus::InProgress,
+			];
+		}
+
+		if ($type === MeetingDocumentType::AttendanceSheet) {
+			$params += [
+				'attendance' => $this->proceedings->attendance($meeting->getId()),
+			];
+		}
+
 		if ($type === MeetingDocumentType::Minutes) {
 			$params += [
 				'attendance' => $this->proceedings->attendance($meeting->getId()),
@@ -96,12 +110,43 @@ final readonly class MeetingDocumentFacade
 	}
 
 	/**
+	 * Výpis z jednoho usnesení (pro úřady, smluvní strany, dotace) s ověřením správnosti.
+	 */
+	public function generateResolutionExtract(int $resolutionId, bool $editable = false): GeneratedDocument
+	{
+		$resolution = $this->resolutions->get($resolutionId);
+		$meeting = $resolution->getMeeting();
+		$municipality = $meeting->getMunicipality();
+		$logo = $municipality->getLogo();
+		$html = $this->latteFactory->create()->renderToString($this->templateDir . '/resolution-extract.latte', [
+			'meeting' => $meeting,
+			'municipality' => $municipality,
+			'profile' => $municipality->getProfile(),
+			'logoPath' => !$editable && $logo !== null && $this->storage->exists($logo) ? $this->storage->getLocalPath($logo) : null,
+			'mayor' => $this->findMayor($meeting),
+			'attachments' => [],
+			'generatedAt' => $this->clock->now(),
+			'resolution' => $resolution,
+		]);
+		$fileName = sprintf('vypis-usneseni-%s', Strings::webalize($resolution->getNumber()));
+
+		return $editable
+			? new GeneratedDocument("{$fileName}.doc", $html, 'application/msword')
+			: new GeneratedDocument("{$fileName}.pdf", $this->pdf->render($html, "Výpis z usnesení č. {$resolution->getNumber()}"));
+	}
+
+	/**
 	 * Starosta k datu zasedání (podepisuje pozvánku).
 	 */
 	private function findMayor(Meeting $meeting): ?Person
 	{
+		return $this->findMember($meeting, MemberFunction::Mayor);
+	}
+
+	private function findMember(Meeting $meeting, MemberFunction $function): ?Person
+	{
 		foreach ($meeting->getBody()->getMembersAt($meeting->getScheduledAt()) as $membership) {
-			if ($membership->getFunction() === MemberFunction::Mayor) {
+			if ($membership->getFunction() === $function) {
 				return $membership->getPerson();
 			}
 		}

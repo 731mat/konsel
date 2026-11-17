@@ -1,0 +1,50 @@
+{layout '@layout.latte'}
+{varType App\Model\Meeting\Meeting $meeting}
+{varType App\Model\Meeting\AttendanceOverview $attendance}
+
+{block content}
+<h1>Prezenční listina</h1>
+<h2>{$meeting->getTitle()|firstUpper} {$meeting->getBody()->getName()|genitiveBody}</h2>
+<p style="text-align: center" class="muted">{$meeting->getScheduledAt()|czDateLong} v {$meeting->getScheduledAt()->format('G:i')} hodin – {$meeting->getPlace()}</p>
+
+<h3>Členové</h3>
+<table width="100%" style="border-collapse: collapse;" cellpadding="6">
+	<thead>
+		<tr style="background: #eef4f9;">
+			<th align="left" width="6%" style="border: 0.5pt solid #9ca3af;">#</th>
+			<th align="left" width="40%" style="border: 0.5pt solid #9ca3af;">Jméno</th>
+			<th align="left" width="20%" style="border: 0.5pt solid #9ca3af;">Funkce</th>
+			<th align="left" width="12%" style="border: 0.5pt solid #9ca3af;">Příchod</th>
+			<th align="left" width="22%" style="border: 0.5pt solid #9ca3af;">Podpis</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr n:foreach="$attendance->entries as $i => $entry">
+			<td style="border: 0.5pt solid #9ca3af; height: 22pt;">{$i + 1}.</td>
+			<td style="border: 0.5pt solid #9ca3af;">{$entry->person->getFullName()}</td>
+			<td style="border: 0.5pt solid #9ca3af;">{$entry->function?->label()}</td>
+			<td style="border: 0.5pt solid #9ca3af;"></td>
+			<td style="border: 0.5pt solid #9ca3af;"></td>
+		</tr>
+	</tbody>
+</table>
+
+<h3>Hosté</h3>
+<table width="100%" style="border-collapse: collapse;" cellpadding="6">
+	<thead>
+		<tr style="background: #eef4f9;">
+			<th align="left" width="6%" style="border: 0.5pt solid #9ca3af;">#</th>
+			<th align="left" width="52%" style="border: 0.5pt solid #9ca3af;">Jméno</th>
+			<th align="left" width="42%" style="border: 0.5pt solid #9ca3af;">Podpis</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr n:for="$i = 1; $i <= 12; $i++">
+			<td style="border: 0.5pt solid #9ca3af; height: 22pt;">{$i}.</td>
+			<td style="border: 0.5pt solid #9ca3af;"></td>
+			<td style="border: 0.5pt solid #9ca3af;"></td>
+		</tr>
+	</tbody>
+</table>
+<p class="small muted">Prezenční listina je přílohou zápisu ze zasedání.</p>
+{/block}

@@ -8,6 +8,7 @@ use App\AdminModule\SecuredPresenter;
 use App\Core\Security\Allowed;
 use App\Core\Security\Privilege;
 use App\Core\Security\Resource;
+use App\Model\Document\MeetingDocumentFacade;
 use App\Model\People\PeopleFacade;
 use App\Model\Resolution\Command\SaveResolutionTask;
 use App\Model\Resolution\Resolution;
@@ -22,6 +23,7 @@ use App\Model\Shared\Exception\ValidationException;
 use App\UI\Form\FormErrors;
 use App\UI\Form\FormFactory;
 use Nette\Application\Attributes\Requires;
+use Nette\Application\Responses\CallbackResponse;
 use Nette\Application\UI\Form;
 
 /**
@@ -37,6 +39,7 @@ final class ResolutionPresenter extends SecuredPresenter
 		private readonly ResolutionTaskFacade $taskFacade,
 		private readonly PeopleFacade $peopleFacade,
 		private readonly FormFactory $formFactory,
+		private readonly MeetingDocumentFacade $documentFacade,
 	) {
 		parent::__construct();
 	}
@@ -84,7 +87,33 @@ final class ResolutionPresenter extends SecuredPresenter
 		$this->template->tasks = $this->taskFacade->findByResolution($resolution->getId());
 		$this->template->isOverdue = fn(ResolutionTask $task): bool => $this->taskFacade->isOverdue($task);
 		$this->template->canEdit = $this->isAllowed(Resource::Resolution, Privilege::Edit);
+		$this->template->canViewDocuments = $this->isAllowed(Resource::Document);
 		$this->template->canRevoke = $this->isAllowed(Resource::Resolution, Privilege::Manage) && $resolution->getStatus() === ResolutionStatus::Adopted;
+	}
+
+	/**
+	 * Výpis z usnesení v PDF (format=doc pro úpravy ve Wordu).
+	 */
+	#[Allowed(Resource::Document)]
+	public function actionExtract(int $id, string $format = 'pdf'): void
+	{
+		try {
+			$resolution = $this->assertOwned($this->resolutionFacade->get($id));
+		} catch (NotFoundException $e) {
+			$this->error($e->getMessage());
+		}
+
+		$document = $this->documentFacade->generateResolutionExtract($resolution->getId(), editable: $format === 'doc');
+		$response = $this->getHttpResponse();
+		$response->setContentType($document->mimeType);
+		$response->setHeader('Content-Disposition', sprintf(
+			'%s; filename="%s"',
+			$format === 'doc' ? 'attachment' : 'inline',
+			$document->fileName,
+		));
+		$this->sendResponse(new CallbackResponse(static function () use ($document): void {
+			echo $document->content;
+		}));
 	}
 
 	#[Allowed(Resource::Resolution, Privilege::Edit)]

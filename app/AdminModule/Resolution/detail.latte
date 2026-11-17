@@ -11,6 +11,7 @@
 {varType Closure $isOverdue}
 {varType bool $canEdit}
 {varType bool $canRevoke}
+{varType bool $canViewDocuments}
 {var $round = $resolution->getVotingRound()}
 
 <div class="d-flex flex-wrap align-items-start gap-3 mb-4">
@@ -24,6 +25,10 @@
 			<a n:href="Meeting:detail, id: $resolution->getMeeting()->getId(), tab: resolutions" class="link-secondary">{$resolution->getMeeting()->getTitle()}, {$resolution->getMeeting()->getScheduledAt()|czDate}</a>
 			· bod {$resolution->getAgendaItem()->getPosition()}. {$resolution->getAgendaItem()->getTitle()}
 		</p>
+	</div>
+	<div n:if="$canViewDocuments" class="d-flex gap-2">
+		<a n:href="extract, id: $resolution->getId()" target="_blank" rel="noopener" class="btn btn-primary"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i> Výpis z usnesení</a>
+		<a n:href="extract, id: $resolution->getId(), format: doc" class="btn btn-outline-secondary" title="Výpis pro úpravy ve Wordu"><i class="bi bi-file-earmark-word" aria-hidden="true"></i><span class="visually-hidden">Word</span></a>
 	</div>
 </div>
 

@@ -1,0 +1,42 @@
+{layout '@layout.latte'}
+{varType App\Model\Meeting\Meeting $meeting}
+{varType App\Model\People\Person|null $mayor}
+{varType App\Model\People\Person|null $deputy}
+{varType App\Model\Resolution\Resolution[] $resolutions}
+{varType DateTimeImmutable $generatedAt}
+{varType bool $draft}
+
+{block content}
+<div n:if="$draft" style="text-align: center; color: #b42318; font-weight: bold; letter-spacing: 2pt; margin-bottom: 6pt;">KONCEPT – ZASEDÁNÍ PROBÍHÁ</div>
+<h1>Usnesení</h1>
+<h2>z {$meeting->getTitle()} {$meeting->getBody()->getName()|genitiveBody}</h2>
+<p style="text-align: center" class="muted">konaného dne {$meeting->getScheduledAt()|czDateLong} – {$meeting->getPlace()}</p>
+
+{foreach $resolutions as $resolution}
+	<div class="item">
+		<h3>Usnesení č. {$resolution->getNumber()}{if $resolution->getStatus() !== App\Model\Resolution\ResolutionStatus::Adopted} <span class="muted">({$resolution->getStatus()->label()})</span>{/if}</h3>
+		<div class="muted small">k bodu {$resolution->getAgendaItem()->getPosition()}. {$resolution->getAgendaItem()->getTitle()}</div>
+		<div class="resolution">{$resolution->getText()|breakLines}</div>
+		{var $round = $resolution->getVotingRound()}
+		<div n:if="$round" class="small muted">
+			Hlasování: pro {$round->count(App\Model\Meeting\VoteChoice::For)}, proti {$round->count(App\Model\Meeting\VoteChoice::Against)}, zdržel se {$round->count(App\Model\Meeting\VoteChoice::Abstain)}
+		</div>
+	</div>
+{else}
+	<p class="muted">Na zasedání nebylo přijato žádné usnesení.</p>
+{/foreach}
+
+<table class="signature" width="100%">
+	<tr>
+		<td width="50%" align="center">
+			<br><br>…………………………………………<br>
+			{$mayor?->getFullName() ?? ''}<br><span class="muted">starosta</span>
+		</td>
+		<td width="50%" align="center">
+			<br><br>…………………………………………<br>
+			{$deputy?->getFullName() ?? ''}<br><span class="muted">místostarosta</span>
+		</td>
+	</tr>
+</table>
+<p class="small muted" style="margin-top: 18pt">Vyhotoveno {$generatedAt|czDate}.</p>
+{/block}

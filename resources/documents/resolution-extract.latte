@@ -1,0 +1,33 @@
+{layout '@layout.latte'}
+{varType App\Model\Meeting\Meeting $meeting}
+{varType App\Model\Resolution\Resolution $resolution}
+{varType App\Model\People\Person|null $mayor}
+{varType DateTimeImmutable $generatedAt}
+
+{block content}
+{var $round = $resolution->getVotingRound()}
+<h1>Výpis z usnesení</h1>
+<h2>{$meeting->getTitle()|firstUpper} {$meeting->getBody()->getName()|genitiveBody}</h2>
+<p style="text-align: center" class="muted">konaného dne {$meeting->getScheduledAt()|czDateLong} – {$meeting->getPlace()}</p>
+
+<h3>Usnesení č. {$resolution->getNumber()}</h3>
+<div class="muted small">k bodu {$resolution->getAgendaItem()->getPosition()}. {$resolution->getAgendaItem()->getTitle()}</div>
+<div class="resolution">{$resolution->getText()|breakLines}</div>
+<p n:if="$round" class="small">
+	Výsledek hlasování: pro {$round->count(App\Model\Meeting\VoteChoice::For)}, proti {$round->count(App\Model\Meeting\VoteChoice::Against)}, zdržel se {$round->count(App\Model\Meeting\VoteChoice::Abstain)}
+	(z {$round->getMembersCount()} členů) – {$round->getResult()?->label($round->getType())}.
+</p>
+<p n:if="$resolution->getStatus() !== App\Model\Resolution\ResolutionStatus::Adopted" class="small">
+	<strong>Stav: {$resolution->getStatus()->label()}</strong>{if $resolution->getStatusNote()} – {$resolution->getStatusNote()}{/if}
+</p>
+
+<table class="signature" width="100%">
+	<tr>
+		<td width="50%" class="muted">Dne {$generatedAt|czDate}</td>
+		<td width="50%" align="center">
+			<br><br>…………………………………………<br>
+			Za správnost výpisu: {$mayor?->getFullName() ?? ''}<br><span class="muted">starosta obce</span>
+		</td>
+	</tr>
+</table>
+{/block}
