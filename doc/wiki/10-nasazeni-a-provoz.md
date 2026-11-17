@@ -23,6 +23,18 @@ parameters:
 		encryption: tls
 ```
 
+## Limity nahrávání (PHP)
+
+Zvukové záznamy zasedání mají až 500 MB na soubor. Na serveru proto musí být (vývoj: `docker/php/php.ini`, po změně `make build && make up`):
+
+```ini
+upload_max_filesize = 500M
+post_max_size = 1024M   ; jedno odeslání může mít víc souborů
+max_input_time = 600
+```
+
+Přílohy bodů hlídá vlastní limit aplikace (64 MB, parametr `attachmentMaxSize`). Pokud je před aplikací nginx/proxy, nastavte i `client_max_body_size 1024m`.
+
 ## Po nasazení nové verze
 
 ```mermaid

@@ -63,6 +63,11 @@ test('approved meeting cannot be changed through any facade; reopening with a re
 	[$attachment] = $attachments->upload($itemId, [new UploadedFile(pdfStream(), 'rozpocet.pdf')], $admin->getId());
 	$comment = $comments->addByUser($itemId, $admin->getId(), 'Rozpočet je vyrovnaný.');
 	$proceedings->recordDiscussion($itemId, 'Bez připomínek.');
+	$recordingStream = fopen('php://memory', 'w+b');
+	assert($recordingStream !== false);
+	fwrite($recordingStream, "ID3\x03\x00\x00\x00\x00\x00\x0a" . str_repeat("\x00", 10) . "\xFF\xFB\x90\x64" . str_repeat("\x00", 400));
+	rewind($recordingStream);
+	[$recording] = $container->getByType(App\Model\Recording\RecordingFacade::class)->upload($meetingId, [new UploadedFile($recordingStream, 'zaznam.mp3')], null);
 	$meetings->transition($meetingId, MeetingTransition::Close);
 	$meetings->transition($meetingId, MeetingTransition::ApproveMinutes);
 	[$finalMinutes] = $archive->archiveFinal($meetingId, $admin->getId());
@@ -99,6 +104,7 @@ test('approved meeting cannot be changed through any facade; reopening with a re
 		'oprava hlasování' => fn() => $voting->reopen($roundId),
 		'smazání hlasování' => fn() => $voting->delete($roundId),
 		'smazání z archivu' => fn() => $archive->delete($finalMinutes->getId()),
+		'smazání záznamu' => fn() => $container->getByType(App\Model\Recording\RecordingFacade::class)->delete($recording->getId()),
 	];
 
 	foreach ($attempts as $name => $attempt) {

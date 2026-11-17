@@ -25,6 +25,9 @@
 {varType bool $canArchive}
 {varType bool $canDeleteArchived}
 {varType bool $missingFinal}
+{varType App\Model\Recording\Recording[] $recordings}
+{varType bool $canUploadRecording}
+{varType bool $canDeleteRecording}
 {varType App\Model\Template\MeetingTemplate[] $meetingTemplates}
 
 <div class="d-flex flex-wrap align-items-start gap-3 mb-4">
@@ -316,6 +319,57 @@
 					</dd>
 					<dt class="col-5 fw-normal text-body-secondary">Zapisovatel</dt><dd class="col-7 mb-0">{$meeting->getRecorder()?->getFullName() ?? '—'}</dd>
 				</dl>
+			</div>
+		</div>
+
+		{var $recordingForm = $canUploadRecording ? $control['recordingForm'] : null}
+		<div n:class="card, $canUploadRecording ? dropzone" id="zaznam" n:attr="data-dropzone: $canUploadRecording ? 1 : null, data-dropzone-modal: $canUploadRecording ? '#recording-modal' : null">
+			<div class="card-header d-flex align-items-center gap-2">
+				<span class="fw-semibold me-auto"><i class="bi bi-mic" aria-hidden="true"></i> Záznam zasedání</span>
+				<span n:if="$recordings" class="badge text-bg-light">{count($recordings)}</span>
+				<button n:if="$canUploadRecording" type="button" class="btn btn-sm btn-outline-primary py-0 px-2" data-bs-toggle="modal" data-bs-target="#recording-modal" title="Nahrát záznam"><i class="bi bi-plus-lg" aria-hidden="true"></i><span class="visually-hidden">Nahrát záznam</span></button>
+			</div>
+			<ul n:if="$recordings" class="list-group list-group-flush">
+				<li n:foreach="$recordings as $recording" class="list-group-item">
+					<div class="d-flex align-items-center gap-2">
+						<div class="me-auto min-w-0">
+							<div class="fw-semibold small text-break">{$recording->getTitle()}</div>
+							<div class="small text-body-secondary">{$recording->getFile()->size|bytes} · {$recording->getCreatedAt()|czDate}</div>
+						</div>
+						<a n:href="recording, id: $meeting->getId(), recordingId: $recording->getId(), download: true" class="btn btn-sm btn-light" title="Stáhnout"><i class="bi bi-download" aria-hidden="true"></i><span class="visually-hidden">Stáhnout</span></a>
+						<form n:if="$canDeleteRecording" method="post" action="{link deleteRecording!, recordingId: $recording->getId()}">
+							<button type="submit" class="btn btn-sm btn-light text-danger" title="Smazat" data-confirm="Smazat záznam „{$recording->getTitle()}“?"><i class="bi bi-trash" aria-hidden="true"></i><span class="visually-hidden">Smazat</span></button>
+						</form>
+					</div>
+					<audio controls preload="none" class="w-100 mt-2" src="{link recording, id: $meeting->getId(), recordingId: $recording->getId()}"></audio>
+				</li>
+			</ul>
+			<div n:if="!$recordings" class="card-body small text-body-secondary">
+				Zatím bez záznamu.{if $canUploadRecording} Přetáhněte sem MP3, nebo klikněte na +.{/if}
+			</div>
+			<div n:if="$canUploadRecording" class="dropzone-overlay" aria-hidden="true"><i class="bi bi-cloud-arrow-up"></i> Pusťte záznam sem</div>
+
+			<div n:if="$canUploadRecording" class="modal fade" id="recording-modal" tabindex="-1" aria-labelledby="recording-modal-title" aria-hidden="true" n:attr="data-show-on-load: $recordingForm?->hasErrors() ? 1 : null">
+				<div class="modal-dialog modal-dialog-centered">
+					{form recordingForm, class: 'modal-content'}
+						<div class="modal-header">
+							<h2 class="modal-title h5" id="recording-modal-title">Nahrát záznam zasedání</h2>
+							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zavřít"></button>
+						</div>
+						<div class="modal-body">
+							<div n:foreach="$form->getOwnErrors() as $error" class="alert alert-danger py-2">{$error}</div>
+							<label n:name="files" class="form-label">Soubory</label>
+							<input n:name="files" n:class="form-control, $form['files']->hasErrors() ? is-invalid" data-dropzone-input>
+							<ul class="dropzone-list list-unstyled small mb-0 mt-2" data-dropzone-list hidden></ul>
+							<div n:ifcontent class="invalid-feedback d-block">{inputError files}</div>
+							<div class="form-text">{$form['files']->getOption('description')}</div>
+						</div>
+						<div class="modal-footer">
+							<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Zrušit</button>
+							<button n:name="upload" class="btn btn-primary"><i class="bi bi-upload" aria-hidden="true"></i> Nahrát</button>
+						</div>
+					{/form}
+				</div>
 			</div>
 		</div>
 	</div>

@@ -28,6 +28,7 @@ use App\Model\Meeting\MeetingType;
 use App\Model\Meeting\ProceedingsFacade;
 use App\Model\People\Body;
 use App\Model\People\PeopleFacade;
+use App\Model\Recording\RecordingFacade;
 use App\Model\Resolution\ResolutionFacade;
 use App\Model\Shared\Exception\DomainException;
 use App\Model\Shared\Exception\NotFoundException;
@@ -78,6 +79,7 @@ final class MeetingPresenter extends SecuredPresenter
 		private readonly CommentFacade $commentFacade,
 		private readonly MeetingDocumentFacade $documentFacade,
 		private readonly DocumentArchiveFacade $archiveFacade,
+		private readonly RecordingFacade $recordingFacade,
 		private readonly AccessFacade $accessFacade,
 		private readonly InvitationFacade $invitationFacade,
 		private readonly ProceedingsFacade $proceedingsFacade,
@@ -198,6 +200,9 @@ final class MeetingPresenter extends SecuredPresenter
 		$this->template->resolutions = $this->template->tab === 'resolutions' ? $this->resolutionFacade->findByMeeting($meeting->getId()) : [];
 		$this->template->canEditProgram = $meeting->canEditProgram() && $this->isAllowed(Resource::Agenda, Privilege::Edit);
 		$this->template->canDelete = $this->isAllowed(Resource::Meeting, Privilege::Delete) && $meeting->getStatus() === MeetingStatus::Draft;
+		$this->template->recordings = $this->recordingFacade->findByMeeting($meeting->getId());
+		$this->template->canUploadRecording = $this->isAllowed(Resource::Attachment, Privilege::Edit);
+		$this->template->canDeleteRecording = $this->isAllowed(Resource::Attachment, Privilege::Delete) && !$meeting->isArchived();
 	}
 
 	/**
@@ -312,6 +317,46 @@ final class MeetingPresenter extends SecuredPresenter
 		}
 
 		$this->redirectToDocuments($meeting);
+	}
+
+	/**
+	 * Zvukový záznam – přehrání v prohlížeči (s přetáčením), download=1 stažení.
+	 */
+	public function actionRecording(int $id, int $recordingId, bool $download = false): void
+	{
+		$meeting = $this->loadMeeting($id);
+		try {
+			$recording = $this->assertOwned($this->recordingFacade->get($recordingId));
+		} catch (NotFoundException $e) {
+			$this->error($e->getMessage());
+		}
+
+		if ($recording->getMeeting() !== $meeting) {
+			$this->error('Záznam neexistuje.');
+		}
+
+		$this->getHttpResponse()->setHeader('X-Content-Type-Options', 'nosniff');
+		$this->sendStoredFile($recording->getFile(), forceDownload: $download);
+	}
+
+	#[Allowed(Resource::Attachment, Privilege::Delete)]
+	#[Requires(methods: 'POST', sameOrigin: true)]
+	public function handleDeleteRecording(int $recordingId): void
+	{
+		$meeting = $this->meeting ?? $this->error();
+		try {
+			$recording = $this->assertOwned($this->recordingFacade->get($recordingId));
+			if ($recording->getMeeting() !== $meeting) {
+				$this->error('Záznam neexistuje.');
+			}
+
+			$this->recordingFacade->delete($recording->getId());
+			$this->flashMessage("Záznam „{$recording->getTitle()}“ byl smazán.", 'success');
+		} catch (DomainException $e) {
+			$this->flashMessage($e->getMessage(), 'danger');
+		}
+
+		$this->redirect('this');
 	}
 
 	#[Allowed(Resource::Meeting, Privilege::Edit)]
@@ -553,6 +598,42 @@ final class MeetingPresenter extends SecuredPresenter
 
 		$this->flashMessage('Zasedání bylo smazáno.', 'success');
 		$this->redirect('default');
+	}
+
+	protected function createComponentRecordingForm(): Form
+	{
+		$this->requirePermission(Resource::Attachment, Privilege::Edit);
+		$form = $this->formFactory->create();
+		$form->addMultiUpload('files', 'Soubory')
+			->setRequired('Vyberte soubor se záznamem.')
+			->addRule(Form::MaxFileSize, sprintf('Záznam může mít nejvýše %d MB.', intdiv(RecordingFacade::MaxSize, 1024 * 1024)), RecordingFacade::MaxSize)
+			->setHtmlAttribute('accept', 'audio/*,.mp3,.m4a,.wav,.ogg,.opus,.flac')
+			->setOption('description', sprintf('MP3, M4A, WAV, OGG, OPUS, FLAC – max. %d MB na soubor, i více souborů najednou (např. před a po přestávce).', intdiv(RecordingFacade::MaxSize, 1024 * 1024)));
+		$form->addSubmit('upload', 'Nahrát');
+		$form->onSuccess[] = function (Form $form): void {
+			$meeting = $this->meeting ?? $this->error();
+			/** @var array{files: list<\Nette\Http\FileUpload>} $values */
+			$values = $form->getValues('array');
+			$files = FormUploads::toUploadedFiles($values['files']);
+			if ($files === []) {
+				$form->addError('Soubor se nepodařilo nahrát (možná je větší, než server dovolí).');
+
+				return;
+			}
+
+			try {
+				$uploaded = $this->recordingFacade->upload($meeting->getId(), $files, $this->currentUserId());
+			} catch (ValidationException $e) {
+				FormErrors::apply($form, $e);
+
+				return;
+			}
+
+			$this->flashMessage(count($uploaded) === 1 ? 'Záznam byl nahrán.' : 'Nahráno záznamů: ' . count($uploaded) . '.', 'success');
+			$this->redirect('this');
+		};
+
+		return $form;
 	}
 
 	protected function createComponentReopenForm(): Form

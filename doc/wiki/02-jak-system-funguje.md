@@ -75,6 +75,8 @@ flowchart LR
 - Přehled hlídá **lhůtu 10 dnů** na vyhotovení zápisu.
 - Dále: **usnesení ze zasedání** (s podpisy), **výpis z jednoho usnesení**.
 
+- **Záznam zasedání**: v detailu zasedání pod Funkcemi tlačítkem + (nebo přetažením) nahrajete zvukový záznam – MP3 a další formáty, až 500 MB na soubor, i více souborů (před a po přestávce). Přehrává se přímo v prohlížeči. Přepis záznamu zatím není.
+
 ### 7. Ověření zápisu (stav *Zápis ověřen*)
 - Po ověření zápisu už nejde měnit program, podklady, diskuse, docházka, hlasování ani funkce – zasedání je v **archivu**.
 - Najde-li se chyba, správce zvolí **Zrušit ověření zápisu** a napíše důvod. Zasedání se vrátí do stavu *Ukončeno*, opraví se a zápis se ověří znovu. Důvod zůstane v historii zasedání.
