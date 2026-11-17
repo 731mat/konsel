@@ -46,8 +46,11 @@ function initDropzones(root) {
 			return;
 		}
 		zone.dataset.dropzoneReady = '1';
-		const input = zone.querySelector('[data-dropzone-input]');
-		const list = zone.querySelector('[data-dropzone-list]');
+		// formulář může být v samostatném okně (data-dropzone-modal), zónou je pak celá karta
+		const modal = zone.dataset.dropzoneModal ? document.querySelector(zone.dataset.dropzoneModal) : null;
+		const scope = modal ?? zone;
+		const input = scope.querySelector('[data-dropzone-input]');
+		const list = scope.querySelector('[data-dropzone-list]');
 		const setFiles = (files) => {
 			const transfer = new DataTransfer();
 			files.forEach((file) => transfer.items.add(file));
@@ -81,6 +84,10 @@ function initDropzones(root) {
 			if (event.dataTransfer?.files.length) {
 				event.preventDefault();
 				addFiles([...event.dataTransfer.files]);
+				// zóna s formulářem v okně (např. přílohy bodu): po puštění souborů okno otevřít k potvrzení
+				if (modal) {
+					bootstrap.Modal.getOrCreateInstance(modal).show();
+				}
 			}
 		});
 		zone.addEventListener('paste', (event) => {
@@ -100,6 +107,17 @@ function initDropzones(root) {
 		});
 	});
 }
+
+// okna patří přímo do <body> (jinak je vrstvení stránky schová pod tmavé pozadí);
+// okno s chybou formuláře po odeslání zůstane otevřené
+document.addEventListener('DOMContentLoaded', () => {
+	document.querySelectorAll('.modal').forEach((modal) => {
+		if (modal.parentElement !== document.body) {
+			document.body.append(modal);
+		}
+	});
+	document.querySelectorAll('.modal[data-show-on-load]').forEach((modal) => bootstrap.Modal.getOrCreateInstance(modal).show());
+});
 
 document.addEventListener('DOMContentLoaded', () => {
 	netteForms.initOnLoad();

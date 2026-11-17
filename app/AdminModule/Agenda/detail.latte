@@ -56,10 +56,12 @@
 			</div>
 		</div>
 
-		<div class="card" id="prilohy">
-			<div class="card-header d-flex align-items-center">
+		{var $uploadForm = $canUpload ? $control['attachmentForm'] : null}
+		<div n:class="card, $canUpload ? dropzone" id="prilohy" n:attr="data-dropzone: $canUpload ? 1 : null, data-dropzone-modal: $canUpload ? '#attachment-modal' : null">
+			<div class="card-header d-flex align-items-center gap-2">
 				<span class="me-auto"><i class="bi bi-paperclip" aria-hidden="true"></i> Přílohy</span>
 				<span n:if="$attachments" class="badge text-bg-light">{count($attachments)}</span>
+				<button n:if="$canUpload" type="button" class="btn btn-sm btn-outline-primary py-0 px-2" data-bs-toggle="modal" data-bs-target="#attachment-modal" title="Přidat přílohu"><i class="bi bi-plus-lg" aria-hidden="true"></i><span class="visually-hidden">Přidat přílohu</span></button>
 			</div>
 			<ul n:if="$attachments" class="list-group list-group-flush">
 				<li n:foreach="$attachments as $attachment" class="list-group-item d-flex align-items-center gap-3 py-3">
@@ -79,29 +81,35 @@
 			</ul>
 			<div n:if="!$attachments" class="card-body empty-state py-4">
 				<i class="bi bi-paperclip" aria-hidden="true"></i>
-				K bodu zatím nejsou přiložené podklady.
+				K bodu zatím nejsou přiložené podklady.{if $canUpload} Přetáhněte je sem, nebo klikněte na +.{/if}
 			</div>
-			<div n:if="$canUpload" class="card-footer bg-transparent">
-				{form attachmentForm, class: 'row g-2 align-items-center'}
-					<div n:foreach="$form->getOwnErrors() as $error" class="col-12"><div class="alert alert-danger py-2 mb-0">{$error}</div></div>
-					<div class="col-md dropzone" data-dropzone>
-						<label n:name="files" class="visually-hidden">Soubory</label>
-						<input n:name="files" n:class="form-control, form-control-sm, $form['files']->hasErrors() ? is-invalid" data-dropzone-input>
-						<ul class="dropzone-list list-unstyled small mb-0 mt-2" data-dropzone-list hidden></ul>
-						<div class="dropzone-overlay" aria-hidden="true"><i class="bi bi-cloud-arrow-up"></i> Pusťte soubory sem</div>
-						<div n:ifcontent class="invalid-feedback d-block">{inputError files}</div>
-					</div>
-					<div class="col-auto">
-						<div class="form-check mb-0">
-							<input n:name="publicForMembers" class="form-check-input">
-							<label n:name="publicForMembers" class="form-check-label small">{$form['publicForMembers']->getCaption()}</label>
+			<div n:if="$canUpload" class="dropzone-overlay" aria-hidden="true"><i class="bi bi-cloud-arrow-up"></i> Pusťte soubory sem</div>
+
+			<div n:if="$canUpload" class="modal fade" id="attachment-modal" tabindex="-1" aria-labelledby="attachment-modal-title" aria-hidden="true" n:attr="data-show-on-load: $uploadForm?->hasErrors() ? 1 : null">
+				<div class="modal-dialog modal-dialog-centered">
+					{form attachmentForm, class: 'modal-content'}
+						<div class="modal-header">
+							<h2 class="modal-title h5" id="attachment-modal-title">Přidat přílohy</h2>
+							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zavřít"></button>
 						</div>
-					</div>
-					<div class="col-auto">
-						<button n:name="upload" class="btn btn-primary btn-sm"><i class="bi bi-upload" aria-hidden="true"></i> Nahrát</button>
-					</div>
-					<div class="col-12 form-text mt-1">{$form['files']->getOption('description')}</div>
-				{/form}
+						<div class="modal-body">
+							<div n:foreach="$form->getOwnErrors() as $error" class="alert alert-danger py-2">{$error}</div>
+							<label n:name="files" class="form-label">Soubory</label>
+							<input n:name="files" n:class="form-control, $form['files']->hasErrors() ? is-invalid" data-dropzone-input>
+							<ul class="dropzone-list list-unstyled small mb-0 mt-2" data-dropzone-list hidden></ul>
+							<div n:ifcontent class="invalid-feedback d-block">{inputError files}</div>
+							<div class="form-text">{$form['files']->getOption('description')}</div>
+							<div class="form-check mt-3 mb-0">
+								<input n:name="publicForMembers" class="form-check-input">
+								<label n:name="publicForMembers" class="form-check-label">{$form['publicForMembers']->getCaption()}</label>
+							</div>
+						</div>
+						<div class="modal-footer">
+							<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Zrušit</button>
+							<button n:name="upload" class="btn btn-primary"><i class="bi bi-upload" aria-hidden="true"></i> Nahrát</button>
+						</div>
+					{/form}
+				</div>
 			</div>
 		</div>
 
