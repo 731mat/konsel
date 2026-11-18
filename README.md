@@ -46,7 +46,7 @@ Wiki je v [`doc/wiki/`](doc/wiki/) a stejné stránky se zobrazují v aplikaci v
 | [Frontend: Vite, Bootstrap, Naja](doc/wiki/07-frontend-vite.md) | jak se sestavuje CSS/JS, AJAX snippety, kontrola vzhledu |
 | [Testy a kvalita](doc/wiki/08-testy-a-kvalita.md) | `make qa`, druhy testů, pomocníci |
 | [Plán a stav](doc/wiki/09-plan-a-stav.md) | co je hotové, co zbývá, dluhy |
-| [Nasazení a provoz](doc/wiki/10-nasazeni-a-provoz.md) | konfigurace, nasazení, cron, zálohy |
+| [Nasazení a provoz](doc/wiki/10-nasazeni-a-provoz.md) | produkce v Dockeru / Portaineru, proměnné, svazky, cron, zálohy |
 | [Šablony dokumentů](doc/wiki/11-sablony-dokumentu.md) | vlastní HTML šablony obce, proměnné, filtry, sandbox |
 
 Další dokumenty:

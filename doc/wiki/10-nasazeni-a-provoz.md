@@ -1,8 +1,88 @@
 # Nasazení a provoz
 
-## Konfigurace
+## Produkce v Dockeru (Portainer)
 
-Tajnosti a nastavení konkrétního serveru patří do `config/local.neon` (není v gitu, předloha `config/local.neon.dist`):
+Produkční image se sestaví přímo z gitu: `compose.prod.yaml` + `docker/prod/` (multi-stage: Vite build → `composer install --no-dev` → PHP 8.4 s Apachem). Stejně to funguje v Portaineru, na libovolném serveru s Dockerem (`docker compose -f compose.prod.yaml up -d --build`) i na Home Assistantu s doplňkem Portainer.
+
+```mermaid
+flowchart LR
+    A[git push do main] --> B["Portainer: Pull and redeploy<br/>(nebo automaticky po pár minutách)"]
+    B --> C["build image<br/>(nezměněné vrstvy z cache)"]
+    C --> D["start kontejneru:<br/>migrace, fulltextový index"]
+    D --> E["Apache + plánované úlohy<br/>(zámky, zálohy)"]
+    V[(svazky: databáze,<br/>soubory, zálohy, logy)] --- D
+```
+
+### Založení stacku
+
+1. Portainer → **Stacks → Add stack**, název `konsel`, Build method **Repository**:
+   - Repository URL `https://github.com/731mat/konsel`, reference `refs/heads/main`
+   - Compose path `compose.prod.yaml`
+   - repozitář je veřejný, Authentication nechte vypnuté
+   - volitelně **Automatic updates** → Polling (např. 5 minut): nová verze se nasadí sama po pushi
+2. **Environment variables** (Advanced mode, vložit a doplnit):
+   ```
+   KONSEL_PORT=8090
+   KONSEL_APP_URL=https://konsel.matyho.cz
+   KONSEL_MAIL_FROM=noreply@konsel.matyho.cz
+   KONSEL_SMTP_HOST=smtp.example.cz
+   KONSEL_SMTP_PORT=587
+   KONSEL_SMTP_USERNAME=…
+   KONSEL_SMTP_PASSWORD=…
+   KONSEL_SMTP_ENCRYPTION=tls
+   ```
+3. **Deploy the stack.** První sestavení trvá několik minut (na Raspberry Pi i desítky minut – kompilují se rozšíření PHP), další nasazení jsou rychlá.
+4. První spuštění – založení obce a správce: Containers → `konsel-app-1` → **Console** → Connect (`/bin/bash`):
+   ```bash
+   konsel municipality:create "Neplachovice" --ico 00300535
+   konsel user:create jmeno@obec.cz "Jméno Příjmení" --role admin -m neplachovice
+   ```
+   Heslo se vypíše (nebo ho zadejte přes `--password`). Další uživatele už zakládá správce v aplikaci.
+5. Reverzní proxy s HTTPS: `konsel.matyho.cz` → `http://<IP Home Assistantu>:8090`.
+   - Nginx Proxy Manager: zapnout SSL (Let's Encrypt) a do Advanced vložit `client_max_body_size 1024m;` a `proxy_read_timeout 600s;` (velké záznamy zasedání).
+   - Cloudflare (tunel nebo proxy) má v bezplatném tarifu limit **100 MB na jeden požadavek** – větší záznam přes něj nenahrajete.
+
+Příkaz `konsel …` je `bin/console` spuštěný pod uživatelem webového serveru. V kontejneru nepoužívejte `php bin/console` jako root – soubory v `temp/` by pak web nemohl přepsat.
+
+### Proměnné prostředí
+
+| Proměnná | Výchozí | K čemu |
+|---|---|---|
+| `KONSEL_PORT` | `8090` | port na hostiteli |
+| `KONSEL_APP_URL` | `https://konsel.matyho.cz` | veřejná adresa (odkazy v e-mailech); u `https://` aplikace posílá HSTS |
+| `KONSEL_MAIL_FROM` | `noreply@konsel.matyho.cz` | odesílatel e-mailů |
+| `KONSEL_SMTP_HOST`, `_PORT`, `_USERNAME`, `_PASSWORD` | – / `587` | SMTP server – bez něj neodejdou pozvánky ani odkazy |
+| `KONSEL_SMTP_ENCRYPTION` | `tls` | `tls`, `ssl` nebo `none` |
+| `KONSEL_ENCRYPTION_KEY` | prázdné | šifrovací klíč pro API klíče v DB; prázdné = vygeneruje se při prvním startu do `var/encryption.key` |
+| `KONSEL_TRUSTED_PROXIES` | privátní sítě | adresy proxy, od kterých aplikace věří hlavičkám `X-Forwarded-*` (https, IP návštěvníka) |
+| `KONSEL_ERROR_EMAIL` | prázdné | e-mail, kam Tracy pošle upozornění na chybu aplikace |
+| `KONSEL_BACKUP_DIR` | svazek `konsel-backups` | cesta na hostiteli pro zálohy (viz níže) |
+
+Proměnné přebíjí `config/local.neon` (načítá je `App\Core\Config\EnvironmentConfig`). Debug režim je vypnutý, dokud není `NETTE_DEBUG=1`.
+
+### Co se děje při startu kontejneru
+
+1. práva svazků pro webový server, šifrovací klíč (jen poprvé)
+2. `migrations:migrate` – databáze se sama převede na novou verzi
+3. `search:reindex` – fulltextový index
+4. na pozadí plánované úlohy každých 10 minut: `locks:cleanup` a `backup:run --scheduled` (systémový cron není potřeba)
+5. Apache
+
+### Svazky a zálohy
+
+| Svazek | V kontejneru | Obsah |
+|---|---|---|
+| `konsel-data` | `/app/var` | `database.sqlite`, `storage/` (přílohy, záznamy), `sessions/`, `encryption.key` |
+| `konsel-backups` | `/app/var/backups` | zálohy z Nastavení → Zálohy |
+| `konsel-log` | `/app/log` | chyby aplikace (`exception.log`, detail chyb) |
+
+Zálohy Home Assistantu svazky Dockeru **neobsahují**. Na Home Assistant OS nastavte `KONSEL_BACKUP_DIR=/mnt/data/supervisor/share/konsel-zalohy` – zálohy Konšelu pak leží ve složce `share` (přístupná přes doplněk Samba a součást záloh HA, pokud zálohujete složku share). Šifrovací klíč (`cat /app/var/encryption.key` v konzoli kontejneru) si uložte bokem nebo ho nastavte do `KONSEL_ENCRYPTION_KEY` – bez něj by po obnově na jiném serveru bylo nutné znovu zadat klíč k AI.
+
+Logy startu a Apache: Portainer → kontejner → **Logs**.
+
+## Konfigurace (bez Dockeru)
+
+Na vlastním serveru bez Dockeru patří tajnosti a nastavení do `config/local.neon` (není v gitu, předloha `config/local.neon.dist`):
 
 ```neon
 parameters:
@@ -25,7 +105,7 @@ parameters:
 
 ## Limity nahrávání (PHP)
 
-Zvukové záznamy zasedání mají až 500 MB na soubor. Na serveru proto musí být (vývoj: `docker/php/php.ini`, po změně `make build && make up`):
+Zvukové záznamy zasedání mají až 500 MB na soubor. Na serveru proto musí být (vývoj: `docker/php/php.ini`, po změně `make build && make up`; produkční image: `docker/prod/php.ini`):
 
 ```ini
 upload_max_filesize = 500M
@@ -35,7 +115,9 @@ max_input_time = 600
 
 Přílohy bodů hlídá vlastní limit aplikace (64 MB, parametr `attachmentMaxSize`). Pokud je před aplikací nginx/proxy, nastavte i `client_max_body_size 1024m`.
 
-## Po nasazení nové verze
+## Po nasazení nové verze (bez Dockeru)
+
+V produkčním kontejneru se migrace a index provedou samy při startu, temp je v každém kontejneru nový.
 
 ```mermaid
 flowchart LR
@@ -48,6 +130,8 @@ flowchart LR
 ```
 
 ## Pravidelné úlohy (cron)
+
+Produkční kontejner je spouští sám (každých 10 minut). Na serveru bez Dockeru:
 
 | Kdy | Příkaz | Proč |
 |---|---|---|

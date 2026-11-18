@@ -1,7 +1,7 @@
 # Konšel
 
 Systém pro přípravu a vedení zasedání zastupitelstva a rady obce (program → podklady → pozvánka → průběh → zápis → usnesení → archiv).
-Nette 3.3 + Doctrine ORM 3, SQLite (později MySQL). Produkce: konsel.matyho.cz.
+Nette 3.3 + Doctrine ORM 3, SQLite (později MySQL). Produkce: konsel.matyho.cz (stack v Portaineru z `compose.prod.yaml`, image `docker/prod/`, nastavení přes proměnné `KONSEL_*` – návod doc/wiki/10-nasazeni-a-provoz.md).
 
 - **Plán a stav práce:** doc/todo-v2.md. Tasky se dělají po jednom. Postup je v sekci „Jak s tímhle plánem pracovat“.
 - **Architektonická rozhodnutí (ADR A1–A15) a cílová struktura:** tamtéž. Neodchyluj se od nich bez zápisu do Deníku a dotazu.

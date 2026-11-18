@@ -1,0 +1,44 @@
+# Produkční nasazení Konšelu – stack v Portaineru (Stacks → Add stack → Repository, Compose path: compose.prod.yaml).
+# Návod: doc/wiki/10-nasazeni-a-provoz.md. Proměnné ${…} se vyplňují v Portaineru (Environment variables).
+#
+# Image se sestavuje z repozitáře při každém nasazení (pull_policy: build) – Portainer jinak
+# po změně v gitu nechá běžet starý image. Nezměněné vrstvy (PHP rozšíření, závislosti) jdou z cache.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/prod/Dockerfile
+    image: konsel:prod
+    pull_policy: build
+    init: true
+    restart: unless-stopped
+    ports:
+      - "${KONSEL_PORT:-8090}:80"
+    environment:
+      # veřejná adresa (odkazy v e-mailech, HSTS u https)
+      KONSEL_APP_URL: ${KONSEL_APP_URL:-https://konsel.matyho.cz}
+      # prázdné = klíč se při prvním startu vygeneruje do svazku (var/encryption.key)
+      KONSEL_ENCRYPTION_KEY: ${KONSEL_ENCRYPTION_KEY:-}
+      # odesílání pozvánek a odkazů
+      KONSEL_MAIL_FROM: ${KONSEL_MAIL_FROM:-noreply@konsel.matyho.cz}
+      KONSEL_SMTP_HOST: ${KONSEL_SMTP_HOST:-}
+      KONSEL_SMTP_PORT: ${KONSEL_SMTP_PORT:-587}
+      KONSEL_SMTP_USERNAME: ${KONSEL_SMTP_USERNAME:-}
+      KONSEL_SMTP_PASSWORD: ${KONSEL_SMTP_PASSWORD:-}
+      KONSEL_SMTP_ENCRYPTION: ${KONSEL_SMTP_ENCRYPTION:-tls}
+      # reverzní proxy (Nginx Proxy Manager, Cloudflare tunel…), od které aplikace přijme X-Forwarded-* (https, IP návštěvníka)
+      KONSEL_TRUSTED_PROXIES: ${KONSEL_TRUSTED_PROXIES:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1}
+      # e-mail pro hlášení chyb aplikace (prázdné = jen log)
+      KONSEL_ERROR_EMAIL: ${KONSEL_ERROR_EMAIL:-}
+    volumes:
+      # databáze, nahrané soubory, relace, šifrovací klíč
+      - konsel-data:/app/var
+      # zálohy z Nastavení → Zálohy; KONSEL_BACKUP_DIR = cesta na hostiteli (např. /mnt/data/supervisor/share/konsel-zalohy)
+      - ${KONSEL_BACKUP_DIR:-konsel-backups}:/app/var/backups
+      - konsel-log:/app/log
+
+volumes:
+  konsel-data:
+  konsel-backups:
+  konsel-log:

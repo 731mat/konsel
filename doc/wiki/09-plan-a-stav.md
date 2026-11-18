@@ -67,7 +67,8 @@ flowchart LR
 | T35 | ustavující zasedání: slib členů, listina slibu | volba osob už funguje |
 | T38 | AI: návrh bodu z přiložené smlouvy nebo žádosti | návrhy textů bodů (T37) hotové |
 | T40 | přepis zvukového záznamu | odloženo |
-| T41–T43 | zveřejnění, GDPR, MySQL, nasazení | |
+| T41–T42 | zveřejnění, GDPR, MySQL | |
+| T43 | nasazení a provoz | produkční image a stack pro Portainer hotové; zbývá CSP, kontrola MIME uploadů, vyzkoušená obnova ze zálohy |
 
 ## Známé dluhy
 

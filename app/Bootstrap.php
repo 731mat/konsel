@@ -24,6 +24,7 @@ final class Bootstrap
 	{
 		$this->initializeEnvironment();
 		$this->setupContainer();
+		$this->addEnvironmentConfig();
 
 		return $this->configurator->createContainer();
 	}
@@ -32,6 +33,7 @@ final class Bootstrap
 	{
 		$this->initializeEnvironment();
 		$this->setupContainer();
+		$this->addEnvironmentConfig();
 
 		return $this->configurator->createContainer();
 	}
@@ -89,6 +91,17 @@ final class Bootstrap
 
 		if (is_file($configDir . '/local.neon')) {
 			$this->configurator->addConfig($configDir . '/local.neon');
+		}
+	}
+
+	/**
+	 * Proměnné KONSEL_* (produkční kontejner) – poslední, aby přebily soubory. Jsou součástí klíče cache kontejneru.
+	 */
+	private function addEnvironmentConfig(): void
+	{
+		$config = Core\Config\EnvironmentConfig::read($this->rootDir . '/var/encryption.key');
+		if ($config !== []) {
+			$this->configurator->addConfig($config);
 		}
 	}
 }
