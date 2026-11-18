@@ -21,6 +21,7 @@ make qa                   # cs + phpstan (max) + testy + validace schématu – 
 make test                 # Nette Tester
 make cs-fix
 make db-reset             # smazat DB → migrace → demo data
+make backup               # záloha databáze a souborů do var/backups (Nastavení → Zálohy)
 make screenshots          # screenshoty stránek (desktop + mobil) do temp/screenshots – kontrola vzhledu, PAGES="/admin,…"
 ```
 

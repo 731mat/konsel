@@ -126,6 +126,19 @@ abstract class SecuredPresenter extends BasePresenter
 		$bodies = $this->switchableBodies();
 		$this->template->switchBodies = $bodies;
 		$this->template->selectedBody = $bodies[$this->selectedBodyId() ?? 0] ?? null;
+		$this->template->canManageBackups = $this->canManageBackups();
+	}
+
+	/**
+	 * Záloha obsahuje celou databázi (všechny obce) – smí ji správce systému, správce obce jen v instalaci s jedinou obcí.
+	 */
+	protected function canManageBackups(): bool
+	{
+		if ($this->isAllowed(Resource::System)) {
+			return true;
+		}
+
+		return $this->isAllowed(Resource::Settings, Privilege::Edit) && count($this->municipalityFacade->findAll()) === 1;
 	}
 
 	/**

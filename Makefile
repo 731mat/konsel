@@ -6,7 +6,7 @@ DC   = docker compose
 EXEC = $(DC) exec -u www-data app
 
 .DEFAULT_GOAL := help
-.PHONY: help up down build rebuild sh logs composer console npm assets qa test stan cs cs-fix db-reset screenshots
+.PHONY: help up down build rebuild sh logs composer console npm assets qa test stan cs cs-fix db-reset backup screenshots
 
 help: ## Vypíše dostupné příkazy
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -58,6 +58,9 @@ cs-fix: ## Oprava coding standardu
 
 db-reset: ## Smaže DB, spustí migrace a nahraje demo data
 	$(EXEC) composer db:reset
+
+backup: ## Záloha databáze a souborů do var/backups (jako tlačítko v Nastavení → Zálohy)
+	$(DC) exec -u www-data app php bin/console backup:run
 
 screenshots: ## Screenshoty stránek (desktop + mobil) do temp/screenshots, např. PAGES="/admin,/admin/meeting"
 	@mkdir -p temp/screenshots

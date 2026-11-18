@@ -52,10 +52,19 @@ flowchart LR
 | Kdy | Příkaz | Proč |
 |---|---|---|
 | každých 10 minut | `bin/console locks:cleanup` | úklid vypršelých zámků bodů |
+| každou hodinu | `bin/console backup:run --scheduled` | pravidelná záloha – proběhne, jen když je podle plánu v Nastavení → Zálohy na řadě |
 
 ## Zálohy
 
-Celá databáze je jeden soubor `var/database.sqlite` (+ `-wal` a `-shm` za běhu), nahrané soubory jsou v `var/storage/`. Zálohujte celou složku `var/`.
+V aplikaci: **Nastavení → Zálohy** (správce systému; správce obce jen v instalaci s jedinou obcí – záloha obsahuje celou databázi).
+
+- Plán: zapnout, četnost (denně / týdně / měsíčně), hodina, den, co zálohovat (databáze + soubory / jen databáze), kolik posledních záloh držet.
+- **Zálohovat teď**, seznam záloh se **stažením** a smazáním.
+- Záloha = ZIP ve `var/backups/`: `database.sqlite` (konzistentní kopie přes `VACUUM INTO`, jde i za provozu), u kompletní zálohy složka `storage` a `manifest.json`.
+- Spouštění plánu: cron každou hodinu `bin/console backup:run --scheduled` (zmeškaný termín se dožene při dalším spuštění). Ručně `bin/console backup:run [--db-only]`, ve vývoji `make backup`.
+- Zálohy leží na stejném serveru – kopírujte je i jinam (stažení z aplikace nebo synchronizace `var/backups`).
+
+Obnova (jen správce serveru): zastavit aplikaci, `database.sqlite` ze zálohy na místo `var/database.sqlite` (smazat `-wal`, `-shm`), u kompletní zálohy nahradit `var/storage`, spustit `migrations:migrate` a `search:reindex`.
 
 ## Kde hledat chyby
 

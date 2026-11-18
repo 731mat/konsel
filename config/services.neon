@@ -11,6 +11,8 @@ services:
 	- App\Core\Doctrine\DatabaseHealth
 	- App\Model\Shared\DoctrineTransactionManager
 	- App\Model\Storage\LocalFileStorage(%varDir%/storage)
+	- App\Model\Backup\SqliteDatabaseDumper
+	- App\Model\Backup\BackupFacade(backupDir: %varDir%/backups, storageDir: %varDir%/storage)
 	- App\Core\Security\Authenticator
 	- App\Core\Security\SecretBox(%encryptionKey%)
 	- App\Core\Security\AuthorizatorFactory::create

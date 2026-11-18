@@ -1,0 +1,110 @@
+{block title}Zálohy{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href="Settings:default">Nastavení</a></li>
+	<li class="breadcrumb-item active" aria-current="page">Zálohy</li>
+{/block}
+
+{block content}
+{varType App\Model\Backup\BackupSettings $settings}
+{varType App\Model\Backup\BackupFile[] $backups}
+{varType string $totalSize}
+{varType DateTimeImmutable|null $nextRun}
+{varType bool $due}
+{varType string $cronLine}
+{varType App\Model\Backup\BackupContent[] $contents}
+{varType Closure $formatSize}
+
+<h1 class="h3 mb-3">Nastavení obce</h1>
+{if $currentMunicipality}{include '../Settings/@tabs.latte', current: 'backups'}{/if}
+
+<div class="row g-4">
+	<div class="col-xl-7 d-flex flex-column gap-4">
+		<div class="card">
+			<div class="card-header d-flex flex-wrap align-items-center gap-2">
+				<span class="fw-semibold me-auto"><i class="bi bi-hdd-stack" aria-hidden="true"></i> Zálohy</span>
+				<span class="small text-body-secondary">{count($backups)} {count($backups) === 1 ? 'záloha' : (count($backups) >= 2 && count($backups) <= 4 ? 'zálohy' : 'záloh')} · {$totalSize}</span>
+			</div>
+			<div class="card-body d-flex flex-wrap gap-2 border-bottom">
+				<form n:foreach="$contents as $content" method="post" action="{link run!, content: $content->value}">
+					<button type="submit" n:class="btn, btn-sm, $iterator->first ? btn-primary : btn-outline-primary" title="{$content->description()}">
+						<i class="bi bi-cloud-arrow-down" aria-hidden="true"></i> Zálohovat teď – {$content->label()}
+					</button>
+				</form>
+			</div>
+			{if $backups}
+				<div class="table-responsive">
+					<table class="table table-sm align-middle mb-0">
+						<thead class="small text-body-secondary">
+							<tr><th class="ps-3">Vytvořeno</th><th>Obsah</th><th class="d-none d-md-table-cell">Spuštěno</th><th class="text-end">Velikost</th><th class="pe-3 text-end"><span class="visually-hidden">Akce</span></th></tr>
+						</thead>
+						<tbody>
+							<tr n:foreach="$backups as $backup">
+								<td class="ps-3 text-nowrap">{$backup->createdAt|czDateTime}</td>
+								<td class="small">{$backup->content->label()}</td>
+								<td class="small d-none d-md-table-cell">{$backup->trigger->label()}</td>
+								<td class="small text-end text-nowrap">{$formatSize($backup->size)}</td>
+								<td class="pe-3 text-end text-nowrap">
+									<a n:href="download, name: $backup->name" class="btn btn-sm btn-outline-secondary" title="Stáhnout {$backup->name}"><i class="bi bi-download" aria-hidden="true"></i> Stáhnout</a>
+									<form method="post" action="{link delete!, name: $backup->name}" class="d-inline">
+										<button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Smazat zálohu z {$backup->createdAt|czDateTime}?" title="Smazat"><i class="bi bi-trash" aria-hidden="true"></i><span class="visually-hidden">Smazat</span></button>
+									</form>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			{else}
+				<div class="card-body empty-state">
+					<i class="bi bi-hdd-stack" aria-hidden="true"></i>
+					Zatím žádná záloha. Vytvořte první tlačítkem výše nebo zapněte pravidelné zálohy.
+				</div>
+			{/if}
+			<div class="card-footer bg-transparent small text-body-secondary">
+				Záloha je jeden ZIP: <code>database.sqlite</code> (kopie databáze), u kompletní zálohy složka <code>storage</code> s nahranými soubory a <code>manifest.json</code>. Zálohy leží na serveru ve <code>var/backups</code> – pro jistotu si je stahujte i jinam.
+			</div>
+		</div>
+
+		<div class="card">
+			<div class="card-header fw-semibold"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Obnova ze zálohy</div>
+			<div class="card-body small">
+				<p>Obnovu dělá správce serveru (v aplikaci záměrně není – přepsala by všechna data):</p>
+				<ol class="ps-3 mb-0">
+					<li>Zastavte aplikaci (<code>make down</code>, na serveru vypněte web).</li>
+					<li>Zálohu rozbalte. Soubor <code>database.sqlite</code> zkopírujte na místo <code>var/database.sqlite</code> (smažte i <code>database.sqlite-wal</code> a <code>-shm</code>).</li>
+					<li>U kompletní zálohy nahraďte obsah <code>var/storage</code> složkou <code>storage</code>.</li>
+					<li>Spusťte aplikaci a migrace (<code>bin/console migrations:migrate</code>) a fulltext (<code>bin/console search:reindex</code>).</li>
+				</ol>
+			</div>
+		</div>
+	</div>
+
+	<div class="col-xl-5 d-flex flex-column gap-4">
+		<div class="card">
+			<div class="card-header fw-semibold"><i class="bi bi-calendar-check" aria-hidden="true"></i> Pravidelné zálohy</div>
+			<div class="card-body">
+				<div class="small mb-3">
+					{if $settings->isEnabled()}
+						<span class="badge text-bg-success">zapnuto</span>
+						{$settings->getFrequency()->label()} v {$settings->getHour()}:00 · příště <strong>{$nextRun|czDateTime}</strong>{if $due} <span class="text-warning-emphasis">(čeká na spuštění cronem)</span>{/if}
+					{else}
+						<span class="badge text-bg-secondary">vypnuto</span> Zálohuje se jen ručně.
+					{/if}
+				</div>
+				<div n:if="$settings->getLastRunAt()" n:class="alert, py-2, small, $settings->getLastSucceeded() ? alert-success : alert-danger">
+					Poslední záloha {$settings->getLastRunAt()|czDateTime}: {$settings->getLastSucceeded() ? 'v pořádku' : 'selhala'}{if $settings->getLastMessage()} – {$settings->getLastMessage()}{/if}
+				</div>
+				{control settingsForm}
+			</div>
+		</div>
+
+		<div class="card">
+			<div class="card-header fw-semibold"><i class="bi bi-terminal" aria-hidden="true"></i> Spouštění na serveru (cron)</div>
+			<div class="card-body small">
+				<p>Plán vyhodnocuje příkaz, který server spouští <strong>každou hodinu</strong>. Záloha proběhne, jen když je podle plánu výše na řadě. Do crontabu serveru vložte:</p>
+				<pre class="bg-body-tertiary rounded p-2 mb-2"><code>{$cronLine}</code></pre>
+				<p class="text-body-secondary mb-0">Ručně z příkazové řádky: <code>bin/console backup:run</code> (kompletní) nebo <code>bin/console backup:run --db-only</code>. Ve vývoji v Dockeru: <code>make backup</code>.</p>
+			</div>
+		</div>
+	</div>
+</div>

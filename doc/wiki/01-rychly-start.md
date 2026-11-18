@@ -70,6 +70,7 @@ Demo účty (heslo vypíše `make db-reset` na konci výpisu):
 | `make sh` | shell uvnitř PHP kontejneru |
 | `make screenshots PAGES="/admin,…"` | screenshoty stránek (desktop + mobil) do `temp/screenshots` |
 | `make logs` | logy kontejnerů |
+| `make backup` | záloha databáze a souborů do `var/backups` |
 
 Konzolové příkazy (`make console ARGS="…"`):
 
@@ -82,6 +83,7 @@ Konzolové příkazy (`make console ARGS="…"`):
 | `app:encryption-key` | vygeneruje šifrovací klíč (pro API klíč OpenAI) |
 | `locks:cleanup` | smaže vypršelé zámky bodů (do cronu) |
 | `search:reindex` | postaví fulltextový index znovu z dat (index se jinak aktualizuje sám) |
+| `backup:run` | záloha (`--db-only` jen databáze, `--scheduled` jen podle plánu – do cronu každou hodinu) |
 
 ## Kde co je
 
