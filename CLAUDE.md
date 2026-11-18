@@ -64,6 +64,7 @@ make screenshots          # screenshoty stránek (desktop + mobil) do temp/scree
 - AI (OpenAI za `AiClient`): prompty jsou v `resources/prompts/*.md`, kontext skládá `AgendaWritingFacade` (pokyny a vzory obce, poslední usnesení). Návrh se nikdy neuloží sám, jen vloží do formuláře. Osobní údaje neposílat. Každé volání se zapíše do `AiUsageLog`. V testech `FakeAiClient` (`lastMessages`).
 - Historie změn (audit) zapisuje `DoctrineAuditSubscriber` sám; nová sledovaná entita = `AuditDescriber::type()/label()`. Citlivá pole (heslo, token, klíč) se nezapisují. Autor z `AuditContext`.
 - Fulltext: index `search_index` (SQLite FTS5) udržuje `DoctrineSearchIndexSubscriber` sám při flushi. Nová hledaná entita = doplnit `Model/Search/SearchDocumentFactory`. Po změně indexace `search:reindex`.
+- Server MCP pro AI asistenty (`/mcp`, wiki 12): nástroj = `app/ApiModule/Mcp/Tool/*Tool.php` (`McpTool`), v `ToolDefinition` zdroj/privilegium ACL, modul a `writes`; jen fasády, entity podle ID přes `McpContext::owned()`, chyby pro AI `ToolException`. AI jedná za uživatele (role, obec, rozsah tokenu), audit „Jméno (AI: …)“. Hlasování, docházka, stavy zasedání, pozvánky, mazání a nastavení přes MCP nikdy. Tokeny jen jako hash (`Model/AiAccess`).
 - Formátovaný text od uživatele (komentáře) = `RichText`: fasáda ho pročistí přes `HtmlSanitizer`, šablona vypisuje `|richText`, nikdy `|noescape`. Pole formuláře dostane `data-rich-editor`.
 
 ## Slovníček (UI ↔ kód)
@@ -91,7 +92,8 @@ make screenshots          # screenshoty stránek (desktop + mobil) do temp/scree
 | Maska číslování | `NumberingMask` |
 | Úkol z usnesení | `ResolutionTask` |
 | Plán (dříve úkolníček), podnět občana | `Project` |
-| Volitelný modul obce | `Module` (`ResolutionTasks`, `Plans`) |
+| Volitelný modul obce | `Module` (`ResolutionTasks`, `Plans`, `AiConnections`) |
+| Připojení AI (osobní token / připojená aplikace) | `AiAccessToken` (`AccessTokenKind`, `AccessScope`), `OAuthClient` |
 | Zápis | `Minutes` |
 | Pozvánka | `Invitation` |
 | Výpis z usnesení | `ResolutionExtract` |

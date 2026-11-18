@@ -21,7 +21,7 @@ const viewports = { desktop: { width: 1440, height: 900 }, mobile: { width: 390,
 
 		for (const path of pages) {
 			await page.goto(base + path);
-			const file = path.replace(/^\/|\/$/g, '').replace(/[^a-z0-9]+/gi, '-') || 'root';
+			const file = path.split('?')[0].replace(/^\/|\/$/g, '').replace(/[^a-z0-9]+/gi, '-').slice(0, 80) || 'root';
 			await page.screenshot({ path: `/out/${name}-${file}.png`, fullPage: true });
 		}
 		await context.close();

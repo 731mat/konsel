@@ -1,0 +1,39 @@
+{block title}Připojení aplikace{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item active" aria-current="page">Připojení aplikace</li>
+{/block}
+
+{block content}
+{varType App\Model\AiAccess\OAuthClient|null $client}
+{varType string|null $redirectHost}
+{varType string|null $authorizeError}
+
+<div class="card mx-auto" style="max-width: 34rem">
+	<div class="card-body p-4">
+		<div class="text-center mb-3"><i class="bi bi-robot fs-1 text-primary" aria-hidden="true"></i></div>
+		{if $client === null || $authorizeError}
+			<h1 class="h4 text-center mb-3">Připojení nelze dokončit</h1>
+			<div class="alert alert-warning mb-3">{$authorizeError}</div>
+			<a n:href="default" class="btn btn-outline-secondary w-100">Připojení AI</a>
+		{else}
+			<h1 class="h4 text-center mb-1">{$client->getName()}</h1>
+			<p class="text-center text-body-secondary small mb-4">žádá o přístup ke Konšelu · vrací se na <strong>{$redirectHost}</strong></p>
+			<p>Aplikace bude jednat <strong>vaším jménem ({$user->getIdentity()?->getData()['name'] ?? ''})</strong>{if $currentMunicipality} v obci {$currentMunicipality->getName()}{/if}: uvidí zasedání, program, podklady, připomínky, usnesení a plány, ke kterým máte přístup.</p>
+			<p class="small text-body-secondary">Hlasovat, zapisovat docházku, schvalovat zápis, rozesílat pozvánky ani mazat aplikace nemůže. Připojení můžete kdykoli odpojit v sekci Připojení AI. Název aplikace uvádí aplikace sama – povolte jen připojení, které jste právě spustili.</p>
+			{form consentForm}
+				<div class="form-check mb-4">
+					<input n:name="write" class="form-check-input">
+					<label n:name="write" class="form-check-label">Povolit i změny – přidávat a upravovat body programu, připomínky, plány a úkoly</label>
+				</div>
+				<ul n:if="$form->hasErrors()" class="alert alert-danger list-unstyled">
+					<li n:foreach="$form->getErrors() as $error">{$error}</li>
+				</ul>
+				<div class="d-flex gap-2">
+					<button n:name="allow" class="btn btn-primary flex-fill">Povolit připojení</button>
+					<button n:name="deny" class="btn btn-outline-secondary flex-fill">Zamítnout</button>
+				</div>
+			{/form}
+		{/if}
+	</div>
+</div>

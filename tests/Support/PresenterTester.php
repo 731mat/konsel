@@ -64,6 +64,43 @@ final readonly class PresenterTester
 	}
 
 	/**
+	 * Požadavek API se surovým tělem a hlavičkami (server MCP, OAuth).
+	 *
+	 * @param array<string, string> $headers
+	 * @param array<string, mixed> $post
+	 * @param array<string, mixed> $params
+	 */
+	public function request(
+		string $presenter,
+		string $action,
+		string $method = 'POST',
+		?string $body = null,
+		array $headers = [],
+		array $post = [],
+		array $params = [],
+	): Response {
+		$current = $this->container->getByType(IRequest::class);
+		$name = $this->container->findByType(IRequest::class)[0] ?? throw new \LogicException('Missing HTTP request service.');
+		$this->container->removeService($name);
+		$this->container->addService($name, new HttpRequest(
+			$current->getUrl(),
+			post: $post,
+			headers: $headers + $current->getHeaders(),
+			method: $method,
+			remoteAddress: $current->getRemoteAddress(),
+			rawBodyCallback: static fn(): string => $body ?? '',
+		));
+		$instance = $this->container->getByType(IPresenterFactory::class)->createPresenter($presenter);
+		Assert::type(Presenter::class, $instance);
+		assert($instance instanceof Presenter);
+		$instance->autoCanonicalize = false;
+
+		return $instance->run(new Request($presenter, $method, [
+			'action' => $action,
+		] + $params, $post));
+	}
+
+	/**
 	 * @param array<string, mixed> $params
 	 */
 	public function render(string $presenter, string $action = 'default', array $params = []): string

@@ -48,6 +48,7 @@ Wiki je v [`doc/wiki/`](doc/wiki/) a stejné stránky se zobrazují v aplikaci v
 | [Plán a stav](doc/wiki/09-plan-a-stav.md) | co je hotové, co zbývá, dluhy |
 | [Nasazení a provoz](doc/wiki/10-nasazeni-a-provoz.md) | produkce v Dockeru / Portaineru, proměnné, svazky, cron, zálohy |
 | [Šablony dokumentů](doc/wiki/11-sablony-dokumentu.md) | vlastní HTML šablony obce, proměnné, filtry, sandbox |
+| [Připojení AI (MCP)](doc/wiki/12-pripojeni-ai-mcp.md) | Claude / ChatGPT u účtu uživatele, nástroje, OAuth, oprávnění |
 
 Další dokumenty:
 

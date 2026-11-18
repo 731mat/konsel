@@ -64,17 +64,18 @@ final readonly class DoctrineMeetingAccessTokenRepository implements MeetingAcce
 	 */
 	private function withoutTenantFilter(callable $query): mixed
 	{
+		// suspend/restore zachová parametr obce (disable + enable by vytvořil filtr bez parametru)
 		$filters = $this->entityManager->getFilters();
 		$enabled = $filters->isEnabled(TenantFilter::Name);
 		if ($enabled) {
-			$filters->disable(TenantFilter::Name);
+			$filters->suspend(TenantFilter::Name);
 		}
 
 		try {
 			return $query();
 		} finally {
 			if ($enabled) {
-				$filters->enable(TenantFilter::Name);
+				$filters->restore(TenantFilter::Name);
 			}
 		}
 	}

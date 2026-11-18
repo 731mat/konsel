@@ -15,3 +15,14 @@
 	<div class="card-header fw-semibold">Změna hesla</div>
 	<div class="card-body">{control passwordForm}</div>
 </div>
+
+<div n:if="$currentMunicipality?->isModuleEnabled(App\Model\Municipality\Module::AiConnections)" class="card mt-4" style="max-width: 30rem">
+	<div class="card-body d-flex align-items-center gap-3">
+		<i class="bi bi-robot fs-3 text-primary" aria-hidden="true"></i>
+		<div class="me-auto">
+			<div class="fw-semibold">Připojení AI</div>
+			<div class="small text-body-secondary">Claude, ChatGPT a další asistenti s přístupem k vašemu účtu.</div>
+		</div>
+		<a n:href=":Admin:AiConnection:" class="btn btn-outline-primary btn-sm">Spravovat</a>
+	</div>
+</div>

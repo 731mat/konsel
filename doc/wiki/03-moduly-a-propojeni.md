@@ -36,6 +36,7 @@ Při postupném zavádění si obec může část aplikace vypnout. Data zůstan
 |---|---|
 | **Úkoly z usnesení** | menu Úkoly z usnesení, karta úkolů v detailu usnesení, úkoly po termínu na přehledu |
 | **Plány** | menu Plány, výběr plánu u bodu programu, plány v portálu zastupitele, výsledky hledání v plánech, **stránka pro občany** (podněty a zveřejněné plány) a strana „Jsem občan“ na úvodní stránce |
+| **Připojení AI asistentů (MCP)** | položka Připojení AI v menu uživatele, souhlas s připojením aplikace; všechna připojení obce přestanou platit (viz [Připojení AI](12-pripojeni-ai-mcp.md)) |
 
 Jak to funguje v kódu: presenter modulu má atribut `#[RequiresModule(Module::Plans)]` (vypnutý modul = 404), položka menu `module:`, šablona se ptá `moduleEnabled(Module::Plans)`, portál a veřejná část volají `requireModule()`. Moduly jsou enum `App\Model\Municipality\Module`, uložené u obce (`Municipality::isModuleEnabled()`).
 

@@ -41,6 +41,7 @@ flowchart LR
 5. Reverzní proxy s HTTPS: `konsel.matyho.cz` → `http://<IP Home Assistantu>:8090`.
    - Nginx Proxy Manager: zapnout SSL (Let's Encrypt) a do Advanced vložit `client_max_body_size 1024m;` a `proxy_read_timeout 600s;` (velké záznamy zasedání).
    - Cloudflare (tunel nebo proxy) má v bezplatném tarifu limit **100 MB na jeden požadavek** – větší záznam přes něj nenahrajete.
+   - Připojení AI (MCP) potřebuje, aby proxy propouštěla `/mcp`, `/oauth/*` a `/.well-known/*` a nepřepisovala hlavičku `Authorization`.
 
 Příkaz `konsel …` je `bin/console` spuštěný pod uživatelem webového serveru. V kontejneru nepoužívejte `php bin/console` jako root – soubory v `temp/` by pak web nemohl přepsat.
 
@@ -65,7 +66,7 @@ Proměnné přebíjí `config/local.neon` (načítá je `App\Core\Config\Environ
 1. práva svazků pro webový server, šifrovací klíč (jen poprvé)
 2. `migrations:migrate` – databáze se sama převede na novou verzi
 3. `search:reindex` – fulltextový index
-4. na pozadí plánované úlohy každých 10 minut: `locks:cleanup` a `backup:run --scheduled` (systémový cron není potřeba)
+4. na pozadí plánované úlohy každých 10 minut: `locks:cleanup`, `ai-access:cleanup` a `backup:run --scheduled` (systémový cron není potřeba)
 5. Apache
 
 ### Svazky a zálohy
@@ -136,6 +137,7 @@ Produkční kontejner je spouští sám (každých 10 minut). Na serveru bez Doc
 | Kdy | Příkaz | Proč |
 |---|---|---|
 | každých 10 minut | `bin/console locks:cleanup` | úklid vypršelých zámků bodů |
+| každý den | `bin/console ai-access:cleanup` | úklid prošlých připojení AI a registrací aplikací |
 | každou hodinu | `bin/console backup:run --scheduled` | pravidelná záloha – proběhne, jen když je podle plánu v Nastavení → Zálohy na řadě |
 
 ## Zálohy

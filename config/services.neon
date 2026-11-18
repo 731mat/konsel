@@ -45,6 +45,10 @@ services:
 	viteAssets: App\Core\Latte\ViteAssets(%rootDir%/www/assets/.vite/manifest.json)
 	- App\UI\Help\Wiki(%rootDir%/doc/wiki)
 
+	# Server MCP pro AI asistenty – nástroje ApiModule/Mcp/Tool/*Tool se registrují samy (sekce search)
+	- App\ApiModule\Mcp\McpServer
+	- App\ApiModule\Mcp\McpToolRegistry(typed(App\ApiModule\Mcp\McpTool))
+
 
 # Automatická registrace podle konvence adresářů
 search:
@@ -55,6 +59,10 @@ search:
 	repositories:
 		in: %appDir%/Model
 		classes: [Doctrine*Repository]
+
+	mcpTools:
+		in: %appDir%/ApiModule/Mcp/Tool
+		classes: [*Tool]
 
 	commands:
 		in: %appDir%/Console

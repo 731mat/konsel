@@ -1,0 +1,146 @@
+{block title}Připojení AI{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item"><a n:href=":Admin:Account:">Můj účet</a></li>
+	<li class="breadcrumb-item active" aria-current="page">Připojení AI</li>
+{/block}
+
+{block content}
+{varType string $mcpUrl}
+{varType string|null $accountProblem}
+{varType App\Model\AiAccess\AiAccessToken[] $connections}
+{varType App\Model\AiAccess\AiAccessToken[] $otherConnections}
+{varType App\Model\AiAccess\IssuedAccessToken|null $issued}
+{varType bool $canManageAll}
+
+<div class="mb-4">
+	<h1 class="h3 mb-1">Připojení AI asistentů</h1>
+	<p class="text-body-secondary mb-0" style="max-width: 48rem">
+		Ke svému účtu si můžete připojit AI asistenta (Claude, ChatGPT a další podporující MCP). Asistent pak umí vyhledávat v zasedáních, usneseních a plánech a s vaším svolením i připravovat body programu.
+		Vidí a smí jen to, co vy, a každá změna se zapíše do historie pod vaším jménem s poznámkou „AI“.
+	</p>
+</div>
+
+<div n:if="$accountProblem" class="alert alert-warning">{$accountProblem}</div>
+
+<div n:if="$issued" class="card border-success mb-4">
+	<div class="card-header bg-success-subtle text-success-emphasis"><i class="bi bi-check-circle" aria-hidden="true"></i> Token „{$issued->token->getName()}“ je vytvořený – zkopírujte si ho, později už zobrazit nepůjde</div>
+	<div class="card-body">
+		<div class="input-group">
+			<input type="text" class="form-control font-monospace" value="{$issued->accessToken}" readonly id="new-token">
+			<button type="button" class="btn btn-outline-secondary" data-copy="#new-token"><i class="bi bi-clipboard" aria-hidden="true"></i> Kopírovat</button>
+		</div>
+		<p class="small text-body-secondary mt-2 mb-0">Token vložte do aplikace jako hlavičku <code>Authorization: Bearer …</code>. Platí do {$issued->token->getValidUntil()|czDate}, rozsah {$issued->token->getScope()->label()}.</p>
+	</div>
+</div>
+
+<div class="row g-4">
+	<div class="col-xl-7">
+		<div class="card mb-4">
+			<div class="card-header fw-semibold"><i class="bi bi-plug" aria-hidden="true"></i> Adresa serveru MCP</div>
+			<div class="card-body">
+				<div class="input-group mb-3">
+					<input type="text" class="form-control font-monospace" value="{$mcpUrl}" readonly id="mcp-url">
+					<button type="button" class="btn btn-outline-secondary" data-copy="#mcp-url"><i class="bi bi-clipboard" aria-hidden="true"></i> Kopírovat</button>
+				</div>
+
+				<h2 class="h6">Claude (claude.ai, aplikace Claude)</h2>
+				<ol class="small mb-3">
+					<li>Nastavení → <strong>Konektory</strong> → <strong>Přidat vlastní konektor</strong>.</li>
+					<li>Název <em>Konšel</em>, adresa serveru výše, uložit a kliknout na <strong>Připojit</strong>.</li>
+					<li>Otevře se Konšel – přihlaste se a povolte připojení (případně i změny).</li>
+				</ol>
+
+				<h2 class="h6">ChatGPT</h2>
+				<ol class="small mb-3">
+					<li>Nastavení → <strong>Aplikace a konektory</strong> → vytvořit vlastní konektor (může vyžadovat zapnutý vývojářský režim).</li>
+					<li>Adresa serveru výše, ověřování <strong>OAuth</strong>, pak se přihlaste do Konšelu a povolte připojení.</li>
+				</ol>
+
+				<h2 class="h6">Claude Code, Cursor, vlastní skripty</h2>
+				<p class="small mb-1">S přihlášením v prohlížeči:</p>
+				<pre class="small bg-body-tertiary border rounded p-2 mb-2" style="white-space: pre-wrap; word-break: break-all"><code>claude mcp add --transport http konsel {$mcpUrl}</code></pre>
+				<p class="small mb-1">Nebo s osobním tokenem (vytvoříte v části Nový osobní token):</p>
+				<pre class="small bg-body-tertiary border rounded p-2 mb-0" style="white-space: pre-wrap; word-break: break-all"><code>claude mcp add --transport http konsel {$mcpUrl} --header "Authorization: Bearer ksl_…"</code></pre>
+			</div>
+		</div>
+
+		<div class="card mb-4">
+			<div class="card-header fw-semibold">Moje připojení</div>
+			{if $connections}
+				<div class="table-responsive">
+					<table class="table align-middle mb-0">
+						<thead><tr><th>Název</th><th>Druh</th><th>Rozsah</th><th>Naposledy použito</th><th>Platí do</th><th></th></tr></thead>
+						<tbody>
+							<tr n:foreach="$connections as $connection">
+								<td>{$connection->getName()} <code n:if="$connection->getHint()" class="small">{$connection->getHint()}…</code></td>
+								<td class="small text-nowrap">{$connection->getKind()->label()}</td>
+								<td class="small text-nowrap">{$connection->getScope()->label()}</td>
+								<td class="small text-nowrap">{if $connection->getLastUsedAt()}{$connection->getLastUsedAt()|czDateTime}{else}<span class="text-body-secondary">zatím ne</span>{/if}</td>
+								<td class="small text-nowrap">{$connection->getValidUntil()|czDate}</td>
+								<td class="text-end">
+									<form method="post" action="{link revoke!, tokenId: $connection->getId()}">
+										<button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Odpojit „{$connection->getName()}“? AI ztratí přístup ke Konšelu.">Odpojit</button>
+									</form>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			{else}
+				<div class="card-body empty-state">
+					<i class="bi bi-robot" aria-hidden="true"></i>
+					<p class="mb-0">Zatím nemáte připojeného žádného AI asistenta.</p>
+				</div>
+			{/if}
+		</div>
+
+		<div n:if="$canManageAll" class="card mb-4">
+			<div class="card-header fw-semibold">Připojení ostatních uživatelů obce</div>
+			{if $otherConnections}
+				<div class="table-responsive">
+					<table class="table align-middle mb-0">
+						<thead><tr><th>Uživatel</th><th>Název</th><th>Rozsah</th><th>Naposledy použito</th><th></th></tr></thead>
+						<tbody>
+							<tr n:foreach="$otherConnections as $connection">
+								<td class="text-nowrap">{$connection->getUser()->getName()}</td>
+								<td>{$connection->getName()} <span class="small text-body-secondary">({$connection->getKind()->label()|lower})</span></td>
+								<td class="small text-nowrap">{$connection->getScope()->label()}</td>
+								<td class="small text-nowrap">{if $connection->getLastUsedAt()}{$connection->getLastUsedAt()|czDateTime}{else}<span class="text-body-secondary">zatím ne</span>{/if}</td>
+								<td class="text-end">
+									<form method="post" action="{link revoke!, tokenId: $connection->getId()}">
+										<button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Odpojit „{$connection->getName()}“ uživatele {$connection->getUser()->getName()}?">Odpojit</button>
+									</form>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			{else}
+				<div class="card-body text-body-secondary small">Nikdo další z obce zatím AI nepřipojil.</div>
+			{/if}
+		</div>
+	</div>
+
+	<div class="col-xl-5">
+		<div n:if="!$accountProblem" class="card mb-4">
+			<div class="card-header fw-semibold"><i class="bi bi-key" aria-hidden="true"></i> Nový osobní token</div>
+			<div class="card-body">
+				<p class="small text-body-secondary">Pro aplikace, které neumí přihlášení přes prohlížeč. Token je jako heslo – nikomu ho nedávejte a při podezření ho odpojte.</p>
+				{control tokenForm}
+			</div>
+		</div>
+
+		<div class="card">
+			<div class="card-header fw-semibold"><i class="bi bi-shield-check" aria-hidden="true"></i> Co AI smí</div>
+			<div class="card-body small">
+				<ul class="mb-0">
+					<li>číst a vyhledávat zasedání, program, podklady, připomínky, usnesení, úkoly a plány – jen to, co vidíte vy;</li>
+					<li>s rozsahem „čtení i změny“ navíc zakládat zasedání, přidávat a upravovat body programu v přípravě, psát připomínky, zakládat plány a úkoly z usnesení;</li>
+					<li><strong>nikdy</strong> nehlasuje, nezapisuje docházku, neschvaluje zápis, nerozesílá pozvánky, nic nemaže a nemění nastavení ani uživatele;</li>
+					<li>data, ke kterým AI přistoupí, zpracovává poskytovatel AI služby, kterou připojujete.</li>
+				</ul>
+			</div>
+		</div>
+	</div>
+</div>

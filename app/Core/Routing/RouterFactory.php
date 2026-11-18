@@ -15,8 +15,16 @@ final class RouterFactory
 	{
 		$router = new RouteList();
 
+		// Server MCP pro AI asistenty a přihlášení aplikací přes OAuth (souhlas uživatele je v administraci)
 		$router->withModule('Api')
+			->addRoute('mcp', 'Mcp:default')
+			->addRoute('.well-known/oauth-protected-resource[/<resource .+>]', 'OAuth:protectedResource')
+			->addRoute('.well-known/oauth-authorization-server[/<issuer .+>]', 'OAuth:metadata')
+			->addRoute('oauth/<action register|token|revoke>', 'OAuth:default')
 			->addRoute('api/<presenter>[/<action>[/<id \d+>]]', 'Health:default');
+
+		$router->withModule('Admin')
+			->addRoute('oauth/authorize', 'AiConnection:authorize');
 
 		$router->withModule('Admin')
 			->addRoute('admin[/<presenter>[/<action>[/<id \d+>]]]', 'Dashboard:default');

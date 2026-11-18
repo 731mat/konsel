@@ -35,6 +35,7 @@
 			<ul class="dropdown-menu dropdown-menu-end shadow-sm">
 				<li n:ifcontent><span class="dropdown-item-text small text-body-secondary">{$currentMunicipality?->getName()}</span></li>
 				<li><a class="dropdown-item" n:href=":Admin:Account:"><i class="bi bi-person-gear" aria-hidden="true"></i> Můj účet</a></li>
+				<li n:if="$currentMunicipality?->isModuleEnabled(App\Model\Municipality\Module::AiConnections)"><a class="dropdown-item" n:href=":Admin:AiConnection:"><i class="bi bi-robot" aria-hidden="true"></i> Připojení AI</a></li>
 				<li><hr class="dropdown-divider"></li>
 				<li><a class="dropdown-item" n:href=":Public:Sign:out"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Odhlásit se</a></li>
 			</ul>
