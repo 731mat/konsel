@@ -38,6 +38,7 @@ flowchart LR
     T49[T49 podbody<br/>a číslování 26/2/3]
     T37[T37 AI návrhy<br/>textů bodů]
     T36[T36 ARES]
+    T39[T39 historie<br/>změn]
     F0 --> F1 --> F2 --> F3 --> F4 --> F5 --> F6
     F6 --> T34
     F6 --> T32
@@ -47,10 +48,11 @@ flowchart LR
     F5 --> T49
     F10 --> T37
     F10 --> T36
+    F10 --> T39
     F3 -.-> F10
 
     classDef done fill:#d1f0dc,stroke:#1e7b4a,color:#0b3d22;
-    class T00,T05,T12,T17,T21,T25,T28,T44,T34,T32,T33,T48,T31,T49,T37,T36 done;
+    class T00,T05,T12,T17,T21,T25,T28,T44,T34,T32,T33,T48,T31,T49,T37,T36,T39 done;
 ```
 
 **MVP (T00–T30 + T34) je hotové**: použitelný systém pro zastupitelstvo i radu – program, sdílení, pozvánky, průběh, usnesení, zápis a dokumenty v PDF a pro Word, včetně archivu uložených verzí a podepsaných originálů.
@@ -62,7 +64,6 @@ flowchart LR
 | T16b | nahrávání souborů nad 64 MB po částech | zatím limit 64 MB |
 | T35 | ustavující zasedání: slib členů, listina slibu | volba osob už funguje |
 | T38 | AI: návrh bodu z přiložené smlouvy nebo žádosti | návrhy textů bodů (T37) hotové |
-| T39 | audit – kdo co změnil | |
 | T40 | přepis zvukového záznamu | odloženo |
 | T41–T43 | zveřejnění, GDPR, MySQL, nasazení | |
 

@@ -9,6 +9,7 @@ use App\Core\Security\Allowed;
 use App\Core\Security\Privilege;
 use App\Core\Security\RequiresModule;
 use App\Core\Security\Resource;
+use App\Model\Audit\AuditFacade;
 use App\Model\Document\MeetingDocumentFacade;
 use App\Model\Municipality\Module;
 use App\Model\People\PeopleFacade;
@@ -39,6 +40,7 @@ final class ResolutionPresenter extends SecuredPresenter
 	public function __construct(
 		private readonly ResolutionFacade $resolutionFacade,
 		private readonly ResolutionTaskFacade $taskFacade,
+		private readonly AuditFacade $auditFacade,
 		private readonly PeopleFacade $peopleFacade,
 		private readonly FormFactory $formFactory,
 		private readonly MeetingDocumentFacade $documentFacade,
@@ -92,6 +94,8 @@ final class ResolutionPresenter extends SecuredPresenter
 		$this->template->isOverdue = fn(ResolutionTask $task): bool => $this->taskFacade->isOverdue($task);
 		$this->template->canEdit = $this->isAllowed(Resource::Resolution, Privilege::Edit);
 		$this->template->canViewDocuments = $this->isAllowed(Resource::Document);
+		// úkoly v historii jen se zapnutým modulem úkolů z usnesení
+		$this->template->history = $this->isAllowed(Resource::Audit) ? $this->auditFacade->findForResolution($resolution->getId(), $tasksEnabled) : null;
 		$this->template->canRevoke = $this->isAllowed(Resource::Resolution, Privilege::Manage) && $resolution->getStatus() === ResolutionStatus::Adopted;
 	}
 

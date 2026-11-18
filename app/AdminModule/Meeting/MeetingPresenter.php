@@ -11,6 +11,7 @@ use App\Core\Security\Resource;
 use App\Model\Access\AccessFacade;
 use App\Model\Access\IssuedToken;
 use App\Model\Attachment\AttachmentFacade;
+use App\Model\Audit\AuditFacade;
 use App\Model\Comment\CommentFacade;
 use App\Model\Document\DocumentArchiveFacade;
 use App\Model\Document\MeetingDocumentFacade;
@@ -56,6 +57,7 @@ final class MeetingPresenter extends SecuredPresenter
 		'proceedings' => 'Průběh',
 		'resolutions' => 'Usnesení',
 		'documents' => 'Dokumenty',
+		'history' => 'Historie',
 	];
 
 	private ?Meeting $meeting = null;
@@ -80,6 +82,7 @@ final class MeetingPresenter extends SecuredPresenter
 		private readonly MeetingDocumentFacade $documentFacade,
 		private readonly DocumentArchiveFacade $archiveFacade,
 		private readonly RecordingFacade $recordingFacade,
+		private readonly AuditFacade $auditFacade,
 		private readonly AccessFacade $accessFacade,
 		private readonly InvitationFacade $invitationFacade,
 		private readonly ProceedingsFacade $proceedingsFacade,
@@ -170,8 +173,14 @@ final class MeetingPresenter extends SecuredPresenter
 		$canManage = $this->isAllowed(Resource::Meeting, Privilege::Manage);
 
 		$this->template->meeting = $meeting;
-		$this->template->tab = array_key_exists($tab, self::Tabs) ? $tab : 'program';
-		$this->template->tabs = self::Tabs;
+		$tabs = self::Tabs;
+		if (!$this->isAllowed(Resource::Audit)) {
+			unset($tabs['history']);
+		}
+
+		$this->template->tab = $tab = array_key_exists($tab, $tabs) ? $tab : 'program';
+		$this->template->tabs = $tabs;
+		$this->template->history = $tab === 'history' ? $this->auditFacade->findByMeeting($meeting->getMunicipality()->getId(), $meeting->getId()) : [];
 		$this->template->transitions = array_values(array_filter(
 			$meeting->getAvailableTransitions(),
 			static fn(MeetingTransition $t): bool => $t->isReopening() ? $canManage : $canEdit,

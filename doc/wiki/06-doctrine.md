@@ -171,6 +171,10 @@ sequenceDiagram
 - Smaže-li databáze řádky kaskádou (body smazaného zasedání), subscriber je z indexu smaže podle `meeting_id`, `agenda_item_id`, `project_id`.
 - Po změně pravidel indexace nebo nasazení na existující data: `make console ARGS="search:reindex"`.
 
+## Událost: historie změn
+
+Druhý subscriber, `DoctrineAuditSubscriber`, při flushi zapíše do `audit_entry`, co se vložilo, změnilo nebo smazalo (sledované entity a čitelné hodnoty určuje `App\Model\Audit\AuditDescriber`). Autora bere z `AuditContext` – nastaví ho `SecuredPresenter` (uživatel úřadu) a `PortalPresenter` (zastupitel), jinak „systém“. Zápis běží ve stejné transakci: co se vrátí, v historii není. **Nová entita, u které chceme historii** = doplnit ji do `AuditDescriber::type()` a `label()`.
+
 ## SQLite
 
 Vývoj i první provoz běží na **SQLite** (jeden soubor `var/database.sqlite`). Nastavení v `SqlitePragmaMiddleware`: cizí klíče zapnuté, WAL režim, čekání na zámek 5 s a transakce `BEGIN IMMEDIATE` (zápisy se seřadí za sebe místo chyby „database is locked“). Přechod na MySQL bude změna konfigurace v `config/doctrine.neon` – migrace jsou napsané nezávisle na databázi.

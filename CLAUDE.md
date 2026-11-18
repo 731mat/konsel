@@ -61,6 +61,7 @@ make screenshots          # screenshoty stránek (desktop + mobil) do temp/scree
 - Volitelné moduly (Nastavení → Moduly): presenter modulu má `#[RequiresModule(Module::…)]`, položka menu `module:`, šablony `moduleEnabled(Module::…)`, portál a veřejná část `requireModule()`. Nová funkce patřící k modulu se musí při vypnutém modulu schovat všude.
 - Šablony dokumentů (výchozí i vlastní šablony obce) se vykreslují v sandboxu Latte (`DocumentTemplateEngine`, `DocumentSandboxPolicy`): nový objekt v dokumentu přidat do `DocumentSandboxPolicy::Classes`, v šablonách žádné `array_map`/`array_filter` (filtry `|where`, `|names`, `|period`). `DocumentTemplateTest` musí projít.
 - AI (OpenAI za `AiClient`): prompty jsou v `resources/prompts/*.md`, kontext skládá `AgendaWritingFacade` (pokyny a vzory obce, poslední usnesení). Návrh se nikdy neuloží sám, jen vloží do formuláře. Osobní údaje neposílat. Každé volání se zapíše do `AiUsageLog`. V testech `FakeAiClient` (`lastMessages`).
+- Historie změn (audit) zapisuje `DoctrineAuditSubscriber` sám; nová sledovaná entita = `AuditDescriber::type()/label()`. Citlivá pole (heslo, token, klíč) se nezapisují. Autor z `AuditContext`.
 - Fulltext: index `search_index` (SQLite FTS5) udržuje `DoctrineSearchIndexSubscriber` sám při flushi. Nová hledaná entita = doplnit `Model/Search/SearchDocumentFactory`. Po změně indexace `search:reindex`.
 - Formátovaný text od uživatele (komentáře) = `RichText`: fasáda ho pročistí přes `HtmlSanitizer`, šablona vypisuje `|richText`, nikdy `|noescape`. Pole formuláře dostane `data-rich-editor`.
 

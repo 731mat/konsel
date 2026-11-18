@@ -10,6 +10,8 @@ use App\Core\Security\RequiresModule;
 use App\Core\Security\Resource;
 use App\Core\Tenancy\CurrentMunicipality;
 use App\Model\Ares\AresFacade;
+use App\Model\Audit\AuditActor;
+use App\Model\Audit\AuditContext;
 use App\Model\Municipality\Municipality;
 use App\Model\Municipality\MunicipalityFacade;
 use App\Model\People\Body;
@@ -52,6 +54,12 @@ abstract class SecuredPresenter extends BasePresenter
 	#[Inject]
 	public PeopleFacade $bodyDirectory;
 
+	/**
+	 * Kdo změny provádí – pro historii změn.
+	 */
+	#[Inject]
+	public AuditContext $auditContext;
+
 	public function checkRequirements(mixed $element): void
 	{
 		parent::checkRequirements($element);
@@ -71,6 +79,13 @@ abstract class SecuredPresenter extends BasePresenter
 		if (($identityData['mustChangePassword'] ?? false) === true && !$this->isLinkCurrent(':Admin:Account:*')) {
 			$this->redirect(':Admin:Account:');
 		}
+
+		$userId = $user->getId();
+		$this->auditContext->setActor(new AuditActor(
+			is_string($identityData['name'] ?? null) ? $identityData['name'] : 'uživatel úřadu',
+			is_int($userId) ? $userId : null,
+			$this->getHttpRequest()->getRemoteAddress(),
+		));
 
 		$municipalityId = $identityData['municipalityId'] ?? null;
 		if (is_int($municipalityId) && !$this->currentMunicipality->isSet()) {

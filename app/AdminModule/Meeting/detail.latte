@@ -21,6 +21,7 @@
 {varType array<int, int> $commentCounts}
 {varType App\Model\Document\MeetingDocumentType[] $documentTypes}
 {varType bool $canViewDocuments}
+{varType App\Model\Audit\AuditEntry[] $history}
 {varType App\Model\Document\ArchivedDocument[] $archivedDocuments}
 {varType bool $canArchive}
 {varType bool $canDeleteArchived}
@@ -245,6 +246,12 @@
 						{/form}
 					</div>
 				</div>
+			{elseif $tab === 'history'}
+				{if $history}
+					{include '../../UI/Audit/@entries.latte', entries: $history}
+				{else}
+					<div class="card-body empty-state"><i class="bi bi-clock-history" aria-hidden="true"></i>U zasedání zatím není zaznamenaná žádná změna.</div>
+				{/if}
 			{else}
 				<div class="card-body empty-state">
 					{switch $tab}

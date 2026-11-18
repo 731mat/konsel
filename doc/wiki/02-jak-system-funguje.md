@@ -92,6 +92,10 @@ flowchart LR
 - **Plány** drží dlouhodobé záměry obce („postavit školu“, „oprava komunikace“) v jednom vlákně: změny fáze, diskuse, soubory a **všechna zasedání**, na kterých se o něm jednalo, včetně přijatých usnesení.
 - **Občan** pošle podnět na veřejné stránce → vznikne úkol ve fázi *nový podnět* → úřad dostane e-mail → po posouzení ho může zveřejnit. Občan pak vidí fázi, prioritu a komentáře označené „vidí občané“.
 
+## Historie změn
+
+**Správa obce → Historie změn** ukazuje, kdo, kdy a co změnil: zasedání, program, docházku, hlasování a jednotlivé hlasy, usnesení, úkoly, přílohy, záznamy, archiv, členství a uživatele, vždy s původní a novou hodnotou. Filtrovat jde podle druhu, uživatele, období a textu. Historie konkrétního zasedání je v jeho detailu na záložce **Historie**, u usnesení v jeho detailu. Záznamy nejdou upravit ani smazat; hesla a klíče se do historie nezapisují. Vidí ji správce obce.
+
 ## Hledání
 
 Pole **Hledat** v horní liště (nebo menu Hledat) prohledá zasedání, body programu, usnesení, diskuse, plány i šablony. Na diakritice a velikosti písmen nezáleží a stačí začátek slova: „smlouva o dilo“ najde „Smlouva o dílo“, „rozpoč“ najde „rozpočtové opatření“. Výsledky jdou zúžit podle druhu, orgánu a roku a shody jsou zvýrazněné.

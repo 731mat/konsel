@@ -1,0 +1,27 @@
+{* Výpis historie změn: {include '../../UI/Audit/@entries.latte', entries: $entries, meetingLinks: true} *}
+{parameters App\Model\Audit\AuditEntry[] $entries, bool $meetingLinks = false}
+<ul class="list-group list-group-flush audit-list">
+	<li n:foreach="$entries as $entry" class="list-group-item py-2">
+		<div class="d-flex flex-wrap align-items-baseline gap-2">
+			<span n:class="badge, 'bg-' . $entry->getAction()->tone() . '-subtle', 'text-' . $entry->getAction()->tone() . '-emphasis'">{$entry->getAction()->label()}</span>
+			<span class="small text-body-secondary">{$entry->getEntityType()->label()}</span>
+			{if $meetingLinks && $entry->getMeetingId()}
+				<a n:href=":Admin:Meeting:detail, id: $entry->getMeetingId()" class="fw-semibold text-break">{$entry->getEntityLabel()}</a>
+			{else}
+				<span class="fw-semibold text-break">{$entry->getEntityLabel()}</span>
+			{/if}
+			<span class="ms-auto small text-body-secondary text-nowrap" title="{$entry->getIp() ?? ''}">{$entry->getCreatedAt()|czDateTime} · {$entry->getActorName()}</span>
+		</div>
+		<dl n:if="$entry->getChanges()" class="audit-changes small mb-0 mt-1">
+			{foreach $entry->getChanges() as $field => [$before, $after]}
+				<dt>{App\Model\Audit\AuditDescriber::fieldLabel($field)}</dt>
+				<dd>
+					{if $entry->getAction() === App\Model\Audit\AuditAction::Updated}
+						<span class="audit-before">{$before ?? '—'|truncate: 160}</span> <i class="bi bi-arrow-right" aria-hidden="true"></i>
+					{/if}
+					<span class="audit-after">{$after ?? '—'|truncate: 160}</span>
+				</dd>
+			{/foreach}
+		</dl>
+	</li>
+</ul>

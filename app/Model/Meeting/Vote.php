@@ -41,6 +41,11 @@ final class Vote
 		$this->choice = $choice;
 	}
 
+	public function getRound(): VotingRound
+	{
+		return $this->votingRound;
+	}
+
 	public function getPerson(): Person
 	{
 		return $this->person;

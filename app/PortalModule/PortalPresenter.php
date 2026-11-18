@@ -7,6 +7,8 @@ namespace App\PortalModule;
 use App\Core\Tenancy\CurrentMunicipality;
 use App\Model\Access\AccessFacade;
 use App\Model\Access\MeetingAccessToken;
+use App\Model\Audit\AuditActor;
+use App\Model\Audit\AuditContext;
 use App\Model\Meeting\Meeting;
 use App\Model\People\Person;
 use App\Model\Shared\Exception\AccessDeniedException;
@@ -27,6 +29,9 @@ abstract class PortalPresenter extends BasePresenter
 	#[Inject]
 	public CurrentMunicipality $currentMunicipality;
 
+	#[Inject]
+	public AuditContext $auditContext;
+
 	private ?MeetingAccessToken $accessToken = null;
 
 	protected function startup(): void
@@ -42,6 +47,11 @@ abstract class PortalPresenter extends BasePresenter
 		}
 
 		$this->currentMunicipality->set($this->accessToken->getMunicipality());
+		$this->auditContext->setActor(new AuditActor(
+			$this->accessToken->getPerson()->getFullName() . ' (zastupitel, osobní odkaz)',
+			null,
+			$this->getHttpRequest()->getRemoteAddress(),
+		));
 	}
 
 	protected function beforeRender(): void

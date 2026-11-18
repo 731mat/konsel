@@ -9,6 +9,7 @@
 {varType App\Model\Resolution\Resolution $resolution}
 {varType App\Model\Resolution\ResolutionTask[] $tasks}
 {varType bool $tasksEnabled}
+{varType App\Model\Audit\AuditEntry[]|null $history}
 {varType Closure $isOverdue}
 {varType bool $canEdit}
 {varType bool $canRevoke}
@@ -114,6 +115,15 @@
 					</ul>
 				</details>
 			</div>
+		</div>
+
+		<div n:if="$history !== null" class="card">
+			<div class="card-header"><i class="bi bi-clock-history" aria-hidden="true"></i> Historie změn</div>
+			{if $history}
+				{include '../../UI/Audit/@entries.latte', entries: $history}
+			{else}
+				<div class="card-body small text-body-secondary">Bez zaznamenaných změn.</div>
+			{/if}
 		</div>
 
 		<div n:if="$canRevoke" class="card">

@@ -1281,3 +1281,26 @@ h1, .h1, h2, .h2, h3, .h3 {
 	margin-left: 1.5rem;
 	border-left: 3px solid var(--bs-primary-border-subtle);
 }
+
+// --- Historie změn -----------------------------------------------------------
+.audit-changes {
+	display: grid;
+	grid-template-columns: minmax(7rem, max-content) 1fr;
+	column-gap: .75rem;
+	row-gap: .1rem;
+
+	dt {
+		font-weight: 500;
+		color: var(--bs-secondary-color);
+	}
+
+	dd {
+		margin: 0;
+		overflow-wrap: anywhere;
+	}
+
+	.audit-before {
+		color: var(--bs-secondary-color);
+		text-decoration: line-through;
+	}
+}

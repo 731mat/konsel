@@ -1,0 +1,77 @@
+{block title}Historie změn{/block}
+
+{block breadcrumbs}
+	<li class="breadcrumb-item active" aria-current="page">Historie změn</li>
+{/block}
+
+{block content}
+{varType App\Model\Audit\AuditEntry[] $entries}
+{varType int $total}
+{varType int $page}
+{varType int $pages}
+{varType App\Model\Audit\AuditEntityType[] $types}
+{varType App\Model\Audit\AuditEntityType|null $selectedType}
+{varType array<int, string> $actors}
+{varType int|null $selectedUser}
+{varType array<string, string> $periods}
+{varType string $selectedPeriod}
+{varType string $q}
+
+<div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+	<div class="me-auto">
+		<h1 class="h3 mb-1">Historie změn</h1>
+		<p class="text-body-secondary mb-0">Kdo, kdy a co změnil – zasedání, program, docházka, hlasování, usnesení, uživatelé. Záznamy nejdou upravit ani smazat.</p>
+	</div>
+	<span class="small text-body-secondary">{$total} {$total === 1 ? 'záznam' : ($total >= 2 && $total <= 4 ? 'záznamy' : 'záznamů')}</span>
+</div>
+
+<form method="get" action="{link default}" class="card card-body mb-4 py-3">
+	<div class="row g-2 align-items-end">
+		<div class="col-md-3">
+			<label for="audit-q" class="form-label small text-body-secondary mb-1">Hledat v popisu</label>
+			<input type="search" id="audit-q" name="q" value="{$q}" class="form-control form-control-sm" placeholder="např. Novotný, Rozpočet">
+		</div>
+		<div class="col-6 col-md-3">
+			<label for="audit-type" class="form-label small text-body-secondary mb-1">Co</label>
+			<select id="audit-type" name="type" class="form-select form-select-sm">
+				<option value="">vše</option>
+				<option n:foreach="$types as $type" value="{$type->value}" selected={$selectedType === $type}>{$type->label()}</option>
+			</select>
+		</div>
+		<div class="col-6 col-md-2">
+			<label for="audit-user" class="form-label small text-body-secondary mb-1">Kdo</label>
+			<select id="audit-user" name="user" class="form-select form-select-sm">
+				<option value="">kdokoli</option>
+				<option n:foreach="$actors as $id => $name" value="{$id}" selected={$selectedUser === $id}>{$name}</option>
+			</select>
+		</div>
+		<div class="col-6 col-md-2">
+			<label for="audit-period" class="form-label small text-body-secondary mb-1">Období</label>
+			<select id="audit-period" name="period" class="form-select form-select-sm">
+				<option n:foreach="$periods as $key => $label" value="{$key}" selected={$selectedPeriod === (string) $key}>{$label}</option>
+			</select>
+		</div>
+		<div class="col-6 col-md-2">
+			<button type="submit" class="btn btn-sm btn-primary w-100">Filtrovat</button>
+		</div>
+	</div>
+</form>
+
+<div class="card">
+	{if $entries}
+		{include '../../UI/Audit/@entries.latte', entries: $entries, meetingLinks: true}
+	{else}
+		<div class="card-body empty-state">
+			<i class="bi bi-clock-history" aria-hidden="true"></i>
+			Filtru neodpovídá žádná změna.
+		</div>
+	{/if}
+</div>
+
+<nav n:if="$pages > 1" aria-label="Stránkování" class="mt-3">
+	<ul class="pagination pagination-sm justify-content-center">
+		<li n:class="page-item, $page <= 1 ? disabled"><a class="page-link" n:href="this, page: $page - 1">Novější</a></li>
+		<li class="page-item disabled"><span class="page-link">{$page} / {$pages}</span></li>
+		<li n:class="page-item, $page >= $pages ? disabled"><a class="page-link" n:href="this, page: $page + 1">Starší</a></li>
+	</ul>
+</nav>
