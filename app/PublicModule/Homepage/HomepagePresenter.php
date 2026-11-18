@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\PublicModule\Homepage;
 
 use App\Core\Tenancy\CurrentMunicipality;
+use App\Model\Installation\InstallationFacade;
 use App\Model\Municipality\Module;
 use App\Model\Municipality\Municipality;
 use App\Model\Municipality\MunicipalityFacade;
@@ -31,8 +32,17 @@ final class HomepagePresenter extends BasePresenter
 		private readonly CurrentMunicipality $currentMunicipality,
 		private readonly PortalSession $portalSession,
 		private readonly SignInFormFactory $signInFormFactory,
+		private readonly InstallationFacade $installation,
 	) {
 		parent::__construct();
+	}
+
+	public function actionDefault(): void
+	{
+		// prázdná instalace → průvodce
+		if ($this->installation->isRequired()) {
+			$this->redirect(':Public:Install:');
+		}
 	}
 
 	public function renderDefault(): void

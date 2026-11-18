@@ -19,6 +19,7 @@ test('crossroad shows citizens the public tasks of the only municipality and mem
 	TestDatabase::migrate($container);
 	$fixtures = new Fixtures($container);
 	$municipality = $fixtures->municipality();
+	$fixtures->user($municipality); // instalace proběhla (bez uživatelů úvodní stránka vede na průvodce)
 	$container->getByType(MunicipalityFacade::class)->changeBrandColors($municipality->getId(), '#1e6b45', '#d9a441');
 	$projects = $container->getByType(ProjectFacade::class);
 	$public = $projects->create($municipality->getId(), new SaveProject('Nová mateřská škola'), 'Úřad');
@@ -43,7 +44,7 @@ test('with more municipalities the citizen picks one', function (): void {
 	$container = ContainerFactory::create();
 	TestDatabase::migrate($container);
 	$fixtures = new Fixtures($container);
-	$fixtures->municipality();
+	$fixtures->user($fixtures->municipality());
 	$container->getByType(MunicipalityFacade::class)->create(new CreateMunicipality('Hlavnice'));
 	$tester = new PresenterTester($container);
 

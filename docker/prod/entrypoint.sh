@@ -23,6 +23,9 @@ konsel migrations:migrate --no-interaction --allow-no-migration
 echo "Konšel: fulltextový index"
 konsel search:reindex || echo "Konšel: přestavění indexu selhalo, hledání může být neúplné" >&2
 
+# Prázdná instalace: adresa průvodce a instalační kód do logu (Portainer → Logs)
+konsel install:code || true
+
 # Plánované úlohy (místo systémového cronu) běží na pozadí jako www-data
 as_app konsel-scheduler &
 

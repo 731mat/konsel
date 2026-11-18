@@ -68,6 +68,7 @@ flowchart LR
 | T38 | AI: návrh bodu z přiložené smlouvy nebo žádosti | návrhy textů bodů (T37) hotové |
 | T40 | přepis zvukového záznamu | odloženo |
 | T41–T42 | zveřejnění, GDPR, MySQL | |
+| T52 | webová instalace (průvodce s instalačním kódem) | hotovo |
 | T51 | připojení AI asistentů přes MCP | hotovo; zbývá vyzkoušet s Claude a ChatGPT na produkci |
 | T43 | nasazení a provoz | produkční image a stack pro Portainer hotové; zbývá CSP, kontrola MIME uploadů, vyzkoušená obnova ze zálohy |
 

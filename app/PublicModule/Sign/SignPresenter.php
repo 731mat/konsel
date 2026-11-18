@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\PublicModule\Sign;
 
+use App\Model\Installation\InstallationFacade;
 use App\UI\BasePresenter;
 use App\UI\Sign\SignInFormFactory;
 use Nette\Application\Attributes\Persistent;
@@ -17,12 +18,17 @@ final class SignPresenter extends BasePresenter
 
 	public function __construct(
 		private readonly SignInFormFactory $signInFormFactory,
+		private readonly InstallationFacade $installation,
 	) {
 		parent::__construct();
 	}
 
 	public function actionIn(): void
 	{
+		if ($this->installation->isRequired()) {
+			$this->redirect(':Public:Install:');
+		}
+
 		if ($this->getUser()->isLoggedIn()) {
 			$this->redirect(':Admin:Dashboard:');
 		}

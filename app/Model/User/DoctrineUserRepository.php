@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Model\User;
 
+use App\Core\Tenancy\TenantFilterSuspender;
 use App\Model\Municipality\Municipality;
 use App\Model\Shared\Exception\NotFoundException;
 use App\Model\Shared\ValueObject\Email;
@@ -56,6 +57,11 @@ final readonly class DoctrineUserRepository implements UserRepository
 			'role' => Role::Admin,
 			'active' => true,
 		]);
+	}
+
+	public function hasAny(): bool
+	{
+		return TenantFilterSuspender::run($this->entityManager, fn(): bool => $this->repository->count([]) > 0);
 	}
 
 	public function add(User $user): void

@@ -1226,6 +1226,46 @@ h1, .h1, h2, .h2, h3, .h3 {
 	max-width: 25rem;
 }
 
+// Průvodce instalací (/instalace)
+.install-card {
+	width: 100%;
+	max-width: 40rem;
+}
+
+.install-step {
+	display: inline-flex;
+	align-items: center;
+	gap: .35rem;
+	padding: .2rem .65rem .2rem .25rem;
+	border-radius: 999px;
+	color: var(--bs-secondary-color);
+	background: var(--bs-tertiary-bg);
+
+	.install-step-number {
+		display: inline-grid;
+		place-items: center;
+		width: 1.4rem;
+		height: 1.4rem;
+		border-radius: 50%;
+		font-weight: 600;
+		background: var(--bs-body-bg);
+	}
+
+	&.done {
+		color: var(--bs-success-text-emphasis);
+		background: var(--bs-success-bg-subtle);
+	}
+
+	&.active {
+		color: var(--konsel-on-primary);
+		background: var(--bs-primary);
+
+		.install-step-number {
+			color: var(--bs-primary);
+		}
+	}
+}
+
 .hero-title {
 	font-size: clamp(2.25rem, 5vw, 3.5rem);
 	font-weight: 750;

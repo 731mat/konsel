@@ -1,0 +1,19 @@
+{layout '@layout.latte'}
+{block title}Instalace – správce{/block}
+
+{define step}
+{varType array<string, array<string, mixed>> $summary}
+{var $municipality = $summary['municipality']}
+{var $bodies = $summary['bodies']}
+{var $options = $summary['options']}
+<h1 class="h4 mb-3">Účet správce</h1>
+<div class="alert alert-light border small mb-4">
+	<div class="fw-semibold mb-1">Shrnutí</div>
+	<div>{$municipality['officialName'] ?? ''}{if $municipality['ico'] ?? null}, IČO {$municipality['ico']}{/if}</div>
+	<div>Období {$bodies['termName'] ?? ''} · {$bodies['councilName'] ?? ''} ({$bodies['councilSeats'] ?? ''} členů){if ($bodies['hasBoard'] ?? false) === true} · {$bodies['boardName'] ?? ''} ({$bodies['boardSeats'] ?? ''}){/if}</div>
+	<div>Moduly: {count(is_array($options['modules'] ?? null) ? $options['modules'] : [])} zapnuto{if ($options['installTemplates'] ?? false) === true} · vzorové šablony{/if}{if ($options['dailyBackup'] ?? false) === true} · noční zálohy{/if}</div>
+</div>
+<p class="small text-body-secondary">Správce obce smí vše v rámci obce, další uživatele založí v části Uživatelé.</p>
+{control adminForm}
+<a n:href="options" class="btn btn-link px-0 mt-2">← Zpět</a>
+{/define}

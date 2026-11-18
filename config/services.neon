@@ -13,6 +13,7 @@ services:
 	- App\Model\Storage\LocalFileStorage(%varDir%/storage)
 	- App\Model\Backup\SqliteDatabaseDumper
 	- App\Model\Backup\BackupFacade(backupDir: %varDir%/backups, storageDir: %varDir%/storage)
+	- App\Model\Installation\InstallationFacade(codeFile: %varDir%/install.code, writableDirs: [var: %varDir%, temp: %tempDir%, log: %rootDir%/log])
 	- App\Core\Security\Authenticator
 	- App\Core\Security\SecretBox(%encryptionKey%)
 	- App\Core\Security\AuthorizatorFactory::create
@@ -22,6 +23,7 @@ services:
 	- App\Model\Document\MpdfRenderer(%tempDir%/mpdf)
 	- App\Model\Document\DocumentTemplateEngine
 	- App\Console\Demo\DemoSeeder(appUrl: %appUrl%)
+	- App\Console\Installation\InstallCodeCommand(appUrl: %appUrl%)
 	- App\Model\Mail\MailTemplates
 	- App\Model\Resolution\ResolutionRecorder
 	- App\Model\Search\SqliteFtsSearchIndex
@@ -68,4 +70,4 @@ search:
 		in: %appDir%/Console
 		classes: [*Command]
 		exclude:
-			classes: [App\Console\Demo\SeedDemoCommand]
+			classes: [App\Console\Demo\SeedDemoCommand, App\Console\Installation\InstallCodeCommand]

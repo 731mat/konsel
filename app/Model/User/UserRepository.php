@@ -26,5 +26,10 @@ interface UserRepository
 
 	public function countActiveAdmins(Municipality $municipality): int;
 
+	/**
+	 * Existuje aspoň jeden uživatel (napříč obcemi) – jinak je instalace prázdná.
+	 */
+	public function hasAny(): bool;
+
 	public function add(User $user): void;
 }

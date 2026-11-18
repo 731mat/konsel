@@ -1,0 +1,28 @@
+{layout '../../@layout.latte'}
+
+{block content}
+{varType array<string, string> $steps}
+{varType string $currentStep}
+<main class="install-card m-auto py-4">
+	<div class="text-center mb-4">
+		<span class="brand fs-3 mb-2">{include '../../UI/@logo.latte'} Konšel</span>
+		<p class="text-body-secondary mb-0">Instalace – nastavení nové obce</p>
+	</div>
+
+	<ol class="install-steps list-unstyled d-flex flex-wrap gap-2 justify-content-center small mb-4" aria-label="Kroky instalace">
+		{var $passed = true}
+		{foreach $steps as $step => $label}
+			{if $step === $currentStep}{var $passed = false}{/if}
+			<li n:class="install-step, $step === $currentStep ? active : ($passed ? done)" aria-current={$step === $currentStep ? step : null}>
+				<span class="install-step-number">{$iterator->counter}</span> {$label}
+			</li>
+		{/foreach}
+	</ol>
+
+	<div class="card shadow">
+		<div class="card-body p-4 p-sm-5">
+			{include step}
+		</div>
+	</div>
+</main>
+{/block}

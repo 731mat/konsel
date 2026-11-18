@@ -1,0 +1,30 @@
+{layout '@layout.latte'}
+{block title}Instalace – kontrola{/block}
+
+{define step}
+{varType App\Model\Installation\InstallationCheck[] $checks}
+{varType bool $canContinue}
+{varType string $baseUrl}
+<h1 class="h4 mb-3">Kontrola prostředí</h1>
+<ul class="list-group mb-3">
+	<li n:foreach="$checks as $check" class="list-group-item d-flex gap-3 align-items-start">
+		{if $check->ok}
+			<i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i>
+		{elseif $check->blocking}
+			<i class="bi bi-x-circle-fill text-danger" aria-hidden="true"></i>
+		{else}
+			<i class="bi bi-exclamation-triangle-fill text-warning" aria-hidden="true"></i>
+		{/if}
+		<div>
+			<div class="fw-semibold">{$check->label}</div>
+			<div class="small text-body-secondary">{$check->detail}</div>
+		</div>
+	</li>
+</ul>
+<p class="small text-body-secondary">Aplikace běží na adrese <strong>{$baseUrl}</strong>. Pokud má být na https a vidíte http, nastavte v reverzní proxy hlavičku X-Forwarded-Proto a proměnnou KONSEL_TRUSTED_PROXIES.</p>
+{if $canContinue}
+	<a n:href="municipality" class="btn btn-primary">Pokračovat</a>
+{else}
+	<div class="alert alert-danger mb-0">Opravte prosím chyby označené červeně a stránku obnovte.</div>
+{/if}
+{/define}

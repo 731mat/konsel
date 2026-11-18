@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Routing;
 
+use Nette\Application\Routers\Route;
 use Nette\Application\Routers\RouteList;
 use Nette\StaticClass;
 
@@ -34,6 +35,21 @@ final class RouterFactory
 			->addRoute('portal[/<presenter>[/<action>[/<id \d+>]]]', 'Meeting:default');
 
 		$router->withModule('Public')
+			->addRoute('instalace[/<action>]', [
+				'presenter' => 'Install',
+				'action' => [
+					Route::Value => 'default',
+					Route::FilterTable => [
+						'kod' => 'code',
+						'kontrola' => 'check',
+						'obec' => 'municipality',
+						'organy' => 'bodies',
+						'nastaveni' => 'options',
+						'spravce' => 'admin',
+					],
+					Route::FilterStrict => true,
+				],
+			])
 			->addRoute('obec/<municipality [a-z0-9-]+>/podnety', 'Ideas:default')
 			->addRoute('obec/<municipality [a-z0-9-]+>/podnety/<id \d+>', 'Ideas:detail')
 			->addRoute('obec/<municipality [a-z0-9-]+>/podnety/soubor/<id \d+>', 'Ideas:file')

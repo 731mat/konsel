@@ -32,12 +32,15 @@ flowchart LR
    KONSEL_SMTP_ENCRYPTION=tls
    ```
 3. **Deploy the stack.** První sestavení trvá několik minut (na Raspberry Pi i desítky minut – kompilují se rozšíření PHP), další nasazení jsou rychlá.
-4. První spuštění – založení obce a správce: Containers → `konsel-app-1` → **Console** → Connect (`/bin/bash`):
-   ```bash
-   konsel municipality:create "Neplachovice" --ico 00300535
-   konsel user:create jmeno@obec.cz "Jméno Příjmení" --role admin -m neplachovice
-   ```
-   Heslo se vypíše (nebo ho zadejte přes `--password`). Další uživatele už zakládá správce v aplikaci.
+4. **Webová instalace:** v Portaineru otevřete kontejner → **Logs** a najděte řádek `Instalace: otevřete https://…/instalace a zadejte instalační kód XXXXX-XXXXX`. Otevřete adresu aplikace – prázdná instalace sama přejde na průvodce:
+   1. instalační kód (aby instalaci nedokončil nikdo cizí; kód platí do dokončení, vypíše ho i `konsel install:code`),
+   2. kontrola prostředí (rozšíření PHP, zápis do složek, šifrovací klíč, adresa https),
+   3. obec – IČO s načtením z ARES, úřední název a adresa,
+   4. volební období, zastupitelstvo a případně rada,
+   5. moduly, vzorové šablony programu a usnesení, noční zálohy,
+   6. účet správce obce → instalace se dokončí najednou a správce je rovnou přihlášený.
+
+   Průvodce je dostupný jen do vytvoření prvního uživatele. Ručně lze instanci založit i v konzoli kontejneru: `konsel municipality:create "Neplachovice" --ico 00300535` a `konsel user:create jmeno@obec.cz "Jméno Příjmení" --role admin -m neplachovice`.
 5. Reverzní proxy s HTTPS: `konsel.matyho.cz` → `http://<IP Home Assistantu>:8090`.
    - Nginx Proxy Manager: zapnout SSL (Let's Encrypt) a do Advanced vložit `client_max_body_size 1024m;` a `proxy_read_timeout 600s;` (velké záznamy zasedání).
    - Cloudflare (tunel nebo proxy) má v bezplatném tarifu limit **100 MB na jeden požadavek** – větší záznam přes něj nenahrajete.
@@ -66,8 +69,9 @@ Proměnné přebíjí `config/local.neon` (načítá je `App\Core\Config\Environ
 1. práva svazků pro webový server, šifrovací klíč (jen poprvé)
 2. `migrations:migrate` – databáze se sama převede na novou verzi
 3. `search:reindex` – fulltextový index
-4. na pozadí plánované úlohy každých 10 minut: `locks:cleanup`, `ai-access:cleanup` a `backup:run --scheduled` (systémový cron není potřeba)
-5. Apache
+4. u prázdné instalace vypíše adresu průvodce a instalační kód (`install:code`)
+5. na pozadí plánované úlohy každých 10 minut: `locks:cleanup`, `ai-access:cleanup` a `backup:run --scheduled` (systémový cron není potřeba)
+6. Apache
 
 ### Svazky a zálohy
 
